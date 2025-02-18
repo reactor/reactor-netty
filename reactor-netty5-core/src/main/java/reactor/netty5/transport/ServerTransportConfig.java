@@ -121,13 +121,13 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 	// Protected/Package private write API
 
-	Map<AttributeKey<?>, ?>            childAttrs;
-	ConnectionObserver                 childObserver;
-	Map<ChannelOption<?>, ?>           childOptions;
-	Consumer<? super CONF>             doOnBind;
-	Consumer<? super DisposableServer> doOnBound;
-	Consumer<? super Connection>       doOnConnection;
-	Consumer<? super DisposableServer> doOnUnbound;
+	Map<AttributeKey<?>, ?>                      childAttrs;
+	ConnectionObserver                           childObserver;
+	Map<ChannelOption<?>, ?>                     childOptions;
+	@Nullable Consumer<? super CONF>             doOnBind;
+	@Nullable Consumer<? super DisposableServer> doOnBound;
+	@Nullable Consumer<? super Connection>       doOnConnection;
+	@Nullable Consumer<? super DisposableServer> doOnUnbound;
 
 	/**
 	 * Default ServerTransportConfig with options.
@@ -208,8 +208,8 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 	static final class ServerTransportDoOn implements ConnectionObserver {
 
-		final Consumer<? super DisposableServer> doOnBound;
-		final Consumer<? super DisposableServer> doOnUnbound;
+		final @Nullable Consumer<? super DisposableServer> doOnBound;
+		final @Nullable Consumer<? super DisposableServer> doOnUnbound;
 
 		ServerTransportDoOn(@Nullable Consumer<? super DisposableServer> doOnBound,
 				@Nullable Consumer<? super DisposableServer> doOnUnbound) {
@@ -234,8 +234,8 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 	static final class ServerTransportDoOnConnection implements ConnectionObserver {
 
-		final ChannelGroup                 channelGroup;
-		final Consumer<? super Connection> doOnConnection;
+		final @Nullable ChannelGroup                 channelGroup;
+		final @Nullable Consumer<? super Connection> doOnConnection;
 
 		ServerTransportDoOnConnection(@Nullable ChannelGroup channelGroup, @Nullable Consumer<? super Connection> doOnConnection) {
 			this.channelGroup = channelGroup;

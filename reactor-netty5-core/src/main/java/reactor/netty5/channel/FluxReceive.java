@@ -48,16 +48,19 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final ChannelOperations<?, ?> parent;
 	final EventLoop         eventLoop;
 
-	CoreSubscriber<? super Object> receiver;
-	boolean                        receiverFastpath;
-	long                           receiverDemand;
-	Queue<Object>                  receiverQueue;
+	@Nullable CoreSubscriber<? super Object> receiver;
+	boolean                                  receiverFastpath;
+	long                                     receiverDemand;
+	@Nullable Queue<Object>                  receiverQueue;
 
 	boolean needRead = true;
 
 	volatile boolean   inboundDone;
-	Throwable inboundError;
+	@Nullable Throwable inboundError;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	volatile IntConsumer receiverCancel;
 
 	boolean subscribedOnce;
@@ -221,6 +224,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
+	@SuppressWarnings("NullAway")
 	final void drainReceiver() {
 		// general protect against stackoverflow onNext -> request -> onNext
 		if (wip++ != 0) {
@@ -322,6 +326,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				}
 			}
 
+			// Deliberately suppress "NullAway"
+			// Deliberately not checking q == null, if e > 0L this means q != null
 			if ((receiverDemand -= e) > 0L || (e > 0L && q.size() < QUEUE_LOW_LIMIT)) {
 				if (needRead) {
 					needRead = false;

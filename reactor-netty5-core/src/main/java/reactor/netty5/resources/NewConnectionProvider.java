@@ -114,9 +114,9 @@ final class NewConnectionProvider implements ConnectionProvider {
 	static final class DisposableConnect implements CoreSubscriber<Channel>, Disposable {
 		final MonoSink<Connection> sink;
 		final Context currentContext;
-		final Supplier<? extends SocketAddress> bindAddress;
+		final @Nullable Supplier<? extends SocketAddress> bindAddress;
 
-		Subscription subscription;
+		@Nullable Subscription subscription;
 
 		DisposableConnect(MonoSink<Connection> sink, @Nullable Supplier<? extends SocketAddress> bindAddress) {
 			this(sink, Context.of(sink.contextView()), bindAddress);

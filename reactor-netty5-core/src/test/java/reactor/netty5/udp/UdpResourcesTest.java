@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,12 +34,14 @@ class UdpResourcesTest {
 		UdpResources.get();
 
 		UdpResources old = UdpResources.udpResources.get();
+		assertThat(old).isNotNull();
 
 		LoopResources loops = LoopResources.create("testIssue1227");
 		UdpResources.set(loops);
 		assertThat(old.isDisposed()).isTrue();
 
 		UdpResources current = UdpResources.udpResources.get();
+		assertThat(current).isNotNull();
 		UdpResources.shutdownLater()
 		            .block(Duration.ofSeconds(5));
 		assertThat(current.isDisposed()).isTrue();

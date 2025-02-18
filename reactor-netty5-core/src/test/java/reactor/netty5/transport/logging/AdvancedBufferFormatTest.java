@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,37 +66,47 @@ class AdvancedBufferFormatTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void simpleToLoggingHandlerBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SIMPLE.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
 				.withMessage("name");
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SIMPLE.toLoggingHandler("name", null, Charset.defaultCharset()))
 				.withMessage("level");
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void hexdumpToLoggingHandlerBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> HEX_DUMP.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
 				.withMessage("name");
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> HEX_DUMP.toLoggingHandler("name", null, Charset.defaultCharset()))
 				.withMessage("level");
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void textualToLoggingHandlerBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> TEXTUAL.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
 				.withMessage("name");
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> TEXTUAL.toLoggingHandler("name", null, Charset.defaultCharset()))
 				.withMessage("level");
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> TEXTUAL.toLoggingHandler("name", LogLevel.DEBUG, null))
 				.withMessage("charset");

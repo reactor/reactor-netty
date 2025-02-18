@@ -53,8 +53,8 @@ public class ProxyProvider {
 		return new Build();
 	}
 
-	final String username;
-	final String password;
+	final @Nullable String username;
+	final @Nullable String password;
 	final SocketAddress address;
 	final Predicate<SocketAddress> nonProxyHostPredicate;
 	final Proxy type;
@@ -75,7 +75,12 @@ public class ProxyProvider {
 		else {
 			this.address = builder.address.get();
 		}
-		this.type = builder.type;
+		if (builder.type != null) {
+			this.type = builder.type;
+		}
+		else {
+			throw new IllegalArgumentException("Proxy type is not specified");
+		}
 		this.connectTimeoutMillis = builder.connectTimeoutMillis;
 	}
 
@@ -163,7 +168,7 @@ public class ProxyProvider {
 	 * @param address the address to test
 	 * @return true if of type {@link InetSocketAddress} and hostname candidate to proxy
 	 */
-	public boolean shouldProxy(SocketAddress address) {
+	public boolean shouldProxy(@Nullable SocketAddress address) {
 		return address instanceof InetSocketAddress && !nonProxyHostPredicate.test(address);
 	}
 
@@ -317,14 +322,14 @@ public class ProxyProvider {
 
 		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
 
-		String username;
-		String password;
-		Function<? super String, ? extends String> passwordFunction;
-		String host;
+		@Nullable String username;
+		@Nullable String password;
+		@Nullable Function<? super String, ? extends String> passwordFunction;
+		@Nullable String host;
 		int port;
-		Supplier<? extends SocketAddress> address;
+		@Nullable Supplier<? extends SocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
-		Proxy type;
+		@Nullable Proxy type;
 		long connectTimeoutMillis = 10000;
 
 		@Override

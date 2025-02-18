@@ -120,7 +120,7 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 
 	static final class ContextAwareConnectMetricsHandler extends ChannelHandlerAdapter {
 
-		final SocketAddress proxyAddress;
+		final @Nullable SocketAddress proxyAddress;
 		final ContextAwareChannelMetricsRecorder recorder;
 
 		ContextAwareConnectMetricsHandler(ContextAwareChannelMetricsRecorder recorder, @Nullable SocketAddress proxyAddress) {

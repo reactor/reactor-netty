@@ -593,27 +593,27 @@ public final class NameResolverProvider {
 		return roundRobinSelection ? new RoundRobinDnsAddressResolverGroup(builder) : new DnsAddressResolverGroup(builder);
 	}
 
-	final Supplier<? extends SocketAddress> bindAddressSupplier;
+	final @Nullable Supplier<? extends SocketAddress> bindAddressSupplier;
 	final Duration cacheMaxTimeToLive;
 	final Duration cacheMinTimeToLive;
 	final Duration cacheNegativeTimeToLive;
 	final boolean completeOncePreferredResolved;
 	final boolean disableOptionalRecord;
 	final boolean disableRecursionDesired;
-	final Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
-	final HostsFileEntriesResolver hostsFileEntriesResolver;
-	final DnsQueryLifecycleObserverFactory loggingFactory;
-	final LoopResources loopResources;
+	final @Nullable Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
+	final @Nullable HostsFileEntriesResolver hostsFileEntriesResolver;
+	final @Nullable DnsQueryLifecycleObserverFactory loggingFactory;
+	final @Nullable LoopResources loopResources;
 	final int maxPayloadSize;
 	final int maxQueriesPerResolve;
 	final int ndots;
 	final boolean preferNative;
 	final Duration queryTimeout;
-	final DnsCache resolveCache;
-	final ResolvedAddressTypes resolvedAddressTypes;
+	final @Nullable DnsCache resolveCache;
+	final @Nullable ResolvedAddressTypes resolvedAddressTypes;
 	final boolean retryTcpOnTimeout;
 	final boolean roundRobinSelection;
-	final Iterable<String> searchDomains;
+	final @Nullable Iterable<String> searchDomains;
 
 	NameResolverProvider(Build build) {
 		this.bindAddressSupplier = build.bindAddressSupplier;
@@ -649,27 +649,27 @@ public final class NameResolverProvider {
 		static final int DEFAULT_NDOTS = -1;
 		static final Duration DEFAULT_QUERY_TIMEOUT = Duration.ofSeconds(5);
 
-		Supplier<? extends SocketAddress> bindAddressSupplier;
+		@Nullable Supplier<? extends SocketAddress> bindAddressSupplier;
 		Duration cacheMaxTimeToLive = DEFAULT_CACHE_MAX_TIME_TO_LIVE;
 		Duration cacheMinTimeToLive = DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 		Duration cacheNegativeTimeToLive = DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
 		boolean completeOncePreferredResolved = DEFAULT_COMPLETE_ONCE_PREFERRED_RESOLVED;
 		boolean disableOptionalRecord;
 		boolean disableRecursionDesired;
-		Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
-		HostsFileEntriesResolver hostsFileEntriesResolver;
-		DnsQueryLifecycleObserverFactory loggingFactory;
-		LoopResources loopResources;
+		@Nullable Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
+		@Nullable HostsFileEntriesResolver hostsFileEntriesResolver;
+		@Nullable DnsQueryLifecycleObserverFactory loggingFactory;
+		@Nullable LoopResources loopResources;
 		int maxPayloadSize = DEFAULT_MAX_PAYLOAD_SIZE;
 		int maxQueriesPerResolve = DEFAULT_MAX_QUERIES_PER_RESOLVE;
 		int ndots = DEFAULT_NDOTS;
 		boolean preferNative = LoopResources.DEFAULT_NATIVE;
 		Duration queryTimeout = DEFAULT_QUERY_TIMEOUT;
-		DnsCache resolveCache;
-		ResolvedAddressTypes resolvedAddressTypes;
+		@Nullable DnsCache resolveCache;
+		@Nullable ResolvedAddressTypes resolvedAddressTypes;
 		boolean retryTcpOnTimeout;
 		boolean roundRobinSelection;
-		Iterable<String> searchDomains;
+		@Nullable Iterable<String> searchDomains;
 
 		@Override
 		public NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier) {

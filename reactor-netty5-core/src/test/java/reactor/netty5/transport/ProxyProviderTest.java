@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,13 +132,17 @@ class ProxyProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void nonProxyHosts_null_1() {
+		// Deliberately suppress "NullAway" for testing purposes
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern(null);
 		assertThat(pred.test(someAddress("foo.com"))).as("Should proxy when nonProxyHosts is blanked out").isFalse();
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void nonProxyHosts_null_2() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThat(createNonProxyHostsProxy(null).nonProxyHostPredicate.test(someAddress(NON_PROXY_HOSTS)))
 				.as("Should proxy when nonProxyHosts is blanked out")
 				.isFalse();

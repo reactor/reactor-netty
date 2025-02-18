@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,8 +96,8 @@ public interface DisposableChannel extends Disposable {
 			onDispose().block(timeout);
 		}
 		catch (IllegalStateException e) {
-			if (e.getMessage()
-			     .contains("blocking read")) {
+			String message = e.getMessage();
+			if (message != null && message.contains("blocking read")) {
 				throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
 			}
 			throw e;

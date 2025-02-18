@@ -76,8 +76,9 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 
 		Mono<? extends Connection> mono = config.connectionProvider()
 		                                        .acquire(config, observer, config.remoteAddress, resolver);
-		if (config.doOnConnect != null) {
-			mono = mono.doOnSubscribe(s -> config.doOnConnect.accept(config));
+		Consumer<? super CONF> doOnConnect = config.doOnConnect;
+		if (doOnConnect != null) {
+			mono = mono.doOnSubscribe(s -> doOnConnect.accept(config));
 		}
 		return mono;
 	}
@@ -106,7 +107,8 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 			return Objects.requireNonNull(connect().block(timeout), "aborted");
 		}
 		catch (IllegalStateException e) {
-			if (e.getMessage().contains("blocking read")) {
+			String message = e.getMessage();
+			if (message != null && message.contains("blocking read")) {
 				throw new IllegalStateException(getClass().getSimpleName() + " couldn't be started within " + timeout.toMillis() + "ms");
 			}
 			throw e;

@@ -60,7 +60,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 	static final class ConnectMetricsHandler extends ChannelHandlerAdapter {
 
-		final SocketAddress proxyAddress;
+		final @Nullable SocketAddress proxyAddress;
 		final ChannelMetricsRecorder recorder;
 
 		ConnectMetricsHandler(ChannelMetricsRecorder recorder, @Nullable SocketAddress proxyAddress) {
@@ -94,9 +94,9 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 	static class TlsMetricsHandler extends ChannelHandlerAdapter {
 
-		protected final SocketAddress proxyAddress;
+		protected final @Nullable SocketAddress proxyAddress;
 		protected final ChannelMetricsRecorder recorder;
-		protected final SocketAddress remoteAddress;
+		protected final @Nullable SocketAddress remoteAddress;
 
 		boolean listenerAdded;
 

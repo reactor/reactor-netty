@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import reactor.netty5.resources.ConnectionProvider;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.function.Consumer;
 
 /**
  * Provides the actual {@link UdpServer} instance.
@@ -55,8 +56,9 @@ final class UdpServerBind extends UdpServer {
 
 		Mono<? extends Connection> mono = ConnectionProvider.newConnection()
 		                                                    .acquire(conf, observer, null, null);
-		if (conf.doOnBind() != null) {
-			mono = mono.doOnSubscribe(s -> conf.doOnBind().accept(conf));
+		Consumer<? super UdpServerConfig> doOnBind = conf.doOnBind();
+		if (doOnBind != null) {
+			mono = mono.doOnSubscribe(s -> doOnBind.accept(conf));
 		}
 		return mono;
 	}

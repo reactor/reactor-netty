@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -301,8 +301,10 @@ class DefaultPooledConnectionProviderTest {
 			assertThat(onNext).isEqualTo(1);
 			assertThat(onError).isEqualTo(4);
 
-			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
-			assertThat(pool.get().metrics().idleSize()).as("currently idle").isEqualTo(0);
+			InstrumentedPool<PooledConnection> instrumentedPool = pool.get();
+			assertThat(instrumentedPool).isNotNull();
+			assertThat(instrumentedPool.metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
+			assertThat(instrumentedPool.metrics().idleSize()).as("currently idle").isEqualTo(0);
 		}
 		finally {
 			server.disposeNow();
@@ -377,8 +379,10 @@ class DefaultPooledConnectionProviderTest {
 			assertThat(onErrorTimeout).isEqualTo(1);
 			assertThat(onErrorPendingAcquire).isEqualTo(1);
 
-			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
-			assertThat(pool.get().metrics().idleSize()).as("currently idle").isEqualTo(0);
+			InstrumentedPool<PooledConnection> instrumentedPool = pool.get();
+			assertThat(instrumentedPool).isNotNull();
+			assertThat(instrumentedPool.metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
+			assertThat(instrumentedPool.metrics().idleSize()).as("currently idle").isEqualTo(0);
 		}
 		finally {
 			server.disposeNow();
@@ -418,6 +422,7 @@ class DefaultPooledConnectionProviderTest {
 		try {
 			conn = pool.acquire(config, observer, remoteAddress, config.resolverInternal())
 			           .block(Duration.ofSeconds(5));
+			assertThat(conn).isNotNull();
 			assertThat(((InetSocketAddress) conn.address()).getHostString()).isEqualTo("example.com");
 		}
 		finally {
@@ -449,6 +454,7 @@ class DefaultPooledConnectionProviderTest {
 		try {
 			conn = pool.acquire(config, observer, remoteAddress, config.resolverInternal())
 			           .block(Duration.ofSeconds(5));
+			assertThat(conn).isNotNull();
 			assertThat(((InetSocketAddress) conn.address()).getHostString()).isEqualTo("example.com");
 		}
 		finally {
@@ -574,7 +580,9 @@ class DefaultPooledConnectionProviderTest {
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Mono<Integer> warmup() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -584,7 +592,9 @@ class DefaultPooledConnectionProviderTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Mono<PooledRef<PooledConnection>> acquire(Duration timeout) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -604,7 +614,9 @@ class DefaultPooledConnectionProviderTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public PoolMetrics metrics() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 	}
@@ -612,12 +624,16 @@ class DefaultPooledConnectionProviderTest {
 	static final class PoolConfigImpl implements PoolConfig<PooledConnection> {
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Mono<PooledConnection> allocator() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public AllocationStrategy allocationStrategy() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -627,32 +643,44 @@ class DefaultPooledConnectionProviderTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Function<PooledConnection, ? extends Publisher<Void>> releaseHandler() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Function<PooledConnection, ? extends Publisher<Void>> destroyHandler() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public BiPredicate<PooledConnection, PooledRefMetadata> evictionPredicate() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Scheduler acquisitionScheduler() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public PoolMetricsRecorder metricsRecorder() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Clock clock() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -676,7 +704,9 @@ class DefaultPooledConnectionProviderTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected LoggingHandler defaultLoggingHandler() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -686,7 +716,9 @@ class DefaultPooledConnectionProviderTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 

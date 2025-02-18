@@ -131,11 +131,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	ConnectionObserver        listener;
 	final Sinks.Empty<Void>   onTerminate;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	volatile Subscription outboundSubscription;
 
 	boolean localActive;
-	String longId;
-	String shortId;
+	@Nullable String longId;
+	@Nullable String shortId;
 
 	protected ChannelOperations(ChannelOperations<INBOUND, OUTBOUND> replaced) {
 		this.connection = replaced.connection;

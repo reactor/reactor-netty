@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.DefaultAddressResolverGroup;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -596,7 +597,7 @@ public class TcpClientTests {
 
 		private final    int                 port;
 		private final    ServerSocketChannel server;
-		private volatile Thread              thread;
+		private volatile @Nullable Thread    thread;
 
 		public EchoServer(int port) {
 			super(1);
@@ -991,9 +992,9 @@ public class TcpClientTests {
 		Buffer b2 = preferredAllocator().copyOf(bytes);
 		Buffer b3 = preferredAllocator().copyOf(bytes);
 
-		WeakReference<Buffer> refCheck1 = new WeakReference<>(b1);
-		WeakReference<Buffer> refCheck2 = new WeakReference<>(b2);
-		WeakReference<Buffer> refCheck3 = new WeakReference<>(b3);
+		WeakReference<@Nullable Buffer> refCheck1 = new WeakReference<>(b1);
+		WeakReference<@Nullable Buffer> refCheck2 = new WeakReference<>(b2);
+		WeakReference<@Nullable Buffer> refCheck3 = new WeakReference<>(b3);
 
 		Connection conn =
 				TcpClient.create()
@@ -1031,7 +1032,7 @@ public class TcpClientTests {
 		conn.disposeNow();
 	}
 
-	private void checkReference(WeakReference<Buffer> ref) throws Exception {
+	private void checkReference(WeakReference<@Nullable Buffer> ref) throws Exception {
 		for (int i = 0; i < 10; i++) {
 			if (ref.get() == null) {
 				return;
@@ -1072,18 +1073,18 @@ public class TcpClientTests {
 
 			newClient = client.runOn(loop1);
 
-			assertThat(newClient.configuration().resolver()).isNotNull();
-			newClient.configuration()
-			         .resolver()
-			         .getResolver(loop2.next())
-			         .resolve(new InetSocketAddress("example.com", 443))
-			         .addListener(f -> assertThat(Thread.currentThread().getName()).startsWith("test-"));
+			AddressResolverGroup<?> addressResolverGroup = newClient.configuration().resolver();
+			assertThat(addressResolverGroup).isNotNull();
+			addressResolverGroup.getResolver(loop2.next())
+			                    .resolve(new InetSocketAddress("example.com", 443))
+			                    .addListener(f -> assertThat(Thread.currentThread().getName()).startsWith("test-"));
 		}
 		finally {
-			if (newClient != null && newClient.configuration().resolver() != null) {
-				newClient.configuration()
-				         .resolver()
-				         .close();
+			if (newClient != null) {
+				AddressResolverGroup<?> addressResolverGroup = newClient.configuration().resolver();
+				if (addressResolverGroup != null) {
+					addressResolverGroup.close();
+				}
 			}
 			loop1.disposeLater()
 			     .block(Duration.ofSeconds(10));
@@ -1101,37 +1102,44 @@ public class TcpClientTests {
 		TcpClient client = TcpClient.create();
 
 		try {
-			assertThat(client.configuration().loopResources()).isSameAs(TcpResources.get());
-			assertThat(client.configuration().resolver()).isNull();
-			assertThat(client.configuration().getNameResolverProvider()).isNull();
+			TcpClientConfig configuration1 = client.configuration();
+			assertThat(configuration1.loopResources()).isSameAs(TcpResources.get());
+			assertThat(configuration1.resolver()).isNull();
+			assertThat(configuration1.getNameResolverProvider()).isNull();
 
 			client = client.runOn(loop1);
 
-			assertThat(client.configuration().loopResources()).isSameAs(loop1);
-			AddressResolverGroup<?> resolver1 = client.configuration().resolver();
-			NameResolverProvider nameResolverProvider1 = client.configuration().getNameResolverProvider();
+			TcpClientConfig configuration2 = client.configuration();
+			assertThat(configuration2.loopResources()).isSameAs(loop1);
+			AddressResolverGroup<?> resolver1 = configuration2.resolver();
+			NameResolverProvider nameResolverProvider1 = configuration2.getNameResolverProvider();
 			assertThat(resolver1).isNotNull();
 			assertThat(nameResolverProvider1).isNotNull();
 			resolver1.close();
 
 			client = client.runOn(loop2);
 
-			assertThat(client.configuration().loopResources()).isSameAs(loop2);
-			AddressResolverGroup<?> resolver2 = client.configuration().resolver();
-			NameResolverProvider nameResolverProvider2 = client.configuration().getNameResolverProvider();
+			TcpClientConfig configuration3 = client.configuration();
+			assertThat(configuration3.loopResources()).isSameAs(loop2);
+			AddressResolverGroup<?> resolver2 = configuration3.resolver();
+			NameResolverProvider nameResolverProvider2 = configuration3.getNameResolverProvider();
 			assertThat(resolver2).isNotNull().isNotSameAs(resolver1);
 			assertThat(nameResolverProvider2).isNotNull().isSameAs(nameResolverProvider1);
 			resolver2.close();
 
 			client = client.resolver(DefaultAddressResolverGroup.INSTANCE);
-			assertThat(client.configuration().loopResources()).isSameAs(loop2);
-			assertThat(client.configuration().resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
-			assertThat(client.configuration().getNameResolverProvider()).isNull();
+
+			TcpClientConfig configuration4 = client.configuration();
+			assertThat(configuration4.loopResources()).isSameAs(loop2);
+			assertThat(configuration4.resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(configuration4.getNameResolverProvider()).isNull();
 
 			client = client.runOn(loop3);
-			assertThat(client.configuration().loopResources()).isSameAs(loop3);
-			assertThat(client.configuration().resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
-			assertThat(client.configuration().getNameResolverProvider()).isNull();
+
+			TcpClientConfig configuration5 = client.configuration();
+			assertThat(configuration5.loopResources()).isSameAs(loop3);
+			assertThat(configuration5.resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(configuration5.getNameResolverProvider()).isNull();
 		}
 		finally {
 			loop1.disposeLater()
@@ -1171,7 +1179,7 @@ public class TcpClientTests {
 				         .bindNow(Duration.ofSeconds(30));
 
 		LoopResources loop = LoopResources.create("doTestSharedNameResolver", 4, true);
-		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		AtomicReference<List<@Nullable AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
 		try {
 			int count = 8;
 			CountDownLatch latch = new CountDownLatch(count);
@@ -1220,7 +1228,7 @@ public class TcpClientTests {
 				         .handle((req, res) -> res.sendString(Mono.just("noSystemProxySettings")))
 				         .bindNow();
 
-		AtomicReference<AddressResolverGroup<?>> resolver = new AtomicReference<>();
+		AtomicReference<@Nullable AddressResolverGroup<?>> resolver = new AtomicReference<>();
 		Connection conn = null;
 		try {
 			conn = TcpClient.create()

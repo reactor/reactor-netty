@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.resolver.AddressResolverGroup;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -71,8 +72,8 @@ class TcpResourcesTest {
 			@Override
 			public Mono<? extends Connection> acquire(TransportConfig config,
 					ConnectionObserver observer,
-					Supplier<? extends SocketAddress> remoteAddress,
-					AddressResolverGroup<?> resolverGroup) {
+					@Nullable Supplier<? extends SocketAddress> remoteAddress,
+					@Nullable AddressResolverGroup<?> resolverGroup) {
 				return Mono.never();
 			}
 
@@ -96,6 +97,7 @@ class TcpResourcesTest {
 		TcpResources newTcpResources = TcpResources.tcpResources.get();
 
 		try {
+			assertThat(newTcpResources).isNotNull();
 			assertThat(newTcpResources).isSameAs(tcpResources);
 
 			TcpResources.disposeLoopsAndConnectionsLater();
@@ -161,6 +163,7 @@ class TcpResourcesTest {
 		TcpResources.get();
 
 		TcpResources old = TcpResources.tcpResources.get();
+		assertThat(old).isNotNull();
 
 		LoopResources loops = LoopResources.create("testIssue1227");
 		TcpResources.set(loops);
@@ -169,6 +172,7 @@ class TcpResourcesTest {
 		assertThat(old.isDisposed()).isTrue();
 
 		TcpResources current = TcpResources.tcpResources.get();
+		assertThat(current).isNotNull();
 		TcpResources.disposeLoopsAndConnectionsLater()
 		            .block(Duration.ofSeconds(5));
 		assertThat(current.isDisposed()).isTrue();

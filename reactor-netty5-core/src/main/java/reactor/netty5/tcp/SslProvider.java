@@ -273,15 +273,15 @@ public final class SslProvider {
 		SslContext sslContext() throws SSLException;
 	}
 
-	final SslContext                   sslContext;
-	final long                         handshakeTimeoutMillis;
-	final long                         closeNotifyFlushTimeoutMillis;
-	final long                         closeNotifyReadTimeoutMillis;
-	final Consumer<? super SslHandler> handlerConfigurator;
-	final int                          builderHashCode;
-	final SniProvider                  sniProvider;
-	final Map<String, SslProvider>     confPerDomainName;
-	final AsyncMapping<String, SslProvider> sniMappings;
+	final SslContext                                  sslContext;
+	final long                                        handshakeTimeoutMillis;
+	final long                                        closeNotifyFlushTimeoutMillis;
+	final long                                        closeNotifyReadTimeoutMillis;
+	final @Nullable Consumer<? super SslHandler>      handlerConfigurator;
+	final int                                         builderHashCode;
+	final @Nullable SniProvider                       sniProvider;
+	final Map<String, SslProvider>                    confPerDomainName;
+	final @Nullable AsyncMapping<String, SslProvider> sniMappings;
 
 	SslProvider(SslProvider.Build builder) {
 		if (builder.sslContext == null) {
@@ -459,15 +459,15 @@ public final class SslProvider {
 						ReactorNetty.SSL_HANDSHAKE_TIMEOUT,
 						"10000"));
 
-		ProtocolSslContextSpec protocolSslContextSpec;
-		SslContext sslContext;
-		Consumer<? super SslHandler> handlerConfigurator;
+		@Nullable ProtocolSslContextSpec protocolSslContextSpec;
+		@Nullable SslContext sslContext;
+		@Nullable Consumer<? super SslHandler> handlerConfigurator;
 		long handshakeTimeoutMillis = DEFAULT_SSL_HANDSHAKE_TIMEOUT;
 		long closeNotifyFlushTimeoutMillis = 3000L;
 		long closeNotifyReadTimeoutMillis;
-		List<SNIServerName> serverNames;
+		@Nullable List<SNIServerName> serverNames;
 		final Map<String, SslProvider> confPerDomainName = new HashMap<>();
-		AsyncMapping<String, SslProvider> sniMappings;
+		@Nullable AsyncMapping<String, SslProvider> sniMappings;
 
 		// SslContextSpec
 

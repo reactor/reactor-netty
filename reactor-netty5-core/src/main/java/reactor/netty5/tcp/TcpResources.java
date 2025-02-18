@@ -146,7 +146,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 
 	final LoopResources                            defaultLoops;
 	final ConnectionProvider                       defaultProvider;
-	final AtomicReference<AddressResolverGroup<?>> defaultResolver;
+	final AtomicReference<@Nullable AddressResolverGroup<?>> defaultResolver;
 
 	protected TcpResources(LoopResources defaultLoops, ConnectionProvider defaultProvider) {
 		this.defaultLoops = defaultLoops;
@@ -355,7 +355,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 * @param <T> the reified type of {@link TcpResources}
 	 * @return an existing or new {@link TcpResources}
 	 */
-	protected static <T extends TcpResources> T getOrCreate(AtomicReference<T> ref,
+	protected static <T extends TcpResources> T getOrCreate(AtomicReference<@Nullable T> ref,
 			@Nullable LoopResources loops,
 			@Nullable ConnectionProvider provider,
 			BiFunction<LoopResources, ConnectionProvider, T> onNew,
@@ -426,7 +426,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 
 	static final BiFunction<LoopResources, ConnectionProvider, TcpResources> ON_TCP_NEW;
 
-	static final AtomicReference<TcpResources>                               tcpResources;
+	static final AtomicReference<@Nullable TcpResources>                     tcpResources;
 
 	static {
 		DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();

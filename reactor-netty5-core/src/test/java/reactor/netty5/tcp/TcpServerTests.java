@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.concurrent.EventExecutor;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -541,7 +542,9 @@ class TcpServerTests {
 		assertThat(t.isAlive()).isTrue();
 
 		//check that stopping the bnc stops the server
-		conn.get().disposeNow();
+		DisposableServer actual = conn.get();
+		assertThat(actual).isNotNull();
+		actual.disposeNow();
 		t.join();
 		assertThat(t.isAlive()).isFalse();
 	}
@@ -1049,8 +1052,8 @@ class TcpServerTests {
 		private final int port;
 		private final CountDownLatch latch;
 		private final String output;
-		private ByteBuffer data;
-		private Exception e;
+		private @Nullable ByteBuffer data;
+		private @Nullable Exception e;
 
 		SimpleClient(int port, CountDownLatch latch, String output) {
 			this.port = port;

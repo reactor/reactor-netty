@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -204,8 +204,10 @@ class AddressUtilsTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void createInetSocketAddressBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
+				// Deliberately suppress "NullAway" for testing purposes
 				.isThrownBy(() -> AddressUtils.createInetSocketAddress(null, 0, true))
 				.withMessage("hostname");
 
@@ -215,8 +217,10 @@ class AddressUtilsTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void createResolvedBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
+				// Deliberately suppress "NullAway" for testing purposes
 				.isThrownBy(() -> AddressUtils.createResolved(null, 0))
 				.withMessage("hostname");
 
@@ -226,8 +230,10 @@ class AddressUtilsTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void createUnresolvedBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
+				// Deliberately suppress "NullAway" for testing purposes
 				.isThrownBy(() -> AddressUtils.createUnresolved(null, 0))
 				.withMessage("hostname");
 
@@ -237,22 +243,28 @@ class AddressUtilsTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void replaceUnresolvedNumericIpBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
+				// Deliberately suppress "NullAway" for testing purposes
 				.isThrownBy(() -> AddressUtils.replaceUnresolvedNumericIp(null))
 				.withMessage("inetSocketAddress");
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void replaceWithResolvedBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
+				// Deliberately suppress "NullAway" for testing purposes
 				.isThrownBy(() -> AddressUtils.replaceWithResolved(null))
 				.withMessage("inetSocketAddress");
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void updateHostBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
+				// Deliberately suppress "NullAway" for testing purposes
 				.isThrownBy(() -> AddressUtils.updateHost(null, null))
 				.withMessage("hostname");
 	}
@@ -265,8 +277,10 @@ class AddressUtilsTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void parseAddressBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
+				// Deliberately suppress "NullAway" for testing purposes
 				.isThrownBy(() -> AddressUtils.parseAddress(null, 0))
 				.withMessage("address");
 

@@ -127,7 +127,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	final LoopResources                            defaultLoops;
-	final AtomicReference<AddressResolverGroup<?>> defaultResolver;
+	final AtomicReference<@Nullable AddressResolverGroup<?>> defaultResolver;
 
 	protected UdpResources(LoopResources defaultLoops) {
 		this.defaultLoops = defaultLoops;
@@ -330,7 +330,7 @@ public class UdpResources implements LoopResources {
 
 	static final Function<LoopResources, UdpResources> ON_UDP_NEW;
 
-	static final AtomicReference<UdpResources>         udpResources;
+	static final AtomicReference<@Nullable UdpResources> udpResources;
 
 	static {
 		DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();

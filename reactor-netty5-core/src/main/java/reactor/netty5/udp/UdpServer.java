@@ -117,7 +117,8 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 			return Objects.requireNonNull(bind().block(timeout), "aborted");
 		}
 		catch (IllegalStateException e) {
-			if (e.getMessage().contains("blocking read")) {
+			String message = e.getMessage();
+			if (message != null && message.contains("blocking read")) {
 				throw new IllegalStateException("UdpServer couldn't be started within " + timeout.toMillis() + "ms");
 			}
 			throw e;

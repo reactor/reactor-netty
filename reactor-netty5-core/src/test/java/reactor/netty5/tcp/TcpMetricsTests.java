@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,9 +69,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 class TcpMetricsTests {
 	TcpServer tcpServer;
-	DisposableServer disposableServer;
+	@Nullable DisposableServer disposableServer;
 	TcpClient tcpClient;
-	Connection connection;
+	@Nullable Connection connection;
 	private ConnectionProvider provider;
 	MeterRegistry registry;
 

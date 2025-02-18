@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.socket.DatagramPacket;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,9 +59,9 @@ import static reactor.netty5.micrometer.TimerAssert.assertTimer;
  */
 class UdpMetricsTests {
 	private UdpServer udpServer;
-	private Connection serverConnection;
+	private @Nullable Connection serverConnection;
 	private UdpClient udpClient;
-	private Connection clientConnection;
+	private @Nullable Connection clientConnection;
 	private MeterRegistry registry;
 
 	@BeforeEach

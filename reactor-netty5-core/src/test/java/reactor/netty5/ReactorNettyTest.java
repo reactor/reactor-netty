@@ -112,8 +112,8 @@ class ReactorNettyTest {
 
 	static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
 
-		final SocketAddress localAddress;
-		final SocketAddress remoteAddress;
+		final @Nullable SocketAddress localAddress;
+		final @Nullable SocketAddress remoteAddress;
 
 		boolean active;
 
@@ -132,12 +132,16 @@ class ReactorNettyTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAwat")
 		protected SocketAddress localAddress0() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return localAddress;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected SocketAddress remoteAddress0() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return remoteAddress;
 		}
 
@@ -181,7 +185,9 @@ class ReactorNettyTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected IoHandle ioHandle() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 

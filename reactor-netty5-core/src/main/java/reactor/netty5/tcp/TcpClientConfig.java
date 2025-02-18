@@ -81,7 +81,7 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 
 	// Protected/Package private write API
 
-	SslProvider sslProvider;
+	@Nullable SslProvider sslProvider;
 
 	TcpClientConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 	                Supplier<? extends SocketAddress> remoteAddress) {

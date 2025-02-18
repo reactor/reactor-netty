@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ class TransportTest {
 	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, BufferFormat expectedFormat) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
+		assertThat(loggingHandler).isNotNull();
 		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
 		assertThat(loggingHandler.bufferFormat()).isSameAs(expectedFormat);
 	}
@@ -75,7 +76,7 @@ class TransportTest {
 	private void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
-		assertThat(loggingHandler).hasFieldOrProperty("charset");
+		assertThat(loggingHandler).isNotNull().hasFieldOrProperty("charset");
 		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
 	}
 
@@ -114,12 +115,16 @@ class TransportTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected Class<? extends Channel> channelType() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected ConnectionObserver defaultConnectionObserver() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -129,22 +134,30 @@ class TransportTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected LoopResources defaultLoopResources() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected ChannelPipelineConfigurer defaultOnChannelInit() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected EventLoopGroup eventLoopGroup() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 

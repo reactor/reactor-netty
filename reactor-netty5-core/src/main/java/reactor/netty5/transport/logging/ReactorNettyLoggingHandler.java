@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import reactor.netty5.ChannelOperationsId;
 import reactor.netty5.Connection;
+import org.jspecify.annotations.Nullable;
 
 import static io.netty5.util.internal.StringUtil.NEWLINE;
 import static java.util.Objects.requireNonNull;
@@ -50,7 +51,7 @@ import static reactor.netty5.transport.logging.AdvancedBufferFormat.TEXTUAL;
 final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	private final AdvancedBufferFormat bufferFormat;
-	private final Charset charset;
+	private final @Nullable Charset charset;
 	private final String name;
 
 	/**

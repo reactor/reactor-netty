@@ -89,14 +89,14 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		static final String CONTEXTUAL_NAME = "connect";
 		static final String TYPE = "client";
 
-		final String proxyAddress;
+		final @Nullable String proxyAddress;
 		final MicrometerChannelMetricsRecorder recorder;
 
 		// remote address and status are not known beforehand
-		String netPeerName;
-		String netPeerPort;
+		@Nullable String netPeerName;
+		@Nullable String netPeerPort;
 		String status = UNKNOWN;
-		ContextView parentContextView;
+		@Nullable ContextView parentContextView;
 
 		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder, @Nullable SocketAddress proxyAddress) {
 			this.proxyAddress = formatSocketAddress(proxyAddress);
@@ -170,19 +170,18 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		static final String TYPE_CLIENT = "client";
 		static final String TYPE_SERVER = "server";
 
-		final String proxyAddress;
+		final @Nullable String proxyAddress;
 		final MicrometerChannelMetricsRecorder recorder;
-		final SocketAddress remoteAddress;
+		final @Nullable SocketAddress remoteAddress;
 		final String type;
 
 		boolean listenerAdded;
-		Observation observation;
 
 		// remote address and status are not known beforehand
-		String netPeerName;
-		String netPeerPort;
+		@Nullable String netPeerName;
+		@Nullable String netPeerPort;
 		String status = UNKNOWN;
-		ContextView parentContextView;
+		@Nullable ContextView parentContextView;
 
 		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer,
 				@Nullable SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress) {
@@ -254,7 +253,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 						this.netPeerName = rAddr.toString();
 						this.netPeerPort = "";
 					}
-					observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
+					Observation observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
 					parentContextView = updateChannelContext(ctx.channel(), observation);
 					observation.start();
 					sslHandler.handshakeFuture()
