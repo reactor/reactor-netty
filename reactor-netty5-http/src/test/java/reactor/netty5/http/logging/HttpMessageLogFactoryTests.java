@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -407,28 +407,38 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 	static final class TestHttpMessageLogFactory implements HttpMessageLogFactory {
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public String trace(HttpMessageArgProvider arg) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public String debug(HttpMessageArgProvider arg) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return arg.httpMessageType() == HttpMessageType.RESPONSE ?
 					arg.protocol() + " " + arg.status() : null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public String info(HttpMessageArgProvider arg) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public String warn(HttpMessageArgProvider arg) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public String error(HttpMessageArgProvider arg) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return arg.httpMessageType() == HttpMessageType.RESPONSE ?
 					arg.protocol() + " " + arg.status() + NEWLINE + arg.decoderResult().cause() :
 					null;

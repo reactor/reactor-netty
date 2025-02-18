@@ -523,7 +523,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		final Mono<Void> source;
 		final HttpOperations<?, ?> parent;
-		final Buffer msg;
+		final @Nullable Buffer msg;
 
 		public PostHeadersNettyOutbound(Mono<Void> source, HttpOperations<?, ?> parent, @Nullable Buffer msg) {
 			this.msg = msg;

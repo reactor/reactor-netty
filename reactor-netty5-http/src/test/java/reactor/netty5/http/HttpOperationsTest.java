@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -182,6 +182,9 @@ class HttpOperationsTest {
 	}
 
 	static final class TestHttpInfos implements HttpInfos {
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
 		String uri;
 
 		@Override
@@ -195,7 +198,9 @@ class HttpOperationsTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public HttpMethod method() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -210,12 +215,16 @@ class HttpOperationsTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public String uri() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public HttpVersion version() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 	}

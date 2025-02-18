@@ -92,7 +92,7 @@ class HttpResourcesTest {
 		HttpResources newHttpResources = HttpResources.httpResources.get();
 
 		try {
-			assertThat(newHttpResources).isSameAs(testResources);
+			assertThat(newHttpResources).isNotNull().isSameAs(testResources);
 
 			HttpResources.disposeLoopsAndConnectionsLater();
 			assertThat(newHttpResources.isDisposed()).isFalse();
@@ -114,6 +114,7 @@ class HttpResourcesTest {
 		HttpResources.get();
 
 		HttpResources old = HttpResources.httpResources.get();
+		assertThat(old).isNotNull();
 
 		LoopResources loops = LoopResources.create("testIssue1227");
 		HttpResources.set(loops);
@@ -122,6 +123,7 @@ class HttpResourcesTest {
 		assertThat(old.isDisposed()).isTrue();
 
 		HttpResources current = HttpResources.httpResources.get();
+		assertThat(current).isNotNull();
 		HttpResources.disposeLoopsAndConnectionsLater()
 		             .block(Duration.ofSeconds(5));
 		assertThat(current.isDisposed()).isTrue();

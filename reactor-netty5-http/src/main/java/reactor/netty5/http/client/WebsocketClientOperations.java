@@ -106,6 +106,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			started = true;
@@ -128,6 +129,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 					}
 				}
 				else {
+					// Deliberately suppress "NullAway"
+					// redirecting is initialized in notRedirected(response)
 					listener().onUncaughtException(this, redirecting);
 				}
 			}

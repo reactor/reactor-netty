@@ -47,6 +47,7 @@ import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -634,7 +635,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		int port2 = SocketUtils.findAvailableTcpPort();
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
-		AtomicReference<Throwable> bufferReleasedError = new AtomicReference<>();
+		AtomicReference<@Nullable Throwable> bufferReleasedError = new AtomicReference<>();
 		DisposableServer server1 = null;
 		DisposableServer server2 = null;
 		Sinks.Empty<Void> bufferReleased = Sinks.empty();

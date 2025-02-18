@@ -440,9 +440,9 @@ class WebsocketTest extends BaseHttpTest {
 
 	@Test
 	void sendToWebsocketSubprotocol() throws InterruptedException {
-		AtomicReference<String> serverSelectedProtocol = new AtomicReference<>();
-		AtomicReference<String> clientSelectedProtocol = new AtomicReference<>();
-		AtomicReference<String> clientSelectedProtocolWhenSimplyUpgrading = new AtomicReference<>();
+		AtomicReference<@Nullable String> serverSelectedProtocol = new AtomicReference<>();
+		AtomicReference<@Nullable String> clientSelectedProtocol = new AtomicReference<>();
+		AtomicReference<@Nullable String> clientSelectedProtocolWhenSimplyUpgrading = new AtomicReference<>();
 		CountDownLatch latch = new CountDownLatch(1);
 
 		disposableServer = createServer()
@@ -1330,6 +1330,7 @@ class WebsocketTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void websocketOperationsBadValues() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations parent = new HttpClientOperations(Connection.from(channel),
@@ -1341,9 +1342,11 @@ class WebsocketTest extends BaseHttpTest {
 				.isThrownBy(() -> ops.aggregateFrames(-1))
 				.withMessageEndingWith("-1 (expected: >= 0)");
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> ops.send(null));
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> ops.sendString(null, Charset.defaultCharset()));
 	}

@@ -18,6 +18,7 @@ package reactor.netty5.http.server.compression;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.CompressionOptions;
 import io.netty5.handler.codec.compression.Zstd;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,11 +32,11 @@ import java.util.List;
  */
 public final class HttpCompressionOptionsSpec {
 
-	private BrotliOption brotli;
+	private @Nullable BrotliOption brotli;
 	private DeflateOption deflate;
 	private GzipOption gzip;
 	private SnappyOption snappy;
-	private ZstdOption zstd;
+	private @Nullable ZstdOption zstd;
 
 	private HttpCompressionOptionsSpec() {
 		gzip = GzipOption.provideDefault();

@@ -118,30 +118,30 @@ import static reactor.netty5.http.server.HttpTrafficHandler.H2;
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse, FutureContextListener<Channel, Void> {
 
-	final HttpCompressionOptionsSpec compressionOptions;
-	final BiPredicate<HttpServerRequest, HttpServerResponse> configuredCompressionPredicate;
+	final @Nullable HttpCompressionOptionsSpec compressionOptions;
+	final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> configuredCompressionPredicate;
 	final ConnectionInfo connectionInfo;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
 	final boolean is100ContinueExpected;
 	final boolean isHttp2;
-	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
+	final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 	final HttpRequest nettyRequest;
 	final HttpResponse nettyResponse;
-	final Duration readTimeout;
-	final Duration requestTimeout;
+	final @Nullable Duration readTimeout;
+	final @Nullable Duration requestTimeout;
 	final HttpHeaders responseHeaders;
 	final String scheme;
 	final ZonedDateTime timestamp;
 	final boolean validateHeaders;
 
-	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+	@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	boolean isWebsocket;
-	Function<? super String, Map<String, String>> paramsResolver;
-	String path;
-	Future<Void> requestTimeoutFuture;
-	Consumer<? super HttpHeaders> trailerHeadersConsumer;
-	FullHttpResponse fullHttpResponse;
+	@Nullable Function<? super String, Map<String, String>> paramsResolver;
+	@Nullable String path;
+	@Nullable Future<Void> requestTimeoutFuture;
+	@Nullable Consumer<? super HttpHeaders> trailerHeadersConsumer;
+	@Nullable FullHttpResponse fullHttpResponse;
 
 	volatile Context currentContext;
 
@@ -390,7 +390,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> paramsResolver) {
+	public HttpServerRequest paramsResolver(@Nullable Function<? super String, Map<String, String>> paramsResolver) {
 		this.paramsResolver = paramsResolver;
 		return this;
 	}

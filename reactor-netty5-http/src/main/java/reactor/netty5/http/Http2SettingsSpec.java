@@ -200,13 +200,13 @@ public final class Http2SettingsSpec {
 		return result;
 	}
 
-	final Long headerTableSize;
-	final Integer initialWindowSize;
-	final Long maxConcurrentStreams;
-	final Integer maxFrameSize;
+	final @Nullable Long headerTableSize;
+	final @Nullable Integer initialWindowSize;
+	final @Nullable Long maxConcurrentStreams;
+	final @Nullable Integer maxFrameSize;
 	final Long maxHeaderListSize;
-	final Long maxStreams;
-	final Boolean pushEnabled;
+	final @Nullable Long maxStreams;
+	final @Nullable Boolean pushEnabled;
 
 	Http2SettingsSpec(Build build) {
 		Http2Settings settings = build.http2Settings;
@@ -226,7 +226,7 @@ public final class Http2SettingsSpec {
 	}
 
 	static final class Build implements Builder {
-		Long maxStreams;
+		@Nullable Long maxStreams;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
 
 		@Override

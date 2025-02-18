@@ -71,9 +71,9 @@ final class HttpConnectionProvider implements ConnectionProvider {
 		return http1ConnectionProvider().maxConnectionsPerHost();
 	}
 
-	final ConnectionProvider http1ConnectionProvider;
+	final @Nullable ConnectionProvider http1ConnectionProvider;
 
-	final AtomicReference<ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
+	final AtomicReference<@Nullable ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
 
 	HttpConnectionProvider() {
 		this(null);
@@ -83,6 +83,9 @@ final class HttpConnectionProvider implements ConnectionProvider {
 		this.http1ConnectionProvider = http1ConnectionProvider;
 	}
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This method is only when http1ConnectionProvider != null
 	ConnectionProvider getOrCreate() {
 		ConnectionProvider provider = h2ConnectionProvider.get();
 		if (provider == null) {

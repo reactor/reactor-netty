@@ -330,7 +330,8 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				      .asString();
 
 		StepVerifier.create(response)
-		            .expectErrorMatches(t -> t.getClass().isAssignableFrom(expectedExc) && t.getMessage().startsWith(expectedMsg))
+		            .expectErrorMatches(t -> t.getClass().isAssignableFrom(expectedExc) &&
+		                    t.getMessage() != null && t.getMessage().startsWith(expectedMsg))
 		            .verify(Duration.ofSeconds(30));
 	}
 
@@ -395,6 +396,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+			assertThat(sa).isNotNull();
 			String address = sa.getHostString() + ":" + sa.getPort();
 
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
@@ -559,6 +561,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+			assertThat(sa).isNotNull();
 			String address = sa.getHostString() + ":" + sa.getPort();
 
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
@@ -638,6 +641,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+			assertThat(sa).isNotNull();
 			String address = sa.getHostString() + ":" + sa.getPort();
 
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
@@ -728,6 +732,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			    .verify(Duration.ofSeconds(5));
 
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+			assertThat(sa).isNotNull();
 			String address = sa.getHostString() + ":" + sa.getPort();
 
 			assertThat(provider.channelPools.size()).isEqualTo(1);

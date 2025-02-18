@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static reactor.netty5.ReactorNetty.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link ChannelDuplexHandler} for handling {@link HttpServer} metrics.
@@ -60,7 +61,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	boolean channelActivated;
 	boolean channelOpened;
 
-	ContextView contextView;
+	@Nullable ContextView contextView;
 
 	long dataReceived;
 	long dataReceivedTime;
@@ -72,13 +73,13 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 
 	boolean isHttp11;
 
-	String method;
-	String path;
-	SocketAddress remoteSocketAddress;
-	String status;
+	@Nullable String method;
+	@Nullable String path;
+	@Nullable SocketAddress remoteSocketAddress;
+	@Nullable String status;
 
 	final Function<String, String> methodTagValue;
-	final Function<String, String> uriTagValue;
+	final @Nullable Function<String, String> uriTagValue;
 
 	protected AbstractHttpServerMetricsHandler(
 			@Nullable Function<String, String> methodTagValue,
@@ -314,24 +315,25 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	protected void recordException() {
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().incrementErrorsCount(remoteSocketAddress, path);
+		recorder().incrementErrorsCount(requireNonNull(remoteSocketAddress), requireNonNull(path));
 	}
 
 	protected void recordRead() {
-		recorder().recordDataReceivedTime(path, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+		recorder().recordDataReceivedTime(requireNonNull(path), requireNonNull(method), Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().recordDataReceived(remoteSocketAddress, path, dataReceived);
+		recorder().recordDataReceived(requireNonNull(remoteSocketAddress), path, dataReceived);
 	}
 
 	protected void recordWrite(Channel channel) {
-		recordWrite(dataReceivedTime, dataSent, dataSentTime, method, path, remoteSocketAddress, status);
+		recordWrite(dataReceivedTime, dataSent, dataSentTime, requireNonNull(method), requireNonNull(path), requireNonNull(remoteSocketAddress), requireNonNull(status));
 	}
 
 	protected void recordWrite(Channel channel, MetricsArgProvider metricsArgProvider) {
 		recordWrite(metricsArgProvider.dataReceivedTime, metricsArgProvider.dataSent, metricsArgProvider.dataSentTime,
-				metricsArgProvider.method, metricsArgProvider.path, metricsArgProvider.remoteSocketAddress, metricsArgProvider.status);
+				requireNonNull(metricsArgProvider.method), requireNonNull(metricsArgProvider.path),
+				requireNonNull(metricsArgProvider.remoteSocketAddress), requireNonNull(metricsArgProvider.status));
 	}
 
 	void recordWrite(
@@ -444,25 +446,25 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	static final Function<String, String> DEFAULT_METHOD_TAG_VALUE = m -> STANDARD_METHODS.contains(m) ? m : UNKNOWN_METHOD;
 
 	static class MetricsArgProvider {
-		final ContextView contextView;
+		final @Nullable ContextView contextView;
 		final long dataReceivedTime;
 		final long dataSent;
 		final long dataSentTime;
 		final Map<Object, Object> map = new HashMap<>();
-		final String method;
-		final String path;
-		final SocketAddress remoteSocketAddress;
-		final String status;
+		final @Nullable String method;
+		final @Nullable String path;
+		final @Nullable SocketAddress remoteSocketAddress;
+		final @Nullable String status;
 
 		MetricsArgProvider(
-				ContextView contextView,
+				@Nullable ContextView contextView,
 				long dataReceivedTime,
 				long dataSent,
 				long dataSentTime,
-				String method,
-				String path,
-				SocketAddress remoteSocketAddress,
-				String status) {
+				@Nullable String method,
+				@Nullable String path,
+				@Nullable SocketAddress remoteSocketAddress,
+				@Nullable String status) {
 			this.contextView = contextView;
 			this.dataReceivedTime = dataReceivedTime;
 			this.dataSent = dataSent;

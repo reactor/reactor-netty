@@ -37,7 +37,7 @@ import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
 final class SimpleCompressionHandler extends HttpContentCompressor {
 
 	boolean decoded;
-	HttpRequest request;
+	@Nullable HttpRequest request;
 
 	private SimpleCompressionHandler() {
 		super((CompressionOptions[]) null);
@@ -54,12 +54,15 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof Buffer buffer) {
 			return super.write(ctx, new DefaultHttpContent(buffer));
 		}
 		if (!decoded && msg instanceof HttpResponse) {
 			try {
+				// Deliberately suppress "NullAway"
+				// This is a lazy initialization
 				decode(ctx, request, false);
 			}
 			catch (Exception e) {

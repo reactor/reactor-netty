@@ -113,7 +113,7 @@ public final class HttpServerFormDecoderProvider {
 		Builder streaming(boolean enable);
 	}
 
-	final Path baseDirectory;
+	final @Nullable Path baseDirectory;
 	final Charset charset;
 	final long maxInMemorySize;
 	final long maxSize;
@@ -288,7 +288,7 @@ public final class HttpServerFormDecoderProvider {
 		static final Scheduler DEFAULT_SCHEDULER = Schedulers.boundedElastic();
 		static final boolean DEFAULT_STREAMING = false;
 
-		Path baseDirectory;
+		@Nullable Path baseDirectory;
 		Charset charset = DEFAULT_CHARSET;
 		long maxInMemorySize = DEFAULT_MAX_IN_MEMORY_SIZE;
 		long maxSize = DEFAULT_MAX_SIZE;

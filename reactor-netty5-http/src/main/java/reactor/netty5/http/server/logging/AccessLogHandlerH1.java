@@ -41,9 +41,12 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
 			System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false"));
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	AccessLogArgProviderH1 accessLogArgProvider;
 
-	AccessLogHandlerH1(@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+	AccessLogHandlerH1(@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog) {
 		super(accessLog);
 	}
 

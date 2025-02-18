@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -292,7 +293,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	private void doTestAbsoluteAndRelativeLocationRedirection(
 			HttpClient client, String uri, String expectedResponse, boolean expectRedirect, String... expectedResourceUrl) {
 		AtomicBoolean redirected = new AtomicBoolean();
-		AtomicReference<List<String>> resourceUrls = new AtomicReference<>(new ArrayList<>());
+		AtomicReference<List<@Nullable String>> resourceUrls = new AtomicReference<>(new ArrayList<>());
 		client.doOnRequest((req, conn) -> resourceUrls.get().add(req.resourceUrl()))
 		      .doOnRedirect((res, conn) -> redirected.set(true))
 		      .followRedirect(true)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,8 +78,10 @@ class AccessLogArgProviderH1Tests {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void request() {
 		assertThat(accessLogArgProvider.request).isNull();
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatNullPointerException().isThrownBy(() -> accessLogArgProvider.request(null));
 		accessLogArgProvider.request(request);
 		assertThat(accessLogArgProvider.request).isEqualTo(request);
@@ -107,7 +109,9 @@ class AccessLogArgProviderH1Tests {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void requestHeader() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatNullPointerException().isThrownBy(() -> accessLogArgProvider.requestHeader(null));
 		assertThat(accessLogArgProvider.requestHeader(HEADER_CONNECTION_NAME)).isNull();
 		accessLogArgProvider.request(request);

@@ -113,23 +113,23 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final boolean                isHttp2;
 	final Sinks.One<HttpHeaders> trailerHeaders;
 
-	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
-	String                      resourceUrl;
-	String                      path;
-	Duration                    responseTimeout;
+	Supplier<String>[]           redirectedFrom = EMPTY_REDIRECTIONS;
+	@Nullable String             resourceUrl;
+	@Nullable String             path;
+	@Nullable Duration           responseTimeout;
 
-	volatile ResponseState responseState;
+	volatile @Nullable ResponseState responseState;
 
 	boolean started;
 	boolean retrying;
 	boolean is100Continue;
-	RedirectClientException redirecting;
+	@Nullable RedirectClientException redirecting;
 
-	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
-	Consumer<HttpClientRequest> redirectRequestConsumer;
-	HttpHeaders previousRequestHeaders;
-	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
-	volatile Throwable unprocessedOutboundError;
+	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
+	@Nullable Consumer<HttpClientRequest> redirectRequestConsumer;
+	@Nullable HttpHeaders previousRequestHeaders;
+	@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
+	volatile @Nullable Throwable unprocessedOutboundError;
 
 	static final String INBOUND_CANCEL_LOG = "Http client inbound receiver cancelled, closing channel.";
 
@@ -258,7 +258,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return Collections.emptyMap();
 	}
 
-	void followRedirectPredicate(BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
+	void followRedirectPredicate(@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
 		this.followRedirectPredicate = predicate;
 	}
 
@@ -514,7 +514,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public String resourceUrl() {
+	public @Nullable String resourceUrl() {
 		return resourceUrl;
 	}
 
@@ -813,7 +813,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return nettyRequest;
 	}
 
+	@SuppressWarnings("NullAway")
 	final boolean notRedirected(HttpResponse response) {
+		// Deliberately suppress "NullAway"
+		// followRedirectPredicate is checked for null in isFollowRedirect()
 		if (isFollowRedirect() && followRedirectPredicate.test(this, this)) {
 			try {
 				redirecting = new RedirectClientException(response.headers(), response.status());
@@ -943,7 +946,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 		final HttpClientOperations                                  parent;
 		final BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback;
-		final Consumer<Flux<Long>>                                  progressCallback;
+		final @Nullable Consumer<Flux<Long>>                        progressCallback;
 
 		SendForm(HttpClientOperations parent,
 				BiConsumer<? super HttpClientRequest, HttpClientForm>  formCallback,

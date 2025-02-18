@@ -114,9 +114,9 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	static final AtomicIntegerFieldUpdater<Http2Pool> ACQUIRED =
 			AtomicIntegerFieldUpdater.newUpdater(Http2Pool.class, "acquired");
 
-	volatile ConcurrentLinkedQueue<Slot> connections;
+	volatile @Nullable ConcurrentLinkedQueue<Slot> connections;
 	@SuppressWarnings("rawtypes")
-	static final AtomicReferenceFieldUpdater<Http2Pool, ConcurrentLinkedQueue> CONNECTIONS =
+	static final AtomicReferenceFieldUpdater<Http2Pool, @Nullable ConcurrentLinkedQueue> CONNECTIONS =
 			AtomicReferenceFieldUpdater.newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
 
 	volatile int idleSize;
@@ -159,7 +159,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 	long lastInteractionTimestamp;
 
-	Disposable evictionTask;
+	@Nullable Disposable evictionTask;
 
 	Http2Pool(PoolConfig<Connection> poolConfig, ConnectionProvider.@Nullable AllocationStrategy<?> allocationStrategy) {
 		this.clock = poolConfig.clock();
@@ -208,7 +208,9 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			@SuppressWarnings("unchecked")
 			ConcurrentLinkedDeque<Borrower> q = PENDING.getAndSet(this, TERMINATED);
 			if (q != TERMINATED) {
-				evictionTask.dispose();
+				if (evictionTask != null) {
+					evictionTask.dispose();
+				}
 
 				Borrower p;
 				while ((p = pollPending(q, true)) != null) {
@@ -931,14 +933,14 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		final Connection connection;
 		final long creationTimestamp;
 		final Http2Pool pool;
-		final String applicationProtocol;
+		final @Nullable String applicationProtocol;
 
 		long idleTimestamp;
 		long maxConcurrentStreams;
 
-		volatile ChannelHandlerContext http2FrameCodecCtx;
-		volatile ChannelHandlerContext http2MultiplexHandlerCtx;
-		volatile ChannelHandlerContext h2cUpgradeHandlerCtx;
+		volatile @Nullable ChannelHandlerContext http2FrameCodecCtx;
+		volatile @Nullable ChannelHandlerContext http2MultiplexHandlerCtx;
+		volatile @Nullable ChannelHandlerContext h2cUpgradeHandlerCtx;
 
 		Slot(Http2Pool pool, Connection connection) {
 			this.connection = connection;

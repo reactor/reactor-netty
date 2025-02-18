@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -185,9 +186,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection = acquired1.get(0).poolable();
@@ -200,13 +204,13 @@ class Http2PoolTest {
 			assertThat(latch.await(1, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
@@ -217,7 +221,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection = acquired2.get(0).poolable();
@@ -228,7 +232,7 @@ class Http2PoolTest {
 			channel.executor().execute(() -> acquired2.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -265,9 +269,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 
 			connection = acquired1.get(0).poolable();
@@ -280,7 +287,7 @@ class Http2PoolTest {
 			assertThat(latch.await(1, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 
 			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build(),
@@ -305,7 +312,7 @@ class Http2PoolTest {
 			((EmbeddedChannel) connection.channel()).runPendingTasks();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(3);
-			assertThat(http2Pool.connections.size()).isEqualTo(2);
+			assertThat(connections.size()).isEqualTo(2);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(2L * Integer.MAX_VALUE);
 
 			if (closeSecond) {
@@ -324,18 +331,18 @@ class Http2PoolTest {
 			acquired2.get(0).poolable().channel().executor().execute(() -> acquired2.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 
 			acquired3.get(0).poolable().channel().executor().execute(() -> acquired3.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			if (closeSecond) {
-				assertThat(http2Pool.connections.size()).isEqualTo(0);
+				assertThat(connections.size()).isEqualTo(0);
 				assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 			}
 			else {
-				assertThat(http2Pool.connections.size()).isEqualTo(1);
+				assertThat(connections.size()).isEqualTo(1);
 				assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 			}
 		}
@@ -362,9 +369,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection = acquired1.get(0).poolable();
@@ -376,7 +386,7 @@ class Http2PoolTest {
 			assertThat(latch.await(1, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			http2Pool.acquire(Duration.ofMillis(10))
@@ -385,13 +395,13 @@ class Http2PoolTest {
 			         .verify(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -419,9 +429,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection = acquired1.get(0).poolable();
@@ -434,7 +447,7 @@ class Http2PoolTest {
 			assertThat(latch.await(1, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
@@ -442,7 +455,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
@@ -453,7 +466,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection = acquired2.get(0).poolable();
@@ -466,7 +479,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -496,9 +509,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection1 = acquired1.get(0).poolable();
@@ -511,7 +527,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
@@ -522,7 +538,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection2 = acquired2.get(0).poolable();
@@ -537,7 +553,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -571,9 +587,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection1 = acquired1.get(0).poolable();
@@ -582,7 +601,7 @@ class Http2PoolTest {
 			Thread.sleep(10);
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
@@ -590,7 +609,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
@@ -601,7 +620,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection2 = acquired2.get(0).poolable();
@@ -616,7 +635,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -651,9 +670,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection1 = acquired1.get(0).poolable();
@@ -662,7 +684,7 @@ class Http2PoolTest {
 			shouldEvict.set(true);
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
@@ -670,7 +692,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			shouldEvict.set(false);
@@ -683,7 +705,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection2 = acquired2.get(0).poolable();
@@ -698,7 +720,7 @@ class Http2PoolTest {
 			http2Pool.evictInBackground();
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -731,9 +753,13 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection1 = acquired1.get(0).poolable();
@@ -751,7 +777,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection2 = acquired2.get(0).poolable();
@@ -762,7 +788,7 @@ class Http2PoolTest {
 			channel.executor().execute(() -> acquired2.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -800,9 +826,12 @@ class Http2PoolTest {
 
 			channel.runPendingTasks();
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired).hasSize(2);
 			assertThat(http2Pool.activeStreams()).isEqualTo(2);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 
 			connection1 = acquired.get(0).poolable();
@@ -813,7 +842,7 @@ class Http2PoolTest {
 			Thread.sleep(15);
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 
 			connection2 = acquired.get(1).poolable();
@@ -824,7 +853,7 @@ class Http2PoolTest {
 			channel.executor().execute(() -> acquired.get(1).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 		}
 		finally {
@@ -854,12 +883,16 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
+
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection1 = acquired1.get(0).poolable();
@@ -868,13 +901,13 @@ class Http2PoolTest {
 			Thread.sleep(10);
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
@@ -885,7 +918,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection2 = acquired2.get(0).poolable();
@@ -896,7 +929,7 @@ class Http2PoolTest {
 			channel.executor().execute(() -> acquired2.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -930,9 +963,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection1 = acquired1.get(0).poolable();
@@ -941,13 +977,13 @@ class Http2PoolTest {
 			shouldEvict.set(true);
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			shouldEvict.set(false);
@@ -960,7 +996,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection2 = acquired2.get(0).poolable();
@@ -971,7 +1007,7 @@ class Http2PoolTest {
 			channel.executor().execute(() -> acquired2.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -1004,9 +1040,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection1 = acquired1.get(0).poolable();
@@ -1015,7 +1054,7 @@ class Http2PoolTest {
 			Thread.sleep(50);
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
@@ -1026,7 +1065,7 @@ class Http2PoolTest {
 
 			assertThat(acquired2).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(2);
-			assertThat(http2Pool.connections.size()).isEqualTo(2);
+			assertThat(connections.size()).isEqualTo(2);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection2 = acquired2.get(0).poolable();
@@ -1038,7 +1077,7 @@ class Http2PoolTest {
 			acquired2.get(0).poolable().channel().executor().execute(() -> acquired2.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -1093,9 +1132,12 @@ class Http2PoolTest {
 			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
 			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(acquired1).hasSize(1);
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			connection = acquired1.get(0).poolable();
@@ -1103,7 +1145,7 @@ class Http2PoolTest {
 			Thread.sleep(10);
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			http2Pool.acquire(Duration.ofMillis(10))
@@ -1112,13 +1154,13 @@ class Http2PoolTest {
 			         .verify(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
-			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
 			channel.executor().execute(() -> acquired1.get(0).invalidate().block(Duration.ofSeconds(1)));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {
@@ -1260,8 +1302,11 @@ class Http2PoolTest {
 
 			channel.executor().execute(() -> acquired.get(0).invalidate().block(Duration.ofSeconds(1)));
 
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
-			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 		}
 		finally {

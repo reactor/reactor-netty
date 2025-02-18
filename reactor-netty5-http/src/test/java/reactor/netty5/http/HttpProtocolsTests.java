@@ -45,6 +45,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.concurrent.DefaultPromise;
 import io.netty5.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -65,6 +66,7 @@ import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.http.client.HttpClientConfig;
 import reactor.netty5.http.client.HttpClientResponse;
 import reactor.netty5.http.client.PrematureCloseException;
+import reactor.netty5.http.server.ConnectionInformation;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.http.server.HttpServerConfig;
 import reactor.netty5.http.server.HttpServerRequest;
@@ -424,7 +426,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	@ParameterizedCompatibleCombinationsTest
 	void testAccessLogWithForwardedHeader(HttpServer server, HttpClient client) throws Exception {
-		Function<SocketAddress, String> applyAddress = addr ->
+		Function<@Nullable SocketAddress, String> applyAddress = addr ->
 				addr instanceof InetSocketAddress ? ((InetSocketAddress) addr).getHostString() : "-";
 
 		disposableServer =
@@ -436,11 +438,16 @@ class HttpProtocolsTests extends BaseHttpTest {
 				          return resp.send();
 				      })
 				      .forwarded(true)
-				      .accessLog(true, args -> AccessLog.create(
-				          "{} {} {}",
-				          applyAddress.apply(args.connectionInformation().remoteAddress()),
-				          applyAddress.apply(args.connectionInformation().hostAddress()),
-				          args.connectionInformation().scheme()))
+				      .accessLog(true, args -> {
+				          ConnectionInformation connectionInformation = args.connectionInformation();
+				          return connectionInformation != null ?
+				                  AccessLog.create(
+				                          "{} {} {}",
+				                          applyAddress.apply(connectionInformation.remoteAddress()),
+				                          applyAddress.apply(connectionInformation.hostAddress()),
+				                          connectionInformation.scheme()) :
+				                  null;
+				      })
 				      .bindNow();
 
 		String expectedLogRecord = "192.0.2.60 203.0.113.43 http";
@@ -869,7 +876,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 				assertThat(signal.get()).isEqualTo("testProtocolVariationsRequestTimeout");
 			}
 			else if (signal.getThrowable() instanceof PrematureCloseException ||
-					signal.getThrowable().getMessage().contains("Connection reset by peer")) {
+					(signal.getThrowable() != null && signal.getThrowable().getMessage() != null &&
+							signal.getThrowable().getMessage().contains("Connection reset by peer"))) {
 				onError++;
 			}
 		}

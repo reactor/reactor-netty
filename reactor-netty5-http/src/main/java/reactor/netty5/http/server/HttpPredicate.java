@@ -194,10 +194,10 @@ final class HttpPredicate
 		return http(uri, null, HttpMethod.PUT);
 	}
 
-	final HttpVersion     protocol;
-	final HttpMethod      method;
-	final String          uri;
-	final UriPathTemplate template;
+	final @Nullable HttpVersion protocol;
+	final HttpMethod            method;
+	final String                uri;
+	final UriPathTemplate       template;
 
 	public HttpPredicate(String uri,
 			@Nullable HttpVersion protocol,
@@ -210,11 +210,7 @@ final class HttpPredicate
 
 	@Override
 	public Map<String, String> apply(Object key) {
-		Map<String, String> headers = template.match(key.toString());
-		if (null != headers && !headers.isEmpty()) {
-			return headers;
-		}
-		return null;
+		return template.match(key.toString());
 	}
 
 	@Override

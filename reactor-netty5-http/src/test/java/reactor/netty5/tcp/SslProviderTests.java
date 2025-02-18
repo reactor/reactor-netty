@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.concurrent.GlobalEventExecutor;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,7 +62,7 @@ class SslProviderTests extends BaseHttpTest {
 	static SelfSignedCertificate anotherCert;
 
 	private List<String> protocols;
-	private SslContext sslContext;
+	private @Nullable SslContext sslContext;
 	private HttpServer server;
 	private Http11SslContextSpec serverSslContextBuilder;
 	private Http2SslContextSpec serverSslContextBuilderH2;
@@ -256,24 +257,28 @@ class SslProviderTests extends BaseHttpTest {
 				           .addSniMapping("localhost", spec -> spec.sslContext(localhostSslContext));
 
 		SniProvider provider = builder.build().sniProvider;
+		assertThat(provider).isNotNull();
 		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
 				.isSameAs(localhostSslContext);
 
 		provider = builder.addSniMapping("localhost", spec -> spec.sslContext(anotherSslContext))
 		                  .build()
 		                  .sniProvider;
+		assertThat(provider).isNotNull();
 		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
 				.isSameAs(anotherSslContext);
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({"deprecation", "NullAway"})
 	void testAddBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
 						.addSniMapping(null, spec -> spec.sslContext(localhostSslContext)));
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
@@ -292,12 +297,14 @@ class SslProviderTests extends BaseHttpTest {
 				           .addSniMappings(map);
 
 		SniProvider provider = builder.build().sniProvider;
+		assertThat(provider).isNotNull();
 		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
 				.isSameAs(localhostSslContext);
 
 		map.put("another", spec -> spec.sslContext(anotherSslContext));
 
 		provider = builder.addSniMappings(map).build().sniProvider;
+		assertThat(provider).isNotNull();
 		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
 				.isSameAs(localhostSslContext);
 		assertThat(provider.mappings.map("another", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
@@ -305,8 +312,9 @@ class SslProviderTests extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({"deprecation", "NullAway"})
 	void testAddAllBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
@@ -325,6 +333,7 @@ class SslProviderTests extends BaseHttpTest {
 				           .setSniMappings(map);
 
 		SniProvider provider = builder.build().sniProvider;
+		assertThat(provider).isNotNull();
 		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
 				.isSameAs(localhostSslContext);
 
@@ -332,6 +341,7 @@ class SslProviderTests extends BaseHttpTest {
 		map.put("another", spec -> spec.sslContext(anotherSslContext));
 
 		provider = builder.setSniMappings(map).build().sniProvider;
+		assertThat(provider).isNotNull();
 		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
 				.isSameAs(defaultSslContext);
 		assertThat(provider.mappings.map("another", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
@@ -339,8 +349,9 @@ class SslProviderTests extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({"deprecation", "NullAway"})
 	void testSetAllBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
@@ -348,8 +359,9 @@ class SslProviderTests extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({"deprecation", "NullAway"})
 	void testSetSniAsyncMappingsBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
@@ -376,8 +388,10 @@ class SslProviderTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void testServerNamesBadValues() throws Exception {
 		SslContext defaultSslContext = clientSslContextBuilder.sslContext();
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(defaultSslContext)

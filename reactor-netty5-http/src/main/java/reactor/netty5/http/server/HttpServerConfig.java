@@ -263,28 +263,28 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	// Protected/Package private write API
 
 	boolean                                                 accessLogEnabled;
-	Function<AccessLogArgProvider, AccessLog>               accessLog;
-	HttpCompressionOptionsSpec                              compressionOptions;
-	BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
-	HttpRequestDecoderSpec                                  decoder;
-	HttpServerFormDecoderProvider                           formDecoderProvider;
-	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-	Http2SettingsSpec                                       http2Settings;
-	HttpMessageLogFactory                                   httpMessageLogFactory;
-	Duration                                                idleTimeout;
-	BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-	                                                        mapHandle;
-	int                                                     maxKeepAliveRequests;
-	Function<String, String>                                methodTagValue;
-	int                                                     minCompressionSize;
-	HttpProtocol[]                                          protocols;
-	int                                                     _protocols;
-	ProxyProtocolSupportType                                proxyProtocolSupportType;
-	Duration                                                readTimeout;
-	boolean                                                 redirectHttpToHttps;
-	Duration                                                requestTimeout;
-	SslProvider                                             sslProvider;
-	Function<String, String>                                uriTagValue;
+	@Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
+	@Nullable HttpCompressionOptionsSpec                              compressionOptions;
+	@Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+	HttpRequestDecoderSpec                                            decoder;
+	HttpServerFormDecoderProvider                                     formDecoderProvider;
+	@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	@Nullable Http2SettingsSpec                                       http2Settings;
+	HttpMessageLogFactory                                             httpMessageLogFactory;
+	@Nullable Duration                                                idleTimeout;
+	@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+	                                                                  mapHandle;
+	int                                                               maxKeepAliveRequests;
+	@Nullable Function<String, String>                                methodTagValue;
+	int                                                               minCompressionSize;
+	HttpProtocol[]                                                    protocols;
+	int                                                               _protocols;
+	ProxyProtocolSupportType                                          proxyProtocolSupportType;
+	@Nullable Duration                                                readTimeout;
+	boolean                                                           redirectHttpToHttps;
+	@Nullable Duration                                                requestTimeout;
+	@Nullable SslProvider                                             sslProvider;
+	@Nullable Function<String, String>                                uriTagValue;
 
 	HttpServerConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions, Supplier<? extends SocketAddress> localAddress) {
 		super(options, childOptions, localAddress);
@@ -411,7 +411,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static void addStreamHandlers(Channel ch,
 			boolean accessLogEnabled,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			HttpServerFormDecoderProvider formDecoderProvider,
@@ -521,7 +521,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static void configureH2Pipeline(ChannelPipeline p,
 			boolean accessLogEnabled,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			boolean enableGracefulShutdown,
@@ -587,7 +587,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static void configureHttp11OrH2CleartextPipeline(ChannelPipeline p,
 			boolean accessLogEnabled,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			HttpRequestDecoderSpec decoder,
@@ -673,7 +673,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static void configureHttp11Pipeline(ChannelPipeline p,
 			boolean accessLogEnabled,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			boolean channelOpened,
@@ -789,11 +789,19 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is invoked in AbstractChannelMetricsHandler.channelRegistered
+		// H2ChannelMetricsHandler extends AbstractChannelMetricsHandler and does nothing in channelRegistered
 		public ChannelHandler connectMetricsHandler() {
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is invoked in AbstractChannelMetricsHandler.channelRegistered
+		// H2ChannelMetricsHandler extends AbstractChannelMetricsHandler and does nothing in channelRegistered
 		public ChannelHandler tlsMetricsHandler() {
 			return null;
 		}
@@ -819,7 +827,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Http11OrH2CleartextCodec upgrader;
 		final boolean addHttp2FrameCodec;
 		final boolean removeMetricsHandler;
-		final Long maxStreams;
+		final @Nullable Long maxStreams;
 
 		/**
 		 * Used when full H2 preface is received.
@@ -899,27 +907,27 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class H2Codec extends ChannelInitializer<Channel> {
 
-		final boolean                                                 accessLogEnabled;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
-		final HttpCompressionOptionsSpec                              compressionOptions;
-		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
-		final HttpServerFormDecoderProvider                           formDecoderProvider;
-		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-		final HttpMessageLogFactory                                   httpMessageLogFactory;
-		final ConnectionObserver                                      listener;
-		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-		                                                              mapHandle;
-		final Function<String, String>                                methodTagValue;
-		final ChannelMetricsRecorder                                  metricsRecorder;
-		final int                                                     minCompressionSize;
-		final ChannelOperations.OnSetup                               opsFactory;
-		final Duration                                                readTimeout;
-		final Duration                                                requestTimeout;
-		final Function<String, String>                                uriTagValue;
+		final boolean                                                           accessLogEnabled;
+		final @Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
+		final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
+		final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final HttpServerFormDecoderProvider                                     formDecoderProvider;
+		final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final HttpMessageLogFactory                                             httpMessageLogFactory;
+		final ConnectionObserver                                                listener;
+		final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+		                                                                        mapHandle;
+		final @Nullable Function<String, String>                                methodTagValue;
+		final @Nullable ChannelMetricsRecorder                                  metricsRecorder;
+		final int                                                               minCompressionSize;
+		final ChannelOperations.OnSetup                                         opsFactory;
+		final @Nullable Duration                                                readTimeout;
+		final @Nullable Duration                                                requestTimeout;
+		final @Nullable Function<String, String>                                uriTagValue;
 
 		H2Codec(
 				boolean accessLogEnabled,
-				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+				@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 				@Nullable HttpCompressionOptionsSpec compressionOptions,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				HttpServerFormDecoderProvider formDecoderProvider,
@@ -964,29 +972,29 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static final class Http11OrH2CleartextCodec extends ChannelInitializer<Channel>
 			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
 
-		final boolean                                                 accessLogEnabled;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
-		final HttpCompressionOptionsSpec                              compressionOptions;
-		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
-		final HttpServerFormDecoderProvider                           formDecoderProvider;
-		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-		final Http2FrameCodecBuilder                                  http2FrameCodecBuilder;
-		final HttpMessageLogFactory                                   httpMessageLogFactory;
-		final ConnectionObserver                                      listener;
-		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-		                                                              mapHandle;
-		final Long                                                    maxStreams;
-		final Function<String, String>                                methodTagValue;
-		final ChannelMetricsRecorder                                  metricsRecorder;
-		final int                                                     minCompressionSize;
-		final ChannelOperations.OnSetup                               opsFactory;
-		final Duration                                                readTimeout;
-		final Duration                                                requestTimeout;
-		final Function<String, String>                                uriTagValue;
+		final boolean                                                           accessLogEnabled;
+		final @Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
+		final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
+		final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final HttpServerFormDecoderProvider                                     formDecoderProvider;
+		final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final Http2FrameCodecBuilder                                            http2FrameCodecBuilder;
+		final HttpMessageLogFactory                                             httpMessageLogFactory;
+		final ConnectionObserver                                                listener;
+		final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+		                                                                        mapHandle;
+		final @Nullable Long                                                    maxStreams;
+		final @Nullable Function<String, String>                                methodTagValue;
+		final @Nullable ChannelMetricsRecorder                                  metricsRecorder;
+		final int                                                               minCompressionSize;
+		final ChannelOperations.OnSetup                                         opsFactory;
+		final @Nullable Duration                                                readTimeout;
+		final @Nullable Duration                                                requestTimeout;
+		final @Nullable Function<String, String>                                uriTagValue;
 
 		Http11OrH2CleartextCodec(
 				boolean accessLogEnabled,
-				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+				@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 				@Nullable HttpCompressionOptionsSpec compressionOptions,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				boolean debug,
@@ -1091,29 +1099,29 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class H2OrHttp11Codec extends ApplicationProtocolNegotiationHandler {
 
-		final boolean                                                 accessLogEnabled;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
-		final HttpCompressionOptionsSpec                              compressionOptions;
-		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
-		final HttpRequestDecoderSpec                                  decoder;
-		final boolean                                                 enableGracefulShutdown;
-		final HttpServerFormDecoderProvider                           formDecoderProvider;
-		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-		final Http2SettingsSpec                                       http2SettingsSpec;
-		final HttpMessageLogFactory                                   httpMessageLogFactory;
-		final Duration                                                idleTimeout;
-		final ConnectionObserver                                      listener;
-		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-		                                                              mapHandle;
-		final int                                                     maxKeepAliveRequests;
-		final Function<String, String>                                methodTagValue;
-		final ChannelMetricsRecorder                                  metricsRecorder;
-		final int                                                     minCompressionSize;
-		final ChannelOperations.OnSetup                               opsFactory;
-		final Duration                                                readTimeout;
-		final Duration                                                requestTimeout;
-		final boolean                                                 supportOnlyHttp2;
-		final Function<String, String>                                uriTagValue;
+		final boolean                                                           accessLogEnabled;
+		final @Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
+		final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
+		final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final HttpRequestDecoderSpec                                            decoder;
+		final boolean                                                           enableGracefulShutdown;
+		final HttpServerFormDecoderProvider                                     formDecoderProvider;
+		final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final @Nullable Http2SettingsSpec                                       http2SettingsSpec;
+		final HttpMessageLogFactory                                             httpMessageLogFactory;
+		final @Nullable Duration                                                idleTimeout;
+		final ConnectionObserver                                                listener;
+		final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+		                                                                        mapHandle;
+		final int                                                               maxKeepAliveRequests;
+		final @Nullable Function<String, String>                                methodTagValue;
+		final @Nullable ChannelMetricsRecorder                                  metricsRecorder;
+		final int                                                               minCompressionSize;
+		final ChannelOperations.OnSetup                                         opsFactory;
+		final @Nullable Duration                                                readTimeout;
+		final @Nullable Duration                                                requestTimeout;
+		final boolean                                                           supportOnlyHttp2;
+		final @Nullable Function<String, String>                                uriTagValue;
 
 		H2OrHttp11Codec(HttpServerChannelInitializer initializer, ConnectionObserver listener) {
 			this(initializer, listener, false);
@@ -1178,31 +1186,31 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class HttpServerChannelInitializer implements ChannelPipelineConfigurer {
 
-		final boolean                                                 accessLogEnabled;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
-		final HttpCompressionOptionsSpec                              compressionOptions;
-		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
-		final HttpRequestDecoderSpec                                  decoder;
-		final boolean                                                 enableGracefulShutdown;
-		final HttpServerFormDecoderProvider                           formDecoderProvider;
-		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-		final Http2SettingsSpec                                       http2SettingsSpec;
-		final HttpMessageLogFactory                                   httpMessageLogFactory;
-		final Duration                                                idleTimeout;
-		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-		                                                              mapHandle;
-		final int                                                     maxKeepAliveRequests;
-		final Function<String, String>                                methodTagValue;
-		final ChannelMetricsRecorder                                  metricsRecorder;
-		final int                                                     minCompressionSize;
-		final ChannelOperations.OnSetup                               opsFactory;
-		final int                                                     protocols;
-		final ProxyProtocolSupportType                                proxyProtocolSupportType;
-		final boolean                                                 redirectHttpToHttps;
-		final SslProvider                                             sslProvider;
-		final Duration                                                readTimeout;
-		final Duration                                                requestTimeout;
-		final Function<String, String>                                uriTagValue;
+		final boolean                                                           accessLogEnabled;
+		final @Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
+		final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
+		final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final HttpRequestDecoderSpec                                            decoder;
+		final boolean                                                           enableGracefulShutdown;
+		final HttpServerFormDecoderProvider                                     formDecoderProvider;
+		final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final @Nullable Http2SettingsSpec                                       http2SettingsSpec;
+		final HttpMessageLogFactory                                             httpMessageLogFactory;
+		final @Nullable Duration                                                idleTimeout;
+		final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+		                                                                        mapHandle;
+		final int                                                               maxKeepAliveRequests;
+		final @Nullable Function<String, String>                                methodTagValue;
+		final @Nullable ChannelMetricsRecorder                                  metricsRecorder;
+		final int                                                               minCompressionSize;
+		final ChannelOperations.OnSetup                                         opsFactory;
+		final int                                                               protocols;
+		final ProxyProtocolSupportType                                          proxyProtocolSupportType;
+		final boolean                                                           redirectHttpToHttps;
+		final @Nullable SslProvider                                             sslProvider;
+		final @Nullable Duration                                                readTimeout;
+		final @Nullable Duration                                                requestTimeout;
+		final @Nullable Function<String, String>                                uriTagValue;
 
 		HttpServerChannelInitializer(HttpServerConfig config) {
 			this.accessLogEnabled = config.accessLogEnabled;
@@ -1400,11 +1408,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class ReactorNettyHttpServerUpgradeHandler extends HttpServerUpgradeHandler<DefaultHttpContent> {
 
-		final Duration readTimeout;
-		final Duration requestTimeout;
+		final @Nullable Duration readTimeout;
+		final @Nullable Duration requestTimeout;
 
 		boolean requestAvailable;
-		Future<Void> requestTimeoutFuture;
+		@Nullable Future<Void> requestTimeoutFuture;
 
 		ReactorNettyHttpServerUpgradeHandler(
 				SourceCodec sourceCodec,
