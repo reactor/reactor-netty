@@ -29,8 +29,8 @@ import java.util.Objects;
  */
 final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLogArgProviderH1> {
 
-	HttpServerRequest request;
-	HttpResponse response;
+	@Nullable HttpServerRequest request;
+	@Nullable HttpResponse response;
 
 	AccessLogArgProviderH1(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);

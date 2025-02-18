@@ -34,6 +34,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -46,16 +47,16 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	private static final Logger log = Loggers.getLogger(AbstractHttpClientMetricsHandler.class);
 
-	final SocketAddress proxyAddress;
+	final @Nullable SocketAddress proxyAddress;
 	final SocketAddress remoteAddress;
 
-	String path;
+	@Nullable String path;
 
-	String method;
+	@Nullable String method;
 
-	String status;
+	@Nullable String status;
 
-	ContextView contextView;
+	@Nullable ContextView contextView;
 
 
 	long dataReceived;
@@ -67,7 +68,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	long dataSentTime;
 
-	final Function<String, String> uriTagValue;
+	final @Nullable Function<String, String> uriTagValue;
 
 	int lastReadSeq;
 
@@ -219,7 +220,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	protected void recordRead(Channel channel, SocketAddress address) {
 		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(address, path, method, status,
+			recorder().recordDataReceivedTime(address, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder().recordResponseTime(address, path, method, status,
@@ -228,7 +229,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			recorder().recordDataReceived(address, path, dataReceived);
 		}
 		else {
-			recorder().recordDataReceivedTime(address, proxyAddress, path, method, status,
+			recorder().recordDataReceivedTime(address, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder().recordResponseTime(address, proxyAddress, path, method, status,
@@ -240,13 +241,13 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	protected void recordWrite(SocketAddress address) {
 		if (proxyAddress == null) {
-			recorder().recordDataSentTime(address, path, method,
+			recorder().recordDataSentTime(address, requireNonNull(path), requireNonNull(method),
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 			recorder().recordDataSent(address, path, dataSent);
 		}
 		else {
-			recorder().recordDataSentTime(address, proxyAddress, path, method,
+			recorder().recordDataSentTime(address, proxyAddress, requireNonNull(path), requireNonNull(method),
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 			recorder().recordDataSent(address, proxyAddress, path, dataSent);

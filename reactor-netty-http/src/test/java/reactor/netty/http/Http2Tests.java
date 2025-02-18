@@ -275,6 +275,7 @@ class Http2Tests extends BaseHttpTest {
 				onNext++;
 			}
 			else if (signal.getThrowable() instanceof PoolAcquireTimeoutException &&
+					signal.getThrowable().getMessage() != null &&
 					signal.getThrowable().getMessage().contains(msg)) {
 				onError++;
 			}

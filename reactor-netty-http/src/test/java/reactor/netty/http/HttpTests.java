@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -531,10 +531,10 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(serverRequestId.get());
 
 		int originalChannelIdPrefixLength = "[id: 0x".length();
-		assertThat(serverChannelId.get()).isNotNull();
+		String serverChId1 = serverChannelId.get();
+		assertThat(serverChId1).isNotNull();
 		assertThat(serverOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(serverChannelId.get()
-						.substring(originalChannelIdPrefixLength)
+				.isEqualTo(serverChId1.substring(originalChannelIdPrefixLength)
 						.replace(serverChannelShortId.get(), serverChannelShortId.get() + "-1"));
 
 		assertThat(clientChannelShortId.get()).isNotNull();
@@ -543,10 +543,10 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(clientChannelShortId.get() + "-1")
 				.isEqualTo(clientRequestId.get());
 
-		assertThat(clientChannelId.get()).isNotNull();
+		String clientChId1 = clientChannelId.get();
+		assertThat(clientChId1).isNotNull();
 		assertThat(clientOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(clientChannelId.get()
-						.substring(originalChannelIdPrefixLength)
+				.isEqualTo(clientChId1.substring(originalChannelIdPrefixLength)
 						.replace(clientChannelShortId.get(), clientChannelShortId.get() + "-1"));
 
 		client.get()
@@ -567,10 +567,10 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(serverChannelShortId.get() + "-2")
 				.isEqualTo(serverRequestId.get());
 
-		assertThat(serverChannelId.get()).isNotNull();
+		String serverChId2 = serverChannelId.get();
+		assertThat(serverChId2).isNotNull();
 		assertThat(serverOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(serverChannelId.get()
-						.substring(originalChannelIdPrefixLength)
+				.isEqualTo(serverChId2.substring(originalChannelIdPrefixLength)
 						.replace(serverChannelShortId.get(), serverChannelShortId.get() + "-2"));
 
 		assertThat(clientChannelShortId.get()).isNotNull();
@@ -579,10 +579,10 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(clientChannelShortId.get() + "-2")
 				.isEqualTo(clientRequestId.get());
 
-		assertThat(clientChannelId.get()).isNotNull();
+		String clientChId2 = clientChannelId.get();
+		assertThat(clientChId2).isNotNull();
 		assertThat(clientOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(clientChannelId.get()
-						.substring(originalChannelIdPrefixLength)
+				.isEqualTo(clientChId2.substring(originalChannelIdPrefixLength)
 						.replace(clientChannelShortId.get(), clientChannelShortId.get() + "-2"));
 	}
 }

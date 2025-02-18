@@ -96,6 +96,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Incubating;
 import reactor.util.context.Context;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.client.Http2ConnectionProvider.OWNER;
@@ -306,7 +307,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the configured request uri
 	 */
-	public String uri() {
+	public @Nullable String uri() {
 		return uri == null ? uriStr : uri.toString();
 	}
 
@@ -335,37 +336,37 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	boolean acceptBrotli;
 	boolean acceptGzip;
-	String baseUrl;
-	BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> body;
-	Function<? super Mono<? extends Connection>, ? extends Mono<? extends Connection>> connector;
+	@Nullable String baseUrl;
+	@Nullable BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> body;
+	@Nullable Function<? super Mono<? extends Connection>, ? extends Mono<? extends Connection>> connector;
 	ClientCookieDecoder cookieDecoder;
 	ClientCookieEncoder cookieEncoder;
 	HttpResponseDecoderSpec decoder;
-	Function<Mono<HttpClientConfig>, Mono<HttpClientConfig>> deferredConf;
-	BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest;
-	BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess;
-	BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect;
-	BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest;
-	BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError;
-	BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse;
-	BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError;
-	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
+	@Nullable Function<Mono<HttpClientConfig>, Mono<HttpClientConfig>> deferredConf;
+	@Nullable BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest;
+	@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess;
+	@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect;
+	@Nullable BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest;
+	@Nullable BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError;
+	@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse;
+	@Nullable BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError;
+	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	HttpHeaders headers;
-	Http2SettingsSpec http2Settings;
-	Http3SettingsSpec http3Settings;
+	@Nullable Http2SettingsSpec http2Settings;
+	@Nullable Http3SettingsSpec http3Settings;
 	HttpMessageLogFactory httpMessageLogFactory;
 	HttpMethod method;
 	HttpProtocol[] protocols;
 	int _protocols;
-	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
-	Consumer<HttpClientRequest> redirectRequestConsumer;
-	Duration responseTimeout;
+	@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
+	@Nullable Consumer<HttpClientRequest> redirectRequestConsumer;
+	@Nullable Duration responseTimeout;
 	boolean retryDisabled;
-	SslProvider sslProvider;
-	URI uri;
-	String uriStr;
-	Function<String, String> uriTagValue;
-	WebsocketClientSpec websocketClientSpec;
+	@Nullable SslProvider sslProvider;
+	@Nullable URI uri;
+	@Nullable String uriStr;
+	@Nullable Function<String, String> uriTagValue;
+	@Nullable WebsocketClientSpec websocketClientSpec;
 
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -850,11 +851,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		final boolean acceptGzip;
 		final Http2FrameCodec http2FrameCodec;
-		final ChannelMetricsRecorder metricsRecorder;
+		final @Nullable ChannelMetricsRecorder metricsRecorder;
 		final ChannelOperations.OnSetup opsFactory;
-		final SocketAddress proxyAddress;
+		final @Nullable SocketAddress proxyAddress;
 		final SocketAddress remoteAddress;
-		final Function<String, String> uriTagValue;
+		final @Nullable Function<String, String> uriTagValue;
 
 		H2CleartextCodec(
 				Http2FrameCodec http2FrameCodec,
@@ -909,14 +910,14 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static final class H2Codec extends ChannelInitializer<Channel> {
 
 		final boolean acceptGzip;
-		final ChannelMetricsRecorder metricsRecorder;
-		final ConnectionObserver observer;
+		final @Nullable ChannelMetricsRecorder metricsRecorder;
+		final @Nullable ConnectionObserver observer;
 		final ChannelOperations.OnSetup opsFactory;
-		final Http2ConnectionProvider.DisposableAcquire owner;
+		final Http2ConnectionProvider.@Nullable DisposableAcquire owner;
 		final long responseTimeoutMillis;
-		final SocketAddress proxyAddress;
+		final @Nullable SocketAddress proxyAddress;
 		final SocketAddress remoteAddress;
-		final Function<String, String> uriTagValue;
+		final @Nullable Function<String, String> uriTagValue;
 
 		H2Codec(
 				Http2ConnectionProvider.@Nullable DisposableAcquire owner,
@@ -987,11 +988,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
 		final Http2Settings                              http2Settings;
-		final ChannelMetricsRecorder                     metricsRecorder;
+		final @Nullable ChannelMetricsRecorder           metricsRecorder;
 		final ConnectionObserver                         observer;
-		final SocketAddress                              proxyAddress;
+		final @Nullable SocketAddress                    proxyAddress;
 		final SocketAddress                              remoteAddress;
-		final Function<String, String>                   uriTagValue;
+		final @Nullable Function<String, String>         uriTagValue;
 
 		H2OrHttp11Codec(HttpClientChannelInitializer initializer, ConnectionObserver observer, SocketAddress remoteAddress) {
 			this.acceptGzip = initializer.acceptGzip;
@@ -1039,12 +1040,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
 		final Http2Settings                              http2Settings;
-		final ChannelMetricsRecorder                     metricsRecorder;
+		final @Nullable ChannelMetricsRecorder           metricsRecorder;
 		final ChannelOperations.OnSetup                  opsFactory;
 		final int                                        protocols;
-		final SocketAddress                              proxyAddress;
-		final SslProvider                                sslProvider;
-		final Function<String, String>                   uriTagValue;
+		final @Nullable SocketAddress                    proxyAddress;
+		final @Nullable SslProvider                      sslProvider;
+		final @Nullable Function<String, String>         uriTagValue;
 
 		HttpClientChannelInitializer(HttpClientConfig config) {
 			this.acceptGzip = config.acceptGzip;
@@ -1068,10 +1069,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()
 					       .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2OrHttp11Codec,
-					               new H2OrHttp11Codec(this, observer, remoteAddress));
+					               new H2OrHttp11Codec(this, observer, requireNonNull(remoteAddress)));
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, requireNonNull(remoteAddress), uriTagValue);
 				}
 				else if ((protocols & h2) == h2) {
 					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
@@ -1085,7 +1086,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp11OrH2CleartextPipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, metricsRecorder, observer, opsFactory, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, requireNonNull(remoteAddress), uriTagValue);
 				}
 				else if ((protocols & h2c) == h2c) {
 					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
@@ -1096,13 +1097,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	static final class HttpClientDoOn implements ConnectionObserver {
 
-		final BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest;
-		final BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess;
-		final BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect;
-		final BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest;
-		final BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError;
-		final BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse;
-		final BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError;
+		final @Nullable BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest;
+		final @Nullable BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess;
+		final @Nullable BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect;
+		final @Nullable BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest;
+		final @Nullable BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError;
+		final @Nullable BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse;
+		final @Nullable BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError;
 
 		HttpClientDoOn(@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> doAfterRequest,
 				@Nullable BiConsumer<? super HttpClientResponse,  ? super Connection> doAfterResponseSuccess,

@@ -72,7 +72,7 @@ final class Http3Pool extends Http2Pool {
 	}
 
 	static final class Slot extends Http2Pool.Slot {
-		volatile ChannelHandlerContext http3ClientConnectionHandlerCtx;
+		volatile @Nullable ChannelHandlerContext http3ClientConnectionHandlerCtx;
 
 		Slot(Http2Pool pool, Connection connection) {
 			super(pool, connection);

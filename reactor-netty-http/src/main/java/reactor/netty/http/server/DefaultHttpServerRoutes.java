@@ -47,7 +47,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	private final List<HttpRouteHandler> initialOrderHandlers = new ArrayList<>();
 
-	private Comparator<HttpRouteHandlerMetadata> comparator;
+	private @Nullable Comparator<HttpRouteHandlerMetadata> comparator;
 
 	@Override
 	public HttpServerRoutes directory(String uri, Path directory,
@@ -159,11 +159,11 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		final Predicate<? super HttpServerRequest> condition;
 		final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
 				handler;
-		final Function<? super String, Map<String, String>> resolver;
+		final @Nullable Function<? super String, Map<String, String>> resolver;
 
-		final String path;
+		final @Nullable String path;
 
-		final HttpMethod method;
+		final @Nullable HttpMethod method;
 
 		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
 				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,

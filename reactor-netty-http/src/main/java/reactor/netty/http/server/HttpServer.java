@@ -263,7 +263,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * with the {@link AccessLogFactory} interface instead. This method will be removed in version 1.2.0.
 	 */
 	@Deprecated
-	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLogFactory) {
+	public final HttpServer accessLog(Function<AccessLogArgProvider, @Nullable AccessLog> accessLogFactory) {
 		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
 		HttpServer dup = duplicate();
 		dup.configuration().accessLog = accessLogFactory;

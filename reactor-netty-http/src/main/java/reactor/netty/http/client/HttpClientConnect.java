@@ -115,14 +115,16 @@ class HttpClientConnect extends HttpClient {
 			mono = new MonoHttpConnect(config);
 		}
 
-		if (config.doOnConnect() != null) {
-			mono = mono.doOnSubscribe(s -> config.doOnConnect().accept(config));
+		Consumer<? super HttpClientConfig> doOnConnect = config.doOnConnect();
+		if (doOnConnect != null) {
+			mono = mono.doOnSubscribe(s -> doOnConnect.accept(config));
 		}
 
-		if (config.doOnRequestError != null) {
+		BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError = config.doOnRequestError;
+		if (doOnRequestError != null) {
 			mono = mono.onErrorResume(error ->
 					Mono.deferContextual(Mono::just)
-					    .doOnNext(ctx -> config.doOnRequestError.accept(new FailedHttpClientRequest(ctx, config), error))
+					    .doOnNext(ctx -> doOnRequestError.accept(new FailedHttpClientRequest(ctx, config), error))
 					    .then(Mono.error(error)));
 		}
 
@@ -462,30 +464,30 @@ class HttpClientConnect extends HttpClient {
 	static final class HttpClientHandler extends SocketAddress
 			implements Predicate<Throwable>, Supplier<SocketAddress> {
 
-		volatile HttpMethod           method;
-		final HttpHeaders             defaultHeaders;
-		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
-		                              handler;
-		final boolean                 compress;
-		final UriEndpointFactory      uriEndpointFactory;
-		final WebsocketClientSpec     websocketClientSpec;
-		final BiPredicate<HttpClientRequest, HttpClientResponse>
-		                              followRedirectPredicate;
-		final BiConsumer<HttpHeaders, HttpClientRequest>
-		                              redirectRequestBiConsumer;
-		final Consumer<HttpClientRequest>
-		                              redirectRequestConsumer;
-		final HttpResponseDecoderSpec decoder;
-		final Duration                responseTimeout;
+		volatile HttpMethod                     method;
+		final HttpHeaders                       defaultHeaders;
+		final @Nullable BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
+		                                        handler;
+		final boolean                           compress;
+		final UriEndpointFactory                uriEndpointFactory;
+		final @Nullable WebsocketClientSpec     websocketClientSpec;
+		final @Nullable BiPredicate<HttpClientRequest, HttpClientResponse>
+		                                        followRedirectPredicate;
+		final @Nullable BiConsumer<HttpHeaders, HttpClientRequest>
+		                                        redirectRequestBiConsumer;
+		final @Nullable Consumer<HttpClientRequest>
+		                                        redirectRequestConsumer;
+		final HttpResponseDecoderSpec           decoder;
+		final @Nullable Duration                responseTimeout;
 
-		ProxyProvider                 proxyProvider;
+		@Nullable ProxyProvider                 proxyProvider;
 
-		volatile UriEndpoint        toURI;
-		volatile String             resourceUrl;
-		volatile UriEndpoint        fromURI;
-		volatile Supplier<String>[] redirectedFrom;
-		volatile boolean            shouldRetry;
-		volatile HttpHeaders        previousRequestHeaders;
+		volatile UriEndpoint                    toURI;
+		volatile String                         resourceUrl;
+		volatile @Nullable UriEndpoint          fromURI;
+		volatile Supplier<String> @Nullable []  redirectedFrom;
+		volatile boolean                        shouldRetry;
+		volatile @Nullable HttpHeaders          previousRequestHeaders;
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;

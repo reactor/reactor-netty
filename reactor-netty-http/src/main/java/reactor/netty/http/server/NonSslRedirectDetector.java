@@ -41,7 +41,7 @@ final class NonSslRedirectDetector extends ByteToMessageDecoder {
 	private static final int SSL_RECORD_HEADER_LENGTH = 5;
 
 	private final SslProvider sslProvider;
-	private final SocketAddress remoteAddress;
+	private final @Nullable SocketAddress remoteAddress;
 	private final boolean sslDebug;
 
 	public NonSslRedirectDetector(SslProvider sslProvider, @Nullable SocketAddress remoteAddress, boolean sslDebug) {

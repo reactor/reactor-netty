@@ -48,7 +48,7 @@ public enum AccessLogHandlerFactory {
 	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
 	 * @return the access log handler
 	 */
-	public ChannelHandler create(@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+	public ChannelHandler create(@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog) {
 		switch (this) {
 			case H3:
 				return new AccessLogHandlerH3(accessLog);

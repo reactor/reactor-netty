@@ -53,6 +53,7 @@ import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientResponse;
+import reactor.netty.http.server.ConnectionInformation;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -106,7 +107,7 @@ class Http3Tests {
 
 	static SelfSignedCertificate ssc;
 
-	DisposableServer disposableServer;
+	@Nullable DisposableServer disposableServer;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
@@ -256,7 +257,7 @@ class Http3Tests {
 
 	@Test
 	void testAccessLogWithForwardedHeader() throws Exception {
-		Function<SocketAddress, String> applyAddress = addr ->
+		Function<@Nullable SocketAddress, String> applyAddress = addr ->
 				addr instanceof InetSocketAddress ? ((InetSocketAddress) addr).getHostString() : "-";
 
 		disposableServer =
@@ -269,10 +270,14 @@ class Http3Tests {
 				            return resp.send();
 				        })
 				        .forwarded(true)
-				        .accessLog(true, args -> AccessLog.create(
-				            "{} {} {}",
-				            applyAddress.apply(args.connectionInformation().remoteAddress()),
-				            applyAddress.apply(args.connectionInformation().hostAddress()), args.connectionInformation().scheme()))
+				        .accessLog(true, args -> {
+				            ConnectionInformation connectionInformation = args.connectionInformation();
+				            return connectionInformation != null ?
+				                    AccessLog.create("{} {} {}",
+				                            applyAddress.apply(connectionInformation.remoteAddress()),
+				                            applyAddress.apply(connectionInformation.hostAddress()), connectionInformation.scheme()) :
+				                    null;
+				        })
 				        .bindNow();
 
 		String expectedLogRecord = "192.0.2.60 203.0.113.43 http";

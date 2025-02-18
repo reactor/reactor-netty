@@ -64,6 +64,7 @@ import java.util.Queue;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.getChannelContext;
 import static reactor.netty.ReactorNetty.setChannelContext;
@@ -101,6 +102,9 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This method is not used with HTTP/3
 	protected CoreSubscriber<PooledRef<Connection>> createDisposableAcquire(
 			TransportConfig config,
 			ConnectionObserver connectionObserver,
@@ -221,8 +225,8 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 		final Map<AttributeKey<?>, ?> attributes;
 		final Disposable.Composite cancellations;
 		final Context currentContext;
-		final LoggingHandler loggingHandler;
-		final ChannelMetricsRecorder metricsRecorder;
+		final @Nullable LoggingHandler loggingHandler;
+		final @Nullable ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
 		final ConnectionObserver obs;
@@ -230,12 +234,15 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 		final Map<ChannelOption<?>, ?> options;
 		final boolean retried;
 		final MonoSink<Connection> sink;
-		final Function<String, String> uriTagValue;
+		final @Nullable Function<String, String> uriTagValue;
 		final boolean validate;
 
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
 		PooledRef<Connection> pooledRef;
-		SocketAddress remoteAddress;
-		Subscription subscription;
+		@Nullable SocketAddress remoteAddress;
+		@Nullable Subscription subscription;
 
 		DisposableAcquire(
 				boolean acceptGzip,
@@ -310,6 +317,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public void onNext(PooledRef<Connection> pooledRef) {
 			this.pooledRef = pooledRef;
 			Channel channel = pooledRef.poolable().channel();
@@ -341,6 +349,8 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 			}
 
 			QuicStreamChannelBootstrap bootstrap =
+					// Deliberately suppress "NullAway"
+					// remoteAddress null is handled above
 					Http3.newRequestStreamBootstrap((QuicChannel) channel,
 							new Http3Codec(obs, opsFactory, acceptGzip, loggingHandler, metricsRecorder, remoteAddress, uriTagValue, validate));
 			attributes(bootstrap, attributes);
@@ -448,8 +458,8 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		static class Pending {
 			final Connection connection;
-			final Throwable error;
-			final State state;
+			final @Nullable Throwable error;
+			final @Nullable State state;
 
 			Pending(Connection connection, @Nullable Throwable error, @Nullable State state) {
 				this.connection = connection;
@@ -464,7 +474,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 		final HttpClientConfig config;
 		final InstrumentedPool<Connection> pool;
 		final SocketAddress remoteAddress;
-		final AddressResolverGroup<?> resolver;
+		final @Nullable AddressResolverGroup<?> resolver;
 
 		PooledConnectionAllocator(
 				ConnectionProvider parent,
@@ -475,6 +485,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 			this(null, null, parent, config, poolFactory, remoteAddress, resolver);
 		}
 
+		@SuppressWarnings("NullAway")
 		PooledConnectionAllocator(
 				@Nullable String id,
 				@Nullable String name,
@@ -490,6 +501,8 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.pool = id == null ?
 					poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
 							poolConfig -> new Http3Pool(poolConfig, poolFactory.allocationStrategy())) :
+					// Deliberately suppress "NullAway"
+					// With id != null, this means name != null
 					poolFactory.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
 							new MicrometerPoolMetricsRecorder(id, name, remoteAddress),
 							poolConfig -> new Http3Pool(poolConfig, poolFactory.allocationStrategy()));
@@ -509,7 +522,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 							AddressResolver<SocketAddress> addrResolver;
 							try {
-								addrResolver = (AddressResolver<SocketAddress>) resolver.getResolver(channel.eventLoop());
+								addrResolver = (AddressResolver<SocketAddress>) requireNonNull(resolver).getResolver(channel.eventLoop());
 							}
 							catch (Throwable t) {
 								// "FutureReturnValueIgnored" this is deliberate

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package reactor.netty.http.server.logging;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -28,7 +30,7 @@ import java.util.function.Predicate;
  * @author Audrey Neveu
  * @since 1.0.3
  */
-public interface AccessLogFactory extends Function<AccessLogArgProvider, AccessLog> {
+public interface AccessLogFactory extends Function<AccessLogArgProvider, @Nullable AccessLog> {
 
 	/**
 	 * Helper method to create an access log factory that selectively enables access logs.

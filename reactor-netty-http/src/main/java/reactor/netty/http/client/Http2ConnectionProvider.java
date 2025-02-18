@@ -98,6 +98,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This method is not used with HTTP/2
 	protected CoreSubscriber<PooledRef<Connection>> createDisposableAcquire(
 			TransportConfig config,
 			ConnectionObserver connectionObserver,
@@ -238,17 +241,20 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
 		final boolean acceptGzip;
-		final ChannelMetricsRecorder metricsRecorder;
+		final @Nullable ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
-		final SocketAddress proxyAddress;
+		final @Nullable SocketAddress proxyAddress;
 		final boolean retried;
 		final MonoSink<Connection> sink;
-		final Function<String, String> uriTagValue;
+		final @Nullable Function<String, String> uriTagValue;
 
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
 		PooledRef<Connection> pooledRef;
-		SocketAddress remoteAddress;
-		Subscription subscription;
+		@Nullable SocketAddress remoteAddress;
+		@Nullable Subscription subscription;
 
 		DisposableAcquire(
 				ConnectionObserver obs,
@@ -382,6 +388,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public void operationComplete(Future<Http2StreamChannel> future) {
 			if (future.isSuccess()) {
 				Channel channel = pooledRef.poolable().channel();
@@ -411,6 +418,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					if (!currentContext().isEmpty()) {
 						setChannelContext(ch, currentContext());
 					}
+					// Deliberately suppress "NullAway"
+					// remoteAddress null is handled in Http2ConnectionProvider.DisposableAcquire.onNext
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
 							opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 
@@ -526,8 +535,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		static class Pending {
 			final Connection connection;
-			final Throwable error;
-			final State state;
+			final @Nullable Throwable error;
+			final @Nullable State state;
 
 			Pending(Connection connection, @Nullable Throwable error, @Nullable State state) {
 				this.connection = connection;
@@ -542,7 +551,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final HttpClientConfig config;
 		final InstrumentedPool<Connection> pool;
 		final SocketAddress remoteAddress;
-		final AddressResolverGroup<?> resolver;
+		final @Nullable AddressResolverGroup<?> resolver;
 
 		PooledConnectionAllocator(
 				ConnectionProvider parent,
@@ -553,6 +562,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this(null, null, parent, config, poolFactory, remoteAddress, resolver);
 		}
 
+		@SuppressWarnings("NullAway")
 		PooledConnectionAllocator(
 				@Nullable String id,
 				@Nullable String name,
@@ -569,6 +579,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
 							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy())) :
 					poolFactory.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+							// Deliberately suppress "NullAway"
+							// With id != null, this means name != null
 							new MicrometerPoolMetricsRecorder(id, name, remoteAddress),
 							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy()));
 		}

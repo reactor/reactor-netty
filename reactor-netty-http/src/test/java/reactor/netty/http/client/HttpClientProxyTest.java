@@ -205,7 +205,8 @@ class HttpClientProxyTest extends BaseHttpTest {
 		HttpClient client =
 				HttpClient.create()
 				          .proxyWhen((config, spec) -> {
-				              if (config.uri().startsWith("http://127.0.0.1")) {
+					          String uri = config.uri();
+					          if (uri != null && uri.startsWith("http://127.0.0.1")) {
 				                  ProxyProvider.Builder builder =
 				                          spec.type(ProxyProvider.Proxy.HTTP)
 				                              .host("localhost")
@@ -438,7 +439,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				          .secure(spec -> spec.sslContext(http11SslContextSpec))
 				          .metrics(true, () -> MicrometerHttpClientMetricsRecorder.INSTANCE);
 
-		AtomicReference<AddressResolverGroup<?>> resolver1 = new AtomicReference<>();
+		AtomicReference<@Nullable AddressResolverGroup<?>> resolver1 = new AtomicReference<>();
 		client.doOnConnect(config -> resolver1.set(config.resolver()))
 		      .get()
 		      .uri("https://example.com")
@@ -446,7 +447,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 		                                                   Mono.just(response.responseHeaders())))
 		      .block(Duration.ofSeconds(30));
 
-		AtomicReference<AddressResolverGroup<?>> resolver2 = new AtomicReference<>();
+		AtomicReference<@Nullable AddressResolverGroup<?>> resolver2 = new AtomicReference<>();
 		client.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 		                       .host("localhost")
 		                       .port(hoverfly.getHoverflyConfig().getProxyPort()))
@@ -457,7 +458,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 		                                                   Mono.just(response.responseHeaders())))
 		      .block(Duration.ofSeconds(30));
 
-		AtomicReference<AddressResolverGroup<?>> resolver3 = new AtomicReference<>();
+		AtomicReference<@Nullable AddressResolverGroup<?>> resolver3 = new AtomicReference<>();
 		client.doOnConnect(config -> resolver3.set(config.resolver()))
 		      .get()
 		      .uri("https://example.com")
@@ -519,7 +520,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 	@Test
 	void testIssue1261(Hoverfly hoverfly) {
-		AtomicReference<AddressResolverGroup<?>> resolver = new AtomicReference<>();
+		AtomicReference<@Nullable AddressResolverGroup<?>> resolver = new AtomicReference<>();
 		HttpClient client =
 				HttpClient.create()
 				          .proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)

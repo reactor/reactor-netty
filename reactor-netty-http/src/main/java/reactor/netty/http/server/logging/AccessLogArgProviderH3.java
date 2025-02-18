@@ -25,8 +25,8 @@ final class AccessLogArgProviderH3 extends AbstractAccessLogArgProvider<AccessLo
 
 	static final String H3_PROTOCOL_NAME = "HTTP/3.0";
 
-	Http3HeadersFrame requestHeaders;
-	Http3HeadersFrame responseHeaders;
+	@Nullable Http3HeadersFrame requestHeaders;
+	@Nullable Http3HeadersFrame responseHeaders;
 
 	AccessLogArgProviderH3(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);
