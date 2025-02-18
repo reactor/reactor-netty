@@ -61,11 +61,11 @@ public final class ProxyProvider {
 		return new ProxyProvider.Build();
 	}
 
-	final String username;
-	final String password;
+	final @Nullable String username;
+	final @Nullable String password;
 	final SocketAddress address;
 	final Predicate<SocketAddress> nonProxyHostPredicate;
-	final HttpHeaders httpHeaders;
+	final @Nullable HttpHeaders httpHeaders;
 	final Proxy type;
 	final long connectTimeoutMillis;
 
@@ -85,7 +85,12 @@ public final class ProxyProvider {
 			this.address = builder.address.get();
 		}
 		this.httpHeaders = builder.httpHeaders.get();
-		this.type = builder.type;
+		if (builder.type != null) {
+			this.type = builder.type;
+		}
+		else {
+			throw new IllegalArgumentException("Proxy type is not specified");
+		}
 		this.connectTimeoutMillis = builder.connectTimeoutMillis;
 	}
 
@@ -178,7 +183,7 @@ public final class ProxyProvider {
 	 * @param address the address to test
 	 * @return true if of type {@link InetSocketAddress} and hostname candidate to proxy
 	 */
-	public boolean shouldProxy(SocketAddress address) {
+	public boolean shouldProxy(@Nullable SocketAddress address) {
 		return address instanceof InetSocketAddress && !nonProxyHostPredicate.test(address);
 	}
 
@@ -390,20 +395,20 @@ public final class ProxyProvider {
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 
 		@SuppressWarnings("UnnecessaryLambda")
-		static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
+		static final Supplier<? extends @Nullable HttpHeaders> NO_HTTP_HEADERS = () -> null;
 
 		@SuppressWarnings("UnnecessaryLambda")
 		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
 
-		String username;
-		String password;
-		Function<? super String, ? extends String> passwordFunction;
-		String host;
+		@Nullable String username;
+		@Nullable String password;
+		@Nullable Function<? super String, ? extends String> passwordFunction;
+		@Nullable String host;
 		int port;
-		Supplier<? extends SocketAddress> address;
+		@Nullable Supplier<? extends SocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
-		Supplier<? extends HttpHeaders> httpHeaders = NO_HTTP_HEADERS;
-		Proxy type;
+		Supplier<? extends @Nullable HttpHeaders> httpHeaders = NO_HTTP_HEADERS;
+		@Nullable Proxy type;
 		long connectTimeoutMillis = 10000;
 
 		Build() {

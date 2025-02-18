@@ -27,11 +27,11 @@ import java.util.Objects;
  */
 public final class MeterKey {
 
-	private final String uri;
-	private final String remoteAddress;
-	private final String proxyAddress;
-	private final String method;
-	private final String status;
+	private final @Nullable String uri;
+	private final @Nullable String remoteAddress;
+	private final @Nullable String proxyAddress;
+	private final @Nullable String method;
+	private final @Nullable String status;
 
 	/**
 	 * Creates a new meter key.

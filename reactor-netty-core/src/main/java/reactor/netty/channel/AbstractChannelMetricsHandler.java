@@ -31,6 +31,7 @@ import reactor.util.Loggers;
 
 import java.net.SocketAddress;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -43,12 +44,12 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 
 	private static final Logger log = Loggers.getLogger(AbstractChannelMetricsHandler.class);
 
-	final SocketAddress remoteAddress;
+	final @Nullable SocketAddress remoteAddress;
 
 	final boolean onServer;
 
 	boolean channelOpened;
-	SocketAddress proxyAddress;
+	@Nullable SocketAddress proxyAddress;
 
 	protected AbstractChannelMetricsHandler(@Nullable SocketAddress remoteAddress, boolean onServer) {
 		this.remoteAddress = remoteAddress;
@@ -127,7 +128,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			if (msg instanceof ByteBuf) {
 				ByteBuf buffer = (ByteBuf) msg;
 				if (buffer.readableBytes() > 0) {
-					recordRead(ctx, remoteAddress, buffer.readableBytes());
+					recordRead(ctx, requireNonNull(remoteAddress), buffer.readableBytes());
 				}
 			}
 			else if (msg instanceof DatagramPacket) {
@@ -155,7 +156,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			if (msg instanceof ByteBuf) {
 				ByteBuf buffer = (ByteBuf) msg;
 				if (buffer.readableBytes() > 0) {
-					recordWrite(ctx, remoteAddress, buffer.readableBytes());
+					recordWrite(ctx, requireNonNull(remoteAddress), buffer.readableBytes());
 				}
 			}
 			else if (msg instanceof DatagramPacket) {

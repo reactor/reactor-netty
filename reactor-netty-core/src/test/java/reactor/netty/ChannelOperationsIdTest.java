@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import reactor.netty.tcp.TcpClient;
@@ -28,9 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChannelOperationsIdTest {
 
-	DisposableServer serverConnection;
+	@Nullable DisposableServer serverConnection;
 
-	Connection clientConnection;
+	@Nullable Connection clientConnection;
 
 	@AfterEach
 	void tearDown() {
@@ -91,16 +92,24 @@ class ChannelOperationsIdTest {
 				.isEqualTo(serverOpsShortId.get());
 
 		int originalChannelIdPrefixLength = "[id: 0x".length();
-		assertThat(serverOpsLongId.get()).isNotNull();
-		assertThat(serverChannelId.get().substring(originalChannelIdPrefixLength)).isNotNull()
-				.isEqualTo(serverOpsLongId.get() + ']');
+		String serverOpsLId = serverOpsLongId.get();
+		assertThat(serverOpsLId).isNotNull();
+		String serverChId = serverChannelId.get();
+		assertThat(serverChId).isNotNull();
+		assertThat(serverChId.substring(originalChannelIdPrefixLength)).isNotNull()
+				.isEqualTo(serverOpsLId + ']');
 
-		assertThat(clientOpsShortId.get()).isNotNull();
-		assertThat(clientChannelShortId.get()).isNotNull()
-				.isEqualTo(clientOpsShortId.get());
+		String clientOpsSId = clientOpsShortId.get();
+		assertThat(clientOpsSId).isNotNull();
+		String clientChSId = clientChannelShortId.get();
+		assertThat(clientChSId).isNotNull()
+				.isEqualTo(clientOpsSId);
 
-		assertThat(clientOpsLongId.get()).isNotNull();
-		assertThat(clientChannelId.get().substring(originalChannelIdPrefixLength)).isNotNull()
-				.isEqualTo(clientOpsLongId.get() + ']');
+		String clientOpsLId = clientOpsLongId.get();
+		assertThat(clientOpsLId).isNotNull();
+		String clientChId = clientChannelId.get();
+		assertThat(clientChId).isNotNull();
+		assertThat(clientChId.substring(originalChannelIdPrefixLength)).isNotNull()
+				.isEqualTo(clientOpsLId + ']');
 	}
 }

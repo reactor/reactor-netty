@@ -126,18 +126,23 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		final Runnable                     asyncFlush;
 
 
-		@SuppressWarnings("unused")
+		@SuppressWarnings({"unused", "NullAway"})
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
 		volatile Subscription s;
 
 		@SuppressWarnings("unused")
 		volatile int          wip;
 
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
 		Queue<I> queue;
 		int      pending;
 		int      requested;
 		int      sourceMode;
 		boolean  needFlush;
-		Throwable terminalSignal;
+		@Nullable Throwable terminalSignal;
 
 		int nextRequest;
 
@@ -635,7 +640,10 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Throwable cause() {
+			// Deliberately suppress "NullAway"
+			// The super method is not annotated
 			return null;
 		}
 

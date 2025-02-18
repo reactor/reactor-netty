@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -145,17 +145,21 @@ class BlockingConnectionTest {
 		System.err.println("STOPPING SERVER");
 		simpleServer.disposeNow();
 
-		assertThat(data1.get())
+		List<String> listData1 = data1.get();
+		assertThat(listData1).isNotNull();
+		assertThat(listData1)
 				.allSatisfy(s -> assertThat(s).startsWith("ECHO: "));
-		assertThat(data2.get())
+		List<String> listData2 = data2.get();
+		assertThat(listData2).isNotNull();
+		assertThat(listData2)
 				.allSatisfy(s -> assertThat(s).startsWith("ECHO: "));
 
-		assertThat(data1.get()
+		assertThat(listData1
 		                .toString()
 		                .replaceAll("ECHO: ", "")
 		                .replaceAll(", ", ""))
 				.isEqualTo("[HelloWorld]");
-		assertThat(data2.get()
+		assertThat(listData2
 		                .toString()
 		                .replaceAll("ECHO: ", "")
 		                .replaceAll(", ", ""))
@@ -185,12 +189,16 @@ class BlockingConnectionTest {
 		DisposableServer c = new TcpServer() {
 
 			@Override
+			@SuppressWarnings("NullAway")
 			public TcpServerConfig configuration() {
+				// Deliberately suppress "NullAway" for testing purposes
 				return null;
 			}
 
 			@Override
+			@SuppressWarnings("NullAway")
 			protected TcpServer duplicate() {
+				// Deliberately suppress "NullAway" for testing purposes
 				return null;
 			}
 
@@ -214,12 +222,16 @@ class BlockingConnectionTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public TestClientTransportConfig configuration() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected TestClientTransport duplicate() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -246,17 +258,23 @@ class BlockingConnectionTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected LoggingHandler defaultLoggingHandler() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected LoopResources defaultLoopResources() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -266,7 +284,9 @@ class BlockingConnectionTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected EventLoopGroup eventLoopGroup() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 	}

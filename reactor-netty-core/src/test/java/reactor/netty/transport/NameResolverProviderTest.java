@@ -77,7 +77,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void bindAddressSupplierBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.bindAddressSupplier(null));
 	}
@@ -92,7 +94,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void cacheMaxTimeToLiveBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.cacheMaxTimeToLive(null));
 
@@ -111,7 +115,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void cacheMinTimeToLiveBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.cacheMinTimeToLive(null));
 
@@ -130,7 +136,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void cacheNegativeTimeToLiveBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.cacheNegativeTimeToLive(null));
 
@@ -156,7 +164,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void datagramChannelStrategyBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.cacheNegativeTimeToLive(null));
 	}
@@ -195,7 +205,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void hostsFileEntriesResolverBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.hostsFileEntriesResolver(null));
 	}
@@ -255,7 +267,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void queryTimeoutBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.queryTimeout(null));
 	}
@@ -269,8 +283,10 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void resolveCacheBadValues() {
 		assertThat(builder.build().resolveCache()).isNull();
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.resolveCache(null));
 	}
@@ -284,7 +300,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void resolvedAddressTypesBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.resolvedAddressTypes(null));
 	}
@@ -317,7 +335,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void runOnBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.runOn(null, false));
 	}
@@ -332,7 +352,9 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void searchDomainsBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.searchDomains(null));
 	}
@@ -347,10 +369,13 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void traceBadValues() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.trace(null, LogLevel.DEBUG));
 
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.trace("category", null));
 	}
@@ -358,12 +383,16 @@ class NameResolverProviderTest {
 	private static class TestDnsCache implements DnsCache {
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl, EventLoop loop) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -377,7 +406,9 @@ class NameResolverProviderTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 	}

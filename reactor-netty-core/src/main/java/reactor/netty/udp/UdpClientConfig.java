@@ -65,7 +65,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 
 	// Protected/Package private write API
 
-	InternetProtocolFamily family;
+	@Nullable InternetProtocolFamily family;
 
 	UdpClientConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {

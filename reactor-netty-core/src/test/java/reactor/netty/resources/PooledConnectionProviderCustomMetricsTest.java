@@ -48,6 +48,8 @@ class PooledConnectionProviderCustomMetricsTest {
 
 	private EventLoopGroup group;
 
+	@SuppressWarnings("NullAway")
+	// pool is lazy initialized
 	private ConnectionProvider pool;
 
 	private static final int MAX_ALLOC_SIZE = 100;
@@ -131,9 +133,9 @@ class PooledConnectionProviderCustomMetricsTest {
 	}
 
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
-		AtomicBoolean registered;
-		AtomicBoolean deRegistered;
-		AtomicInteger customMetric;
+		@Nullable AtomicBoolean registered;
+		@Nullable AtomicBoolean deRegistered;
+		@Nullable AtomicInteger customMetric;
 
 		MeterRegistrarImpl(
 				@Nullable AtomicBoolean registered,
@@ -173,7 +175,9 @@ class PooledConnectionProviderCustomMetricsTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected LoggingHandler defaultLoggingHandler() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 
@@ -183,7 +187,9 @@ class PooledConnectionProviderCustomMetricsTest {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
+			// Deliberately suppress "NullAway" for testing purposes
 			return null;
 		}
 

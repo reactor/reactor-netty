@@ -395,8 +395,8 @@ public interface ConnectionProvider extends Disposable {
 
 		String name;
 		Duration inactivePoolDisposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
-		Duration poolInactivity;
-		Duration disposeTimeout;
+		@Nullable Duration poolInactivity;
+		@Nullable Duration disposeTimeout;
 		int maxConnectionPools = MAX_CONNECTION_POOLS;
 		final Map<SocketAddress, ConnectionPoolSpec<?>> confPerRemoteHost = new HashMap<>();
 
@@ -530,14 +530,14 @@ public interface ConnectionProvider extends Disposable {
 		int      maxConnections         = DEFAULT_POOL_MAX_CONNECTIONS;
 		int      pendingAcquireMaxCount = PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
 		Duration pendingAcquireTimeout  = Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT);
-		Duration maxIdleTime;
-		Duration maxLifeTime;
+		@Nullable Duration maxIdleTime;
+		@Nullable Duration maxLifeTime;
 		boolean  metricsEnabled;
 		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
-		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
-		BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
-		AllocationStrategy<?> allocationStrategy;
-		BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
+		@Nullable Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
+		@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
+		@Nullable AllocationStrategy<?> allocationStrategy;
+		@Nullable BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
