@@ -48,6 +48,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -338,18 +339,20 @@ public final class TransportConnector {
 			if (config instanceof ClientTransportConfig) {
 				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
 
-				if (clientTransportConfig.doOnResolveError != null) {
+				BiConsumer<? super Connection, ? super Throwable> doOnResolveError = clientTransportConfig.doOnResolveError;
+				if (doOnResolveError != null) {
 					resolveFuture.addListener((FutureListener<List<SocketAddress>>) future -> {
 						if (future.cause() != null) {
-							clientTransportConfig.doOnResolveError.accept(Connection.from(channel), future.cause());
+							doOnResolveError.accept(Connection.from(channel), future.cause());
 						}
 					});
 				}
 
-				if (clientTransportConfig.doAfterResolve != null) {
+				BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve = clientTransportConfig.doAfterResolve;
+				if (doAfterResolve != null) {
 					resolveFuture.addListener((FutureListener<List<SocketAddress>>) future -> {
 						if (future.isSuccess()) {
-							clientTransportConfig.doAfterResolve.accept(Connection.from(channel), future.getNow().get(0));
+							doAfterResolve.accept(Connection.from(channel), future.getNow().get(0));
 						}
 					});
 				}
@@ -389,7 +392,7 @@ public final class TransportConnector {
 
 		final Channel channel;
 
-		CoreSubscriber<? super Channel> actual;
+		@Nullable CoreSubscriber<? super Channel> actual;
 
 		MonoChannelPromise(Channel channel) {
 			this.channel = channel;
@@ -449,8 +452,11 @@ public final class TransportConnector {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Throwable cause() {
 			Object result = this.result;
+			// Deliberately suppress "NullAway"
+			// The super method is not annotated
 			return result == SUCCESS ? null : (Throwable) result;
 		}
 
@@ -645,9 +651,9 @@ public final class TransportConnector {
 		}
 
 		static final Object SUCCESS = new Object();
-		static final AtomicReferenceFieldUpdater<MonoChannelPromise, Object> RESULT_UPDATER =
+		static final AtomicReferenceFieldUpdater<MonoChannelPromise, @Nullable Object> RESULT_UPDATER =
 				AtomicReferenceFieldUpdater.newUpdater(MonoChannelPromise.class, Object.class, "result");
-		volatile Object result;
+		volatile @Nullable Object result;
 	}
 
 	static final class RetryConnectException extends RuntimeException {

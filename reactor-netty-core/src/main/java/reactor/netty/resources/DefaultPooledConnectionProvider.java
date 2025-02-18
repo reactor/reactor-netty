@@ -123,8 +123,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final boolean retried;
 		final MonoSink<Connection> sink;
 
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
 		PooledRef<PooledConnection> pooledRef;
-		Subscription subscription;
+		@Nullable Subscription subscription;
 
 		DisposableAcquire(
 				ConnectionObserver obs,
@@ -369,8 +372,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		static class Pending {
 			final Connection connection;
-			final Throwable error;
-			final State state;
+			final @Nullable Throwable error;
+			final @Nullable State state;
 
 			Pending(Connection connection, @Nullable Throwable error, @Nullable State state) {
 				this.connection = connection;
@@ -385,7 +388,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final Sinks.Empty<Void> onTerminate;
 		final InstrumentedPool<PooledConnection> pool;
 
-		PooledRef<PooledConnection> pooledRef;
+		@Nullable PooledRef<PooledConnection> pooledRef;
 
 		PooledConnection(Channel channel, InstrumentedPool<PooledConnection> pool) {
 			this.channel = channel;
@@ -436,16 +439,17 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 					setChannelContext(channel, null);
 				}
 
-				if (pooledRef == null) {
+				PooledRef<PooledConnection> localPooledRef = pooledRef;
+				if (localPooledRef == null) {
 					return;
 				}
 
-				pooledRef.release()
+				localPooledRef.release()
 				         .subscribe(
 				                 null,
 				                 t -> {
 				                     if (log.isDebugEnabled()) {
-				                         logPoolState(pooledRef.poolable().channel, pool,
+				                         logPoolState(localPooledRef.poolable().channel, pool,
 				                                 "Failed cleaning the channel from pool", t);
 				                     }
 				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop,
@@ -455,7 +459,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                 },
 				                 () -> {
 				                     if (log.isDebugEnabled()) {
-				                         logPoolState(pooledRef.poolable().channel, pool, "Channel cleaned");
+				                         logPoolState(localPooledRef.poolable().channel, pool, "Channel cleaned");
 				                     }
 				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop,
 				                     // and it is guarded by release(), so tryEmitEmpty() should happen just once
@@ -507,7 +511,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final TransportConfig config;
 		final InstrumentedPool<PooledConnection> pool;
 		final SocketAddress remoteAddress;
-		final AddressResolverGroup<?> resolver;
+		final @Nullable AddressResolverGroup<?> resolver;
 
 		PooledConnectionAllocator(
 				TransportConfig config,
@@ -517,6 +521,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this(null, null, config, provider, remoteAddress, resolver);
 		}
 
+		@SuppressWarnings("NullAway")
 		PooledConnectionAllocator(
 				@Nullable String id,
 				@Nullable String name,
@@ -530,6 +535,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this.pool = id == null ?
 					provider.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE) :
 					provider.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+							// Deliberately suppress "NullAway"
+							// With id != null, this means name != null
 							new MicrometerPoolMetricsRecorder(id, name, remoteAddress));
 		}
 
@@ -559,7 +566,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final class PooledConnectionInitializer extends ChannelInitializer<Channel> implements CoreSubscriber<Channel> {
 			final MonoSink<PooledConnection> sink;
 
-			PooledConnection pooledConnection;
+			@Nullable PooledConnection pooledConnection;
 
 			PooledConnectionInitializer(MonoSink<PooledConnection> sink) {
 				this.sink = sink;

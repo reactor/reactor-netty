@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -87,10 +88,11 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 */
 	public Mono<? extends DisposableServer> bind() {
 		CONF config = configuration();
-		Objects.requireNonNull(config.bindAddress(), "bindAddress");
+		Supplier<? extends SocketAddress> bindAddress = config.bindAddress();
+		Objects.requireNonNull(bindAddress, "bindAddress");
 
 		Mono<? extends DisposableServer> mono =  Mono.create(sink -> {
-			SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
+			SocketAddress local = Objects.requireNonNull(bindAddress.get(), "Bind Address supplier returned null");
 			if (local instanceof InetSocketAddress) {
 				InetSocketAddress localInet = (InetSocketAddress) local;
 
@@ -121,8 +123,9 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			                  .subscribe(disposableServer);
 		});
 
-		if (config.doOnBind() != null) {
-			mono = mono.doOnSubscribe(s -> config.doOnBind().accept(config));
+		Consumer<? super CONF> doOnBind = config.doOnBind();
+		if (doOnBind != null) {
+			mono = mono.doOnSubscribe(s -> doOnBind.accept(config));
 		}
 		return mono;
 	}
@@ -154,8 +157,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			return Objects.requireNonNull(bind().block(timeout), "aborted");
 		}
 		catch (IllegalStateException e) {
-			if (e.getMessage()
-			     .contains("blocking read")) {
+			String message = e.getMessage();
+			if (message != null && message.contains("blocking read")) {
 				throw new IllegalStateException(getClass().getSimpleName() + " couldn't be started within " + timeout.toMillis() + "ms");
 			}
 			throw e;
@@ -365,7 +368,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		final Map<AttributeKey<?>, ?> childAttrs;
 		final boolean isDomainSocket;
 
-		Runnable enableAutoReadTask;
+		@Nullable Runnable enableAutoReadTask;
 
 		Acceptor(EventLoopGroup childGroup, ChannelHandler childHandler,
 				Map<ChannelOption<?>, ?> childOptions, Map<AttributeKey<?>, ?> childAttrs,
@@ -494,8 +497,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		final TransportConfig            config;
 		final SocketAddress              bindAddress;
 
-		Channel channel;
-		Subscription subscription;
+		@Nullable Channel channel;
+		@Nullable Subscription subscription;
 
 		DisposableBind(MonoSink<DisposableServer> sink, TransportConfig config, SocketAddress bindAddress) {
 			this.sink = sink;
@@ -505,6 +508,9 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
 		public Channel channel() {
 			return channel;
 		}
@@ -590,8 +596,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				           .block(timeout);
 			}
 			catch (IllegalStateException e) {
-				if (e.getMessage()
-						.contains("blocking read")) {
+				String message = e.getMessage();
+				if (message != null && message.contains("blocking read")) {
 					throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
 				}
 				throw e;

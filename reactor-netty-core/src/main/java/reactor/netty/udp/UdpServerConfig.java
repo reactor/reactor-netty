@@ -95,10 +95,10 @@ public final class UdpServerConfig extends TransportConfig {
 
 	// Protected/Package private write API
 
-	Consumer<? super UdpServerConfig> doOnBind;
-	Consumer<? super Connection>      doOnBound;
-	Consumer<? super Connection>      doOnUnbound;
-	InternetProtocolFamily            family;
+	@Nullable Consumer<? super UdpServerConfig> doOnBind;
+	@Nullable Consumer<? super Connection>      doOnBound;
+	@Nullable Consumer<? super Connection>      doOnUnbound;
+	@Nullable InternetProtocolFamily            family;
 
 	UdpServerConfig(Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> bindAddress) {
 		super(options, bindAddress);
@@ -177,9 +177,9 @@ public final class UdpServerConfig extends TransportConfig {
 
 	static final class UdpServerDoOn implements ConnectionObserver {
 
-		final ChannelGroup                 channelGroup;
-		final Consumer<? super Connection> doOnBound;
-		final Consumer<? super Connection> doOnUnbound;
+		final @Nullable ChannelGroup                 channelGroup;
+		final @Nullable Consumer<? super Connection> doOnBound;
+		final @Nullable Consumer<? super Connection> doOnUnbound;
 
 		UdpServerDoOn(@Nullable ChannelGroup channelGroup,
 				@Nullable Consumer<? super Connection> doOnBound,

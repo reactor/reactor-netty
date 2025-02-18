@@ -91,8 +91,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final Builder builder;
 	final String name;
 	final Duration inactivePoolDisposeInterval;
-	final Duration poolInactivity;
-	final Duration disposeTimeout;
+	final @Nullable Duration poolInactivity;
+	final @Nullable Duration disposeTimeout;
 	final int maxConnectionPools;
 	final AtomicInteger connectionPoolCount = new AtomicInteger(0);
 	final Map<SocketAddress, Integer> maxConnections = new HashMap<>();
@@ -120,6 +120,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public final Mono<? extends Connection> acquire(
 			TransportConfig config,
 			ConnectionObserver connectionObserver,
@@ -148,6 +149,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				String id = metricsEnabled ? poolKey.hashCode() + "" : null;
 
 				InstrumentedPool<T> newPool = metricsEnabled && poolFactory.registrar == null && Metrics.isMicrometerAvailable() ?
+						// Deliberately suppress "NullAway"
+						// With metricsEnabled == true, id is not null
 						createPool(id, config, poolFactory, remoteAddress, resolverGroup) :
 						createPool(config, poolFactory, remoteAddress, resolverGroup);
 
@@ -155,12 +158,16 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					// registrar is null when metrics are enabled on HttpClient level or
 					// with the `metrics(boolean metricsEnabled)` method on ConnectionProvider
 					if (poolFactory.registrar != null) {
+						// Deliberately suppress "NullAway"
+						// With metricsEnabled == true, id is not null
 						poolFactory.registrar.get().registerMetrics(name, id, remoteAddress,
 								new DelegatingConnectionPoolMetrics(newPool.metrics()));
 					}
 					else if (Metrics.isMicrometerAvailable()) {
 						// work directly with the pool otherwise a weak reference is needed to ConnectionPoolMetrics
 						// we don't want to keep another map with weak references
+						// Deliberately suppress "NullAway"
+						// With metricsEnabled == true, id is not null
 						registerDefaultMetrics(id, remoteAddress, newPool.metrics());
 					}
 				}
@@ -489,19 +496,19 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final boolean metricsEnabled;
 		final int pendingAcquireMaxCount;
 		final long pendingAcquireTimeout;
-		final Supplier<? extends MeterRegistrar> registrar;
-		final Clock clock;
-		final Duration disposeTimeout;
-		final BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
-		final AllocationStrategy<?> allocationStrategy;
-		final BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
+		final @Nullable Supplier<? extends MeterRegistrar> registrar;
+		final @Nullable Clock clock;
+		final @Nullable Duration disposeTimeout;
+		final @Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
+		final @Nullable AllocationStrategy<?> allocationStrategy;
+		final @Nullable BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
 
-		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
+		PoolFactory(ConnectionPoolSpec<?> conf, @Nullable Duration disposeTimeout) {
 			this(conf, disposeTimeout, null);
 		}
 
 		// Used only for testing purposes
-		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout, @Nullable Clock clock) {
+		PoolFactory(ConnectionPoolSpec<?> conf, @Nullable Duration disposeTimeout, @Nullable Clock clock) {
 			this.evictionInterval = conf.evictionInterval;
 			this.leasingStrategy = conf.leasingStrategy;
 			this.maxConnections = conf.maxConnections;
@@ -737,7 +744,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	static final class PoolKey {
-		final String fqdn;
+		final @Nullable String fqdn;
 		final SocketAddress holder;
 		final int pipelineKey;
 

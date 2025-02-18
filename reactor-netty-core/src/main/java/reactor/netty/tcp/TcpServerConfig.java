@@ -71,7 +71,7 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 
 	// Protected/Package private write API
 
-	SslProvider sslProvider;
+	@Nullable SslProvider sslProvider;
 
 	TcpServerConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions,
 	                Supplier<? extends SocketAddress> localAddress) {

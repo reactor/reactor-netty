@@ -195,16 +195,16 @@ public abstract class TransportConfig {
 
 	// Protected/Package private write API
 
-	Map<AttributeKey<?>, ?>                    attrs;
-	Supplier<? extends SocketAddress>          bindAddress;
-	ChannelGroup                               channelGroup;
-	ChannelPipelineConfigurer                  doOnChannelInit;
-	LoggingHandler                             loggingHandler;
-	LoopResources                              loopResources;
-	ChannelMetricsRecorder                     metricsRecorder;
-	ConnectionObserver                         observer;
-	Map<ChannelOption<?>, ?>                   options;
-	boolean                                    preferNative;
+	Map<AttributeKey<?>, ?>                     attrs;
+	@Nullable Supplier<? extends SocketAddress> bindAddress;
+	@Nullable ChannelGroup                      channelGroup;
+	ChannelPipelineConfigurer                   doOnChannelInit;
+	@Nullable LoggingHandler                    loggingHandler;
+	@Nullable LoopResources                     loopResources;
+	@Nullable ChannelMetricsRecorder            metricsRecorder;
+	ConnectionObserver                          observer;
+	Map<ChannelOption<?>, ?>                    options;
+	boolean                                     preferNative;
 
 	/**
 	 * Default TransportConfig with options.
@@ -369,7 +369,7 @@ public abstract class TransportConfig {
 		final TransportConfig config;
 		final ConnectionObserver connectionObserver;
 		final boolean onServer;
-		final SocketAddress remoteAddress;
+		final @Nullable SocketAddress remoteAddress;
 
 		TransportChannelInitializer(TransportConfig config, ConnectionObserver connectionObserver,
 				@Nullable SocketAddress remoteAddress, boolean onServer) {

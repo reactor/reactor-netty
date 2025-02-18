@@ -155,17 +155,17 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	final ConnectionProvider connectionProvider;
 
-	Consumer<? super CONF>                   doOnConnect;
-	Consumer<? super Connection>             doOnConnected;
-	Consumer<? super Connection>             doOnDisconnected;
-	Consumer<? super Connection>             doOnResolve;
-	BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve;
-	BiConsumer<? super Connection, ? super Throwable> doOnResolveError;
-	NameResolverProvider                     nameResolverProvider;
-	ProxyProvider                            proxyProvider;
-	Supplier<ProxyProvider>                  proxyProviderSupplier;
-	Supplier<? extends SocketAddress>        remoteAddress;
-	AddressResolverGroup<?>                  resolver;
+	@Nullable Consumer<? super CONF>                   doOnConnect;
+	@Nullable Consumer<? super Connection>             doOnConnected;
+	@Nullable Consumer<? super Connection>             doOnDisconnected;
+	@Nullable Consumer<? super Connection>             doOnResolve;
+	@Nullable BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve;
+	@Nullable BiConsumer<? super Connection, ? super Throwable> doOnResolveError;
+	@Nullable NameResolverProvider                     nameResolverProvider;
+	@Nullable ProxyProvider                            proxyProvider;
+	@Nullable Supplier<ProxyProvider>                  proxyProviderSupplier;
+	Supplier<? extends SocketAddress>                  remoteAddress;
+	@Nullable AddressResolverGroup<?>                  resolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -269,7 +269,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 
 		@Override
-		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress remoteAddress) {
+		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, @Nullable SocketAddress remoteAddress) {
 			if (proxyProvider.shouldProxy(remoteAddress)) {
 				proxyProvider.addProxyHandler(channel);
 			}
@@ -278,9 +278,9 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	static final class ClientTransportDoOn implements ConnectionObserver {
 
-		final ChannelGroup channelGroup;
-		final Consumer<? super Connection> doOnConnected;
-		final Consumer<? super Connection> doOnDisconnected;
+		final @Nullable ChannelGroup channelGroup;
+		final @Nullable Consumer<? super Connection> doOnConnected;
+		final @Nullable Consumer<? super Connection> doOnDisconnected;
 
 		ClientTransportDoOn(@Nullable ChannelGroup channelGroup,
 				@Nullable Consumer<? super Connection> doOnConnected,
