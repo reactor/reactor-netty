@@ -110,8 +110,8 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	}
 
 	@SuppressWarnings("NullAway")
-		// Deliberately suppress "NullAway"
-		// This method is only when http1ConnectionProvider != null
+	// Deliberately suppress "NullAway"
+	// This method is only when http1ConnectionProvider != null
 	ConnectionProvider getOrCreateHttp3() {
 		ConnectionProvider provider = http3ConnectionProvider.get();
 		if (provider == null) {
