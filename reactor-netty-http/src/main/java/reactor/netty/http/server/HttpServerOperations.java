@@ -414,7 +414,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> paramsResolver) {
+	public HttpServerRequest paramsResolver(@Nullable Function<? super String, Map<String, String>> paramsResolver) {
 		this.paramsResolver = paramsResolver;
 		return this;
 	}

@@ -276,7 +276,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 
 		@Override
-		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress remoteAddress) {
+		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, @Nullable SocketAddress remoteAddress) {
 			if (proxyProvider.shouldProxy(remoteAddress)) {
 				proxyProvider.addProxyHandler(channel);
 			}
