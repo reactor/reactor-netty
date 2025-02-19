@@ -495,12 +495,12 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final AllocationStrategy<?> allocationStrategy;
 		final BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
 
-		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
+		PoolFactory(ConnectionPoolSpec<?> conf, @Nullable Duration disposeTimeout) {
 			this(conf, disposeTimeout, null);
 		}
 
 		// Used only for testing purposes
-		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout, @Nullable Clock clock) {
+		PoolFactory(ConnectionPoolSpec<?> conf, @Nullable Duration disposeTimeout, @Nullable Clock clock) {
 			this.evictionInterval = conf.evictionInterval;
 			this.leasingStrategy = conf.leasingStrategy;
 			this.maxConnections = conf.maxConnections;
