@@ -281,7 +281,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return Collections.emptyMap();
 	}
 
-	void followRedirectPredicate(BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
+	void followRedirectPredicate(@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
 		this.followRedirectPredicate = predicate;
 	}
 
@@ -537,6 +537,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	@Nullable
 	public String resourceUrl() {
 		return resourceUrl;
 	}
