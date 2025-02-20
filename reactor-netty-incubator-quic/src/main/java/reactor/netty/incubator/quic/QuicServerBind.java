@@ -18,7 +18,6 @@ package reactor.netty.incubator.quic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.util.NetUtil;
-import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -115,7 +114,11 @@ final class QuicServerBind extends QuicServer {
 		final Context              currentContext;
 		final MonoSink<Connection> sink;
 
-		@Nullable Subscription subscription;
+		// Never null when accessed - only via dispose()
+		// which is registered into sink.onCancel() callback.
+		// See onSubscribe(Subscription).
+		@SuppressWarnings("NullAway")
+		Subscription subscription;
 
 		DisposableBind(SocketAddress bindAddress, MonoSink<Connection> sink) {
 			this.bindAddress = bindAddress;
@@ -130,6 +133,7 @@ final class QuicServerBind extends QuicServer {
 
 		@Override
 		public void dispose() {
+			// sink.onCancel() registration happens in onSubscribe()
 			subscription.cancel();
 		}
 
