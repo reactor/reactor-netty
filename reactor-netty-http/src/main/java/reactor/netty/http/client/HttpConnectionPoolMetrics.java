@@ -25,7 +25,7 @@ import reactor.netty.resources.ConnectionPoolMetrics;
  * @author raccoonback
  * @since 1.2.4
  */
-public interface Http2ConnectionPoolMetrics extends ConnectionPoolMetrics {
+public interface HttpConnectionPoolMetrics extends ConnectionPoolMetrics {
 
 	/**
 	 * Measure the current number of active HTTP/2 or HTTP/3 streams in the connection pool.

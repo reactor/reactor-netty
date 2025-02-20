@@ -34,8 +34,8 @@ public abstract class Http2MeterRegistrarAdapter implements ConnectionProvider.M
 
 	/**
 	 * Registers metrics for a connection pool. If the provided metrics are an instance of
-	 * {@link Http2ConnectionPoolMetrics}, it delegates the call to the abstract method
-	 * {@link #registerMetrics(String, String, SocketAddress, Http2ConnectionPoolMetrics)}.
+	 * {@link HttpConnectionPoolMetrics}, it delegates the call to the abstract method
+	 * {@link #registerMetrics(String, String, SocketAddress, HttpConnectionPoolMetrics)}.
 	 *
 	 * @param poolName      the name of the connection pool
 	 * @param id            the identifier of the connection pool
@@ -44,8 +44,8 @@ public abstract class Http2MeterRegistrarAdapter implements ConnectionProvider.M
 	 */
 	@Override
 	public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
-		if (metrics instanceof Http2ConnectionPoolMetrics) {
-			registerMetrics(poolName, id, remoteAddress, (Http2ConnectionPoolMetrics) metrics);
+		if (metrics instanceof HttpConnectionPoolMetrics) {
+			registerMetrics(poolName, id, remoteAddress, (HttpConnectionPoolMetrics) metrics);
 		}
 	}
 
@@ -57,5 +57,5 @@ public abstract class Http2MeterRegistrarAdapter implements ConnectionProvider.M
 	 * @param remoteAddress the remote address of the connection pool
 	 * @param metrics       the HTTP/2 or HTTP/3 specific metrics to be registered
 	 */
-	protected abstract void registerMetrics(String poolName, String id, SocketAddress remoteAddress, Http2ConnectionPoolMetrics metrics);
+	protected abstract void registerMetrics(String poolName, String id, SocketAddress remoteAddress, HttpConnectionPoolMetrics metrics);
 }

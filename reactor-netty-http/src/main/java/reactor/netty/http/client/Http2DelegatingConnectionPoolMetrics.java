@@ -16,7 +16,7 @@
 package reactor.netty.http.client;
 
 
-final class Http2DelegatingConnectionPoolMetrics implements Http2ConnectionPoolMetrics {
+final class Http2DelegatingConnectionPoolMetrics implements HttpConnectionPoolMetrics {
 
 	private final Http2Pool delegate;
 

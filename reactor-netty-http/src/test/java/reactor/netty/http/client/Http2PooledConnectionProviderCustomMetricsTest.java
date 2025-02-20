@@ -58,7 +58,7 @@ class Http2PooledConnectionProviderCustomMetricsTest {
 	void measureActiveStreamsSize() throws InterruptedException {
 		AtomicBoolean isRegistered = new AtomicBoolean();
 		AtomicBoolean isDeregistered = new AtomicBoolean();
-		AtomicReference<Http2ConnectionPoolMetrics> metrics = new AtomicReference<>();
+		AtomicReference<HttpConnectionPoolMetrics> metrics = new AtomicReference<>();
 
 		DisposableServer disposableServer = HttpServer.create()
 				.port(5678)
@@ -106,7 +106,7 @@ class Http2PooledConnectionProviderCustomMetricsTest {
 	void measurePendingStreamsSize() {
 		AtomicBoolean isRegistered = new AtomicBoolean();
 		AtomicBoolean isDeregistered = new AtomicBoolean();
-		AtomicReference<Http2ConnectionPoolMetrics> metrics = new AtomicReference<>();
+		AtomicReference<HttpConnectionPoolMetrics> metrics = new AtomicReference<>();
 
 		DisposableServer disposableServer = HttpServer.create()
 				.port(1234)
@@ -157,12 +157,12 @@ class Http2PooledConnectionProviderCustomMetricsTest {
 	static final class CustomHttp2MeterRegistrar extends Http2MeterRegistrarAdapter {
 		AtomicBoolean isRegistered;
 		AtomicBoolean isDeregistered;
-		AtomicReference<Http2ConnectionPoolMetrics> metrics;
+		AtomicReference<HttpConnectionPoolMetrics> metrics;
 
 		CustomHttp2MeterRegistrar(
 				@Nullable AtomicBoolean isRegistered,
 				@Nullable AtomicBoolean isDeregistered,
-				AtomicReference<Http2ConnectionPoolMetrics> metrics
+				AtomicReference<HttpConnectionPoolMetrics> metrics
 		) {
 			this.isRegistered = isRegistered;
 			this.isDeregistered = isDeregistered;
@@ -170,7 +170,7 @@ class Http2PooledConnectionProviderCustomMetricsTest {
 		}
 
 		@Override
-		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, Http2ConnectionPoolMetrics metrics) {
+		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, HttpConnectionPoolMetrics metrics) {
 			if (isRegistered != null) {
 				isRegistered.set(true);
 			}
