@@ -154,7 +154,7 @@ class Http2PooledConnectionProviderCustomMetricsTest {
 		disposableServer.disposeNow();
 	}
 
-	static final class CustomHttp2MeterRegistrar extends Http2MeterRegistrarAdapter {
+	static final class CustomHttp2MeterRegistrar extends HttpMeterRegistrarAdapter {
 		AtomicBoolean isRegistered;
 		AtomicBoolean isDeregistered;
 		AtomicReference<HttpConnectionPoolMetrics> metrics;

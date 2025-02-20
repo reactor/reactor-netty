@@ -30,7 +30,7 @@ import java.net.SocketAddress;
  *
  * @author raccoonback
  */
-public abstract class Http2MeterRegistrarAdapter implements ConnectionProvider.MeterRegistrar {
+public abstract class HttpMeterRegistrarAdapter implements ConnectionProvider.MeterRegistrar {
 
 	/**
 	 * Registers metrics for a connection pool. If the provided metrics are an instance of
