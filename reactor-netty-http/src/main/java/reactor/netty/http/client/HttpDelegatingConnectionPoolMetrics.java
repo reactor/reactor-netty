@@ -16,11 +16,11 @@
 package reactor.netty.http.client;
 
 
-final class Http2DelegatingConnectionPoolMetrics implements HttpConnectionPoolMetrics {
+final class HttpDelegatingConnectionPoolMetrics implements HttpConnectionPoolMetrics {
 
 	private final Http2Pool delegate;
 
-	public Http2DelegatingConnectionPoolMetrics(Http2Pool delegate) {
+	public HttpDelegatingConnectionPoolMetrics(Http2Pool delegate) {
 		this.delegate = delegate;
 	}
 

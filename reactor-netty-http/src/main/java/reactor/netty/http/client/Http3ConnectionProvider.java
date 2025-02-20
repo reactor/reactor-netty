@@ -156,7 +156,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	@Override
 	protected ConnectionPoolMetrics delegateConnectionPoolMetrics(InstrumentedPool.PoolMetrics metrics) {
-		return new Http2DelegatingConnectionPoolMetrics((Http2Pool) metrics);
+		return new HttpDelegatingConnectionPoolMetrics((Http2Pool) metrics);
 	}
 
 	@Override
