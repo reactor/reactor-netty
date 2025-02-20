@@ -18,7 +18,6 @@ package reactor.netty.incubator.quic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.util.NetUtil;
-import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
