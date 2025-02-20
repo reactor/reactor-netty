@@ -254,7 +254,10 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		// This is a lazy initialization
 		PooledRef<Connection> pooledRef;
 		@Nullable SocketAddress remoteAddress;
-		@Nullable Subscription subscription;
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
+		Subscription subscription;
 
 		DisposableAcquire(
 				ConnectionObserver obs,
@@ -306,6 +309,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		@Override
 		public void dispose() {
+			// sink.onCancel() happens after initializing the subscription
 			subscription.cancel();
 		}
 

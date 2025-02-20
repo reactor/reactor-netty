@@ -115,7 +115,10 @@ final class QuicServerBind extends QuicServer {
 		final Context              currentContext;
 		final MonoSink<Connection> sink;
 
-		@Nullable Subscription subscription;
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
+		Subscription subscription;
 
 		DisposableBind(SocketAddress bindAddress, MonoSink<Connection> sink) {
 			this.bindAddress = bindAddress;
@@ -130,6 +133,7 @@ final class QuicServerBind extends QuicServer {
 
 		@Override
 		public void dispose() {
+			// sink.onCancel() happens after initializing the subscription
 			subscription.cancel();
 		}
 

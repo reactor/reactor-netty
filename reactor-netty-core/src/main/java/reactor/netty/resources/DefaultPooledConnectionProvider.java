@@ -127,7 +127,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		// Deliberately suppress "NullAway"
 		// This is a lazy initialization
 		PooledRef<PooledConnection> pooledRef;
-		@Nullable Subscription subscription;
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
+		Subscription subscription;
 
 		DisposableAcquire(
 				ConnectionObserver obs,
@@ -164,6 +167,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public void dispose() {
+			// sink.onCancel() happens after initializing the subscription
 			subscription.cancel();
 		}
 

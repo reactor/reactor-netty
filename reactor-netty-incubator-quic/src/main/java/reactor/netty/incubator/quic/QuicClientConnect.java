@@ -132,7 +132,10 @@ final class QuicClientConnect extends QuicClient {
 		final ConnectionObserver                streamObserver;
 		final Map<ChannelOption<?>, ?>          streamOptions;
 
-		@Nullable Subscription subscription;
+		@SuppressWarnings("NullAway")
+		// Deliberately suppress "NullAway"
+		// This is a lazy initialization
+		Subscription subscription;
 
 		DisposableConnect(QuicClientConfig config, SocketAddress bindAddress, MonoSink<QuicConnection> sink) {
 			this.attributes = config.attributes();
@@ -159,6 +162,7 @@ final class QuicClientConnect extends QuicClient {
 
 		@Override
 		public void dispose() {
+			// sink.onCancel() happens after initializing the subscription
 			subscription.cancel();
 		}
 
