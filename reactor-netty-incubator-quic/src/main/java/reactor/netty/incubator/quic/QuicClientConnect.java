@@ -132,9 +132,10 @@ final class QuicClientConnect extends QuicClient {
 		final ConnectionObserver                streamObserver;
 		final Map<ChannelOption<?>, ?>          streamOptions;
 
+		// Never null when accessed - only via dispose()
+		// which is registered into sink.onCancel() callback.
+		// See onSubscribe(Subscription).
 		@SuppressWarnings("NullAway")
-		// Deliberately suppress "NullAway"
-		// This is a lazy initialization
 		Subscription subscription;
 
 		DisposableConnect(QuicClientConfig config, SocketAddress bindAddress, MonoSink<QuicConnection> sink) {
@@ -162,7 +163,7 @@ final class QuicClientConnect extends QuicClient {
 
 		@Override
 		public void dispose() {
-			// sink.onCancel() happens after initializing the subscription
+			// sink.onCancel() registration happens in onSubscribe()
 			subscription.cancel();
 		}
 

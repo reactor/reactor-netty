@@ -117,9 +117,10 @@ final class NewConnectionProvider implements ConnectionProvider {
 		final Context currentContext;
 		final @Nullable Supplier<? extends SocketAddress> bindAddress;
 
+		// Never null when accessed - only via dispose()
+		// which is registered into sink.onCancel() callback.
+		// See onSubscribe(Subscription).
 		@SuppressWarnings("NullAway")
-		// Deliberately suppress "NullAway"
-		// This is a lazy initialization
 		Subscription subscription;
 
 		DisposableConnect(MonoSink<Connection> sink, @Nullable Supplier<? extends SocketAddress> bindAddress) {
@@ -139,7 +140,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void dispose() {
-			// sink.onCancel() happens after initializing the subscription
+			// sink.onCancel() registration happens in onSubscribe()
 			subscription.cancel();
 		}
 

@@ -498,9 +498,10 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		final SocketAddress              bindAddress;
 
 		@Nullable Channel channel;
+		// Never null when accessed - only via dispose()
+		// which is registered into sink.onCancel() callback.
+		// See onSubscribe(Subscription).
 		@SuppressWarnings("NullAway")
-		// Deliberately suppress "NullAway"
-		// This is a lazy initialization
 		Subscription subscription;
 
 		DisposableBind(MonoSink<DisposableServer> sink, TransportConfig config, SocketAddress bindAddress) {
@@ -538,7 +539,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				}
 			}
 			else {
-				// sink.onCancel() happens after initializing the subscription
+				// sink.onCancel() registration happens in onSubscribe()
 				subscription.cancel();
 			}
 		}
