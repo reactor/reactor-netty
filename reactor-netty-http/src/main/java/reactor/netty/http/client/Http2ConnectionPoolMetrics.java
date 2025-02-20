@@ -18,18 +18,19 @@ package reactor.netty.http.client;
 import reactor.netty.resources.ConnectionPoolMetrics;
 
 /**
- * Interface for collecting HTTP/2 specific connection pool metrics.
+ * Interface for collecting HTTP/2 or HTTP/3 specific connection pool metrics.
  * Extends the {@link ConnectionPoolMetrics} interface to include metrics
- * related to active, pending HTTP/2 streams.
+ * related to active and pending HTTP/2 or HTTP/3 streams.
  *
  * @author raccoonback
+ * @since 1.2.4
  */
 public interface Http2ConnectionPoolMetrics extends ConnectionPoolMetrics {
 
 	/**
-	 * Measure the current number of active HTTP/2 streams in the connection pool.
+	 * Measure the current number of active HTTP/2 or HTTP/3 streams in the connection pool.
 	 *
-	 * @return the number of active HTTP/2 streams
+	 * @return the number of active HTTP/2 or HTTP/3 streams
 	 */
 	int activeStreamSize();
 

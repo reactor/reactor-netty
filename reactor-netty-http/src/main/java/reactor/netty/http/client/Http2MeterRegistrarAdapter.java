@@ -50,12 +50,12 @@ public abstract class Http2MeterRegistrarAdapter implements ConnectionProvider.M
 	}
 
 	/**
-	 * Registers HTTP/2 specific metrics for a connection pool.
+	 * Registers HTTP/2 or HTTP/3 specific metrics for a connection pool.
 	 *
 	 * @param poolName      the name of the connection pool
 	 * @param id            the identifier of the connection pool
 	 * @param remoteAddress the remote address of the connection pool
-	 * @param metrics       the HTTP/2 specific metrics to be registered
+	 * @param metrics       the HTTP/2 or HTTP/3 specific metrics to be registered
 	 */
 	protected abstract void registerMetrics(String poolName, String id, SocketAddress remoteAddress, Http2ConnectionPoolMetrics metrics);
 }
