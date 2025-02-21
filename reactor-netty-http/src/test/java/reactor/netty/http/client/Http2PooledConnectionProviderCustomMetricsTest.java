@@ -46,11 +46,10 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 	@BeforeAll
 	static void setUp() throws CertificateException, SSLException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
-		sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-				.build();
+		sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		sslClient = SslContextBuilder.forClient()
-				.trustManager(InsecureTrustManagerFactory.INSTANCE)
-				.build();
+		                             .trustManager(InsecureTrustManagerFactory.INSTANCE)
+		                             .build();
 	}
 
 	@Test
@@ -59,36 +58,34 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		AtomicBoolean isDeregistered = new AtomicBoolean();
 		AtomicReference<HttpConnectionPoolMetrics> metrics = new AtomicReference<>();
 
-		disposableServer = createServer()
-				.protocol(H2)
-				.wiretap(true)
-				.secure(spec -> spec.sslContext(sslServer))
-				.handle((req, resp) -> resp.sendString(
-								Mono.delay(Duration.ofSeconds(10))
-										.then(Mono.just("test"))
-						)
-				)
-				.bindNow();
+		disposableServer =
+				createServer()
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslServer))
+				        .handle((req, resp) -> resp.sendString(Mono.delay(Duration.ofSeconds(10)).then(Mono.just("test"))))
+				        .bindNow();
 
 		CustomHttp2MeterRegistrar registrar = new CustomHttp2MeterRegistrar(isRegistered, isDeregistered, metrics);
-		ConnectionProvider pool = ConnectionProvider.builder("custom-pool")
-				.metrics(true, () -> registrar)
-				.maxConnections(10)
-				.build();
+		ConnectionProvider pool =
+				ConnectionProvider.builder("custom-pool")
+				                  .metrics(true, () -> registrar)
+				                  .maxConnections(10)
+				                  .build();
 
 		CountDownLatch latch = new CountDownLatch(5);
-		HttpClient httpClient = createClient(pool, disposableServer::address)
-				.protocol(H2)
-				.secure(spec -> spec.sslContext(sslClient))
-				.doOnConnected(connection -> latch.countDown());
+		HttpClient httpClient =
+				createClient(pool, disposableServer::address)
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslClient))
+				        .doOnConnected(connection -> latch.countDown());
 
 		try {
 			IntStream.range(0, 5)
-					.forEach(unUsed -> httpClient.get()
-							.uri("/")
-							.responseSingle((resp, bytes) -> bytes.asString())
-							.subscribe()
-					);
+			         .forEach(unUsed ->
+			                 httpClient.get()
+			                           .uri("/")
+			                           .responseSingle((resp, bytes) -> bytes.asString())
+			                           .subscribe());
 
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 			assertThat(isRegistered.get()).isTrue();
@@ -107,41 +104,38 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		AtomicBoolean isDeregistered = new AtomicBoolean();
 		AtomicReference<HttpConnectionPoolMetrics> metrics = new AtomicReference<>();
 
-		disposableServer = createServer()
-				.protocol(H2)
-				.wiretap(true)
-				.secure(spec -> spec.sslContext(sslServer))
-				.handle((req, resp) -> resp.sendString(
-								Mono.delay(Duration.ofSeconds(1))
-										.then(Mono.just("test"))
-						)
-				)
-				.bindNow();
+		disposableServer =
+				createServer()
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslServer))
+				        .handle((req, resp) -> resp.sendString(Mono.delay(Duration.ofSeconds(1)).then(Mono.just("test"))))
+				        .bindNow();
 
 		CustomHttp2MeterRegistrar registrar = new CustomHttp2MeterRegistrar(isRegistered, isDeregistered, metrics);
-		ConnectionProvider pool = ConnectionProvider.builder("custom-pool")
-				.metrics(true, () -> registrar)
-				.maxConnections(1)
-				.pendingAcquireMaxCount(5)
-				.pendingAcquireTimeout(Duration.ofSeconds(20))
-				.build();
+		ConnectionProvider pool =
+				ConnectionProvider.builder("custom-pool")
+				                  .metrics(true, () -> registrar)
+				                  .maxConnections(1)
+				                  .pendingAcquireMaxCount(5)
+				                  .pendingAcquireTimeout(Duration.ofSeconds(20))
+				                  .build();
 
-		HttpClient httpClient = createClient(pool, disposableServer::address)
-				.protocol(H2)
-				.secure(spec -> spec.sslContext(sslClient))
-				.http2Settings(builder -> {
-					builder.maxStreams(1);
-					builder.maxConcurrentStreams(1);
-				});
+		HttpClient httpClient =
+				createClient(pool, disposableServer::address)
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslClient))
+				        .http2Settings(builder -> {
+				            builder.maxStreams(1);
+				            builder.maxConcurrentStreams(1);
+				        });
 
 		try {
 			IntStream.range(0, 5)
-					.forEach(unUsed -> {
-						httpClient.get()
-								.uri("/")
-								.responseSingle((resp, bytes) -> bytes.asString())
-								.subscribe();
-					});
+			         .forEach(unUsed ->
+			                 httpClient.get()
+			                           .uri("/")
+			                           .responseSingle((resp, bytes) -> bytes.asString())
+			                           .subscribe());
 
 			assertThat(isRegistered.get()).isTrue();
 			assertThat(metrics.get().pendingAcquireSize()).isEqualTo(4);
@@ -161,8 +155,7 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		CustomHttp2MeterRegistrar(
 				AtomicBoolean isRegistered,
 				AtomicBoolean isDeregistered,
-				AtomicReference<HttpConnectionPoolMetrics> metrics
-		) {
+				AtomicReference<HttpConnectionPoolMetrics> metrics) {
 			this.isRegistered = isRegistered;
 			this.isDeregistered = isDeregistered;
 			this.metrics = metrics;

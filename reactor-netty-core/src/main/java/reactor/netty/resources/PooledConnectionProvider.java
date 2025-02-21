@@ -155,8 +155,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					// with the `metrics(boolean metricsEnabled)` method on ConnectionProvider
 					if (poolFactory.registrar != null) {
 						poolFactory.registrar.get().registerMetrics(
-								name, id, remoteAddress, delegateConnectionPoolMetrics(newPool.metrics())
-						);
+								name, id, remoteAddress, delegateConnectionPoolMetrics(newPool.metrics()));
 					}
 					else if (Metrics.isMicrometerAvailable()) {
 						// work directly with the pool otherwise a weak reference is needed to ConnectionPoolMetrics

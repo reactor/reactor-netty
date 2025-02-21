@@ -589,5 +589,4 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		static final Function<Connection, Publisher<Void>> DEFAULT_DESTROY_HANDLER = connection -> Mono.empty();
 	}
-
 }

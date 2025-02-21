@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,27 +29,27 @@ public class Application {
 
 		ConnectionProvider provider =
 				ConnectionProvider.builder("custom")
-						.maxConnections(50)
-						.metrics(true, () -> new CustomHttpMeterRegistrar(metrics)) //<1>
-						.build();
+				                  .maxConnections(50)
+				                  .metrics(true, () -> new CustomHttpMeterRegistrar(metrics)) //<1>
+				                  .build();
 
 		HttpClient client = HttpClient.create(provider);
 
 		String response =
 				client.get()
-						.uri("https://example.com/")
-						.responseContent()
-						.aggregate()
-						.asString()
-						.block();
+				      .uri("https://example.com/")
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block();
 
 		System.out.println("Response " + response);
-		System.out.println("Acquired size  " + metrics.get().acquiredSize());
-		System.out.println("Idle size  " + metrics.get().idleSize());
-		System.out.println("Pending size  " + metrics.get().pendingAcquireSize());
+		System.out.println("Acquired size " + metrics.get().acquiredSize());
+		System.out.println("Idle size " + metrics.get().idleSize());
+		System.out.println("Pending size " + metrics.get().pendingAcquireSize());
 
 		provider.disposeLater()
-				.block();
+		        .block();
 	}
 
 	static final class CustomHttpMeterRegistrar implements ConnectionProvider.MeterRegistrar {
@@ -60,12 +60,12 @@ public class Application {
 		}
 
 		@Override
-		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) { // <2>
+		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) { //<2>
 			this.metrics.set(metrics);
 		}
 
 		@Override
-		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) { // <3>
+		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) { //<3>
 			// no op
 		}
 	}

@@ -20,7 +20,7 @@ import reactor.netty.resources.ConnectionPoolMetrics;
 /**
  * Interface for collecting HTTP/2 or HTTP/3 specific connection pool metrics.
  * Extends the {@link ConnectionPoolMetrics} interface to include metrics
- * related to active and pending HTTP/2 or HTTP/3 streams.
+ * related to active HTTP/2 or HTTP/3 streams.
  *
  * @author raccoonback
  * @since 1.2.4

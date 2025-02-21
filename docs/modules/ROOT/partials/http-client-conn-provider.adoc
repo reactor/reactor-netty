@@ -124,7 +124,7 @@ When HTTP client metrics are needed for an integration with a system other than 
 
 The following `HTTP` example enables that integration:
 
-{examples-link}/pool/metrics/Application.java
+{examples-link}/pool/metrics/http/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/pool/metrics/http/Application.java[lines=25..72]
@@ -135,10 +135,10 @@ include::{examples-dir}/pool/metrics/http/Application.java[lines=25..72]
 
 The following `HTTP2`, `H2C`, `HTTP3` example enables that integration:
 
-{examples-link}/pool/metrics/Application.java
+{examples-link}/pool/metrics/http2/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/pool/metrics/http2/Application.java[lines=27..75]
+include::{examples-dir}/pool/metrics/http2/Application.java[lines=27..73]
 ----
 <1> Enables `HTTP2`, `H2C`, `HTTP3` Connection Pool metrics and provides `HttpMeterRegistrarAdapter` implementation.
 <2> It is called when registering metrics for the  `HTTP2`, `H2C`, `HTTP3` connection pool.

@@ -20,7 +20,6 @@ import reactor.netty.resources.ConnectionProvider;
 
 import java.net.SocketAddress;
 
-
 /**
  * An abstract adapter class for registering HTTP/2 or HTTP/3 specific metrics in a connection pool.
  * This class implements the {@link ConnectionProvider.MeterRegistrar} interface and provides
