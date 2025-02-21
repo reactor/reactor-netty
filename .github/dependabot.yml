@@ -203,7 +203,7 @@ updates:
   - dependency-name: org.graalvm.buildtools.native
     versions:
     - "> 0.9.25"
-  # Dependencies updated by forward merging 1.1.x branch
+  # Dependencies updated by forward merging 1.1.x and 1.2.x branch
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
   - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
   - dependency-name: org.assertj:assertj-core
@@ -219,6 +219,7 @@ updates:
   - dependency-name: com.aayushatharva.brotli4j:brotli4j
   - dependency-name: io.netty.incubator:netty-incubator-transport-native-io_uring
   - dependency-name: com.diffplug.spotless
+  - dependency-name: com.github.luben:zstd-jni
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
