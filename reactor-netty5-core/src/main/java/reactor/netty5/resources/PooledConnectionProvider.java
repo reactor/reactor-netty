@@ -161,8 +161,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					if (poolFactory.registrar != null) {
 						// Deliberately suppress "NullAway"
 						// With metricsEnabled == true, id is not null
-						poolFactory.registrar.get().registerMetrics(name, id, remoteAddress,
-								new DelegatingConnectionPoolMetrics(newPool.metrics()));
+						poolFactory.registrar.get().registerMetrics(
+								name, id, remoteAddress, delegateConnectionPoolMetrics(newPool.metrics()));
 					}
 					else if (Metrics.isMicrometerAvailable()) {
 						// work directly with the pool otherwise a weak reference is needed to ConnectionPoolMetrics
@@ -340,6 +340,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 	protected PoolFactory<T> poolFactory(SocketAddress remoteAddress) {
 		return poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
+	}
+
+	protected ConnectionPoolMetrics delegateConnectionPoolMetrics(InstrumentedPool.PoolMetrics metrics) {
+		return new DelegatingConnectionPoolMetrics(metrics);
 	}
 
 	protected void registerDefaultMetrics(String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {

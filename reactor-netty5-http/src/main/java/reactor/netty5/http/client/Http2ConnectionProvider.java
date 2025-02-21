@@ -40,6 +40,7 @@ import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.channel.ChannelMetricsRecorder;
 import reactor.netty5.channel.ChannelOperations;
+import reactor.netty5.resources.ConnectionPoolMetrics;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.resources.PooledConnectionProvider;
 import reactor.netty5.transport.ClientTransportConfig;
@@ -150,6 +151,11 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup) {
 		return new PooledConnectionAllocator(id, name(), parent, config, poolFactory, remoteAddress, resolverGroup).pool;
+	}
+
+	@Override
+	protected ConnectionPoolMetrics delegateConnectionPoolMetrics(InstrumentedPool.PoolMetrics metrics) {
+		return new HttpDelegatingConnectionPoolMetrics((Http2Pool) metrics);
 	}
 
 	@Override
