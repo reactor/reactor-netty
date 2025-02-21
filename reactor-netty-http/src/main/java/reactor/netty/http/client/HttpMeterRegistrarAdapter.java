@@ -22,13 +22,14 @@ import java.net.SocketAddress;
 
 
 /**
- * An abstract adapter class for registering HTTP/2 specific metrics in a connection pool.
+ * An abstract adapter class for registering HTTP/2 or HTTP/3 specific metrics in a connection pool.
  * This class implements the {@link ConnectionProvider.MeterRegistrar} interface and provides
- * methods to register and deregister metrics specific to HTTP/2 connections.
+ * methods to register and deregister metrics specific to HTTP/2 or HTTP/3 connections.
  * <p>
- * This is useful for monitoring and managing the performance of HTTP/2 connections in a pool.
+ * This is useful for monitoring and managing the performance of HTTP/2 or HTTP/3 connections in a pool.
  *
  * @author raccoonback
+ * @since 1.2.4
  */
 public abstract class HttpMeterRegistrarAdapter implements ConnectionProvider.MeterRegistrar {
 
