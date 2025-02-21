@@ -19,7 +19,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
@@ -43,8 +43,8 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 	static SslContext sslServer;
 	static SslContext sslClient;
 
-	@BeforeEach
-	void setUp() throws CertificateException, SSLException {
+	@BeforeAll
+	static void setUp() throws CertificateException, SSLException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 				.build();
@@ -82,20 +82,23 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 				.secure(spec -> spec.sslContext(sslClient))
 				.doOnConnected(connection -> latch.countDown());
 
-		IntStream.range(0, 5)
-				.forEach(unUsed -> httpClient.get()
-						.uri("/")
-						.responseSingle((resp, bytes) -> bytes.asString())
-						.subscribe()
-				);
+		try {
+			IntStream.range(0, 5)
+					.forEach(unUsed -> httpClient.get()
+							.uri("/")
+							.responseSingle((resp, bytes) -> bytes.asString())
+							.subscribe()
+					);
 
-		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
-		assertThat(isRegistered.get()).isTrue();
-		assertThat(metrics.get().activeStreamSize()).isEqualTo(5);
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(isRegistered.get()).isTrue();
+			assertThat(metrics.get().activeStreamSize()).isEqualTo(5);
+		}
+		finally {
+			pool.disposeLater().block(Duration.ofSeconds(5));
 
-		pool.disposeLater().block();
-
-		assertThat(isDeregistered.get()).isTrue();
+			assertThat(isDeregistered.get()).isTrue();
+		}
 	}
 
 	@Test
@@ -131,20 +134,23 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 					builder.maxConcurrentStreams(1);
 				});
 
-		IntStream.range(0, 5)
-				.forEach(unUsed -> {
-					httpClient.get()
-							.uri("/")
-							.responseSingle((resp, bytes) -> bytes.asString())
-							.subscribe();
-				});
+		try {
+			IntStream.range(0, 5)
+					.forEach(unUsed -> {
+						httpClient.get()
+								.uri("/")
+								.responseSingle((resp, bytes) -> bytes.asString())
+								.subscribe();
+					});
 
-		assertThat(isRegistered.get()).isTrue();
-		assertThat(metrics.get().pendingAcquireSize()).isEqualTo(4);
+			assertThat(isRegistered.get()).isTrue();
+			assertThat(metrics.get().pendingAcquireSize()).isEqualTo(4);
+		}
+		finally {
+			pool.disposeLater().block(Duration.ofSeconds(5));
 
-		pool.disposeLater().block();
-
-		assertThat(isDeregistered.get()).isTrue();
+			assertThat(isDeregistered.get()).isTrue();
+		}
 	}
 
 	static final class CustomHttp2MeterRegistrar extends HttpMeterRegistrarAdapter {
@@ -164,20 +170,14 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 
 		@Override
 		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, HttpConnectionPoolMetrics metrics) {
-			if (isRegistered != null) {
-				isRegistered.set(true);
-			}
+			isRegistered.set(true);
 
-			if (this.metrics.get() == null) {
-				this.metrics.set(metrics);
-			}
+			this.metrics.compareAndSet(null, metrics);
 		}
 
 		@Override
 		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
-			if (isDeregistered != null) {
-				isDeregistered.set(true);
-			}
+			isDeregistered.set(true);
 		}
 	}
 }
