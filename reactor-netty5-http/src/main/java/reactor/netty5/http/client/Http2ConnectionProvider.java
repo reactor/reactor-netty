@@ -17,9 +17,7 @@ package reactor.netty5.http.client;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.http2.Http2Connection;
 import io.netty5.handler.codec.http2.Http2FrameCodec;
-import io.netty5.handler.codec.http2.Http2LocalFlowController;
 import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.handler.codec.http2.Http2StreamChannelBootstrap;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
@@ -170,6 +168,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				.deRegisterMetrics(name(), id, remoteAddress);
 	}
 
+	static Http2Pool.Http2PooledRef http2PooledRef(PooledRef<Connection> pooledRef) {
+		return pooledRef instanceof Http2Pool.Http2PooledRef ?
+				(Http2Pool.Http2PooledRef) pooledRef :
+				(Http2Pool.Http2PooledRef) pooledRef.metadata();
+	}
+
 	static void invalidate(@Nullable ConnectionObserver owner) {
 		if (owner instanceof DisposableAcquire da) {
 			da.pooledRef
@@ -178,25 +182,30 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		}
 	}
 
-	static void logStreamsState(Channel channel, Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint, String msg) {
-		log.debug(format(channel, "{}, now: {} active streams and {} max active streams."),
+	static void logStreamsState(Channel channel, Http2Pool.Slot slot, String msg) {
+		log.debug(format(channel, "{}, now: this connection [{} active streams and {} max active streams], " +
+						"all connections [{} active streams and {} max active streams]."),
 				msg,
-				localEndpoint.numActiveStreams(),
-				localEndpoint.maxActiveStreams());
+				slot.concurrency,
+				slot.maxConcurrentStreams,
+				slot.pool.activeStreams(),
+				slot.pool.totalMaxConcurrentStreams);
 	}
 
 	static void registerClose(Channel channel, ConnectionObserver owner) {
 		channel.closeFuture()
 		       .addListener(f -> {
-		           if (log.isDebugEnabled()) {
-		               Http2FrameCodec frameCodec = channel.parent().pipeline().get(Http2FrameCodec.class);
-		               if (frameCodec != null) {
-		                   Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = frameCodec.connection().local();
-		                   logStreamsState(channel, localEndpoint, "Stream closed");
-		               }
+		           if (owner instanceof DisposableAcquire) {
+		               DisposableAcquire da = (DisposableAcquire) owner;
+		               da.pooledRef
+		                 .invalidate()
+		                 .subscribe(null, null, () -> {
+		                     if (log.isDebugEnabled()) {
+		                         Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(da.pooledRef);
+		                         logStreamsState(channel, http2PooledRef.slot, "Stream closed");
+		                     }
+		                 });
 		           }
-
-		           invalidate(owner);
 		       });
 	}
 
@@ -439,8 +448,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					}
 
 					if (log.isDebugEnabled()) {
-						Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = ((Http2FrameCodec) frameCodec.handler()).connection().local();
-						logStreamsState(ch, localEndpoint, "Stream opened");
+						logStreamsState(ch, http2PooledRef.slot, "Stream opened");
 					}
 				}
 			}
@@ -499,12 +507,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				}
 			}
 			return false;
-		}
-
-		static Http2Pool.Http2PooledRef http2PooledRef(PooledRef<Connection> pooledRef) {
-			return pooledRef instanceof Http2Pool.Http2PooledRef ?
-					(Http2Pool.Http2PooledRef) pooledRef :
-					(Http2Pool.Http2PooledRef) pooledRef.metadata();
 		}
 
 		static final AttributeKey<Http2StreamChannelBootstrap> HTTP2_STREAM_CHANNEL_BOOTSTRAP =
