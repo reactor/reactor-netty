@@ -118,3 +118,28 @@ The following example enables that integration:
 include::{examples-dir}/pool/metrics/Application.java[lines=18..45]
 ----
 <1> Enables the built-in integration with Micrometer
+
+
+When HTTP client metrics are needed for an integration with a system other than `Micrometer` or you want to provide your own integration with Micrometer, you can provide your own metrics, as follows.
+
+The following `HTTP` example enables that integration:
+
+{examples-link}/pool/metrics/http/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/pool/metrics/http/Application.java[lines=25..72]
+----
+<1> Enables `HTTP` Connection Pool metrics and provides `ConnectionProvider.MeterRegistrar` implementation.
+<2> It is called when registering metrics for the `HTTP` connection pool.
+<3> It is called when deregistering metrics for the `HTTP` connection pool.
+
+The following `HTTP2`, `H2C`, `HTTP3` example enables that integration:
+
+{examples-link}/pool/metrics/http2/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/pool/metrics/http2/Application.java[lines=27..73]
+----
+<1> Enables `HTTP2`, `H2C`, `HTTP3` Connection Pool metrics and provides `HttpMeterRegistrarAdapter` implementation.
+<2> It is called when registering metrics for the  `HTTP2`, `H2C`, `HTTP3` connection pool.
+<3> It is called when deregistering metrics for the  `HTTP2`, `H2C`, `HTTP3` connection pool.
