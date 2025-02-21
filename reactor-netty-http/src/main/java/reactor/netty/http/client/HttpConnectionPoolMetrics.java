@@ -33,11 +33,4 @@ public interface HttpConnectionPoolMetrics extends ConnectionPoolMetrics {
 	 * @return the number of active HTTP/2 or HTTP/3 streams
 	 */
 	int activeStreamSize();
-
-	/**
-	 * Measure the current number of pending HTTP/2 streams in the connection pool.
-	 *
-	 * @return the number of pending HTTP/2 streams
-	 */
-	int pendingStreamSize();
 }

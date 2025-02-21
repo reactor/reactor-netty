@@ -58,9 +58,4 @@ final class HttpDelegatingConnectionPoolMetrics implements HttpConnectionPoolMet
 	public int activeStreamSize() {
 		return delegate.activeStreams();
 	}
-
-	@Override
-	public int pendingStreamSize() {
-		return delegate.pendingAcquireSize();
-	}
 }
