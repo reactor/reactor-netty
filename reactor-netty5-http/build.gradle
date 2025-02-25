@@ -178,6 +178,7 @@ dependencies {
 	// noMicrometerTest sourceSet (must not include Micrometer)
 	noMicrometerTestImplementation "org.assertj:assertj-core:$assertJVersion"
 	noMicrometerTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	noMicrometerTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	noMicrometerTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	noMicrometerTestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
@@ -187,6 +188,7 @@ dependencies {
 	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	contextPropagationTestImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
+	contextPropagationTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
