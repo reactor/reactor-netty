@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -188,6 +188,7 @@ dependencies {
 	// noMicrometerTest sourceSet (must not include Micrometer)
 	noMicrometerTestImplementation "org.assertj:assertj-core:$assertJVersion"
 	noMicrometerTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	noMicrometerTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	noMicrometerTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	noMicrometerTestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
@@ -197,6 +198,7 @@ dependencies {
 	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	contextPropagationTestImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
+	contextPropagationTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 
 	http3TestImplementation(testFixtures(project(':reactor-netty-core'))) {
@@ -207,6 +209,7 @@ dependencies {
 	http3TestImplementation "org.assertj:assertj-core:$assertJVersion"
 	http3TestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	http3TestImplementation "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
+	http3TestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	http3TestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	http3TestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 }
