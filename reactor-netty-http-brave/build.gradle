@@ -54,6 +54,7 @@ dependencies {
 	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testImplementation "io.zipkin.brave:brave-instrumentation-http-tests:$braveVersion"
 
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 }
