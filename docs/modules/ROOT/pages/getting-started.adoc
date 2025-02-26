@@ -153,7 +153,8 @@ Check for updates at https://github.com/reactor/reactor/releases.
 === Milestones and Snapshots
 
 Milestones and release candidates are distributed through `Maven Central`.
-Note that milestone and release candidate releases are for testing purposes and are not intended for production use.
+
+NOTE: Milestone and release candidate releases are for testing purposes and are not intended for production use.
 
 Snapshots are distributed through the `Spring Snapshots` repository rather than `Maven Central`.
 To add it to your build configuration file, use the following snippet:
