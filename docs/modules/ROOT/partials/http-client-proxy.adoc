@@ -30,5 +30,5 @@ The `proxyWhen(...)` method allows for dynamic proxy configuration.
 {examples-link}/proxy/deferred/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/proxy/deferred/Application.java[lines=18..53]
+include::{examples-dir}/proxy/deferred/Application.java[lines=18..55]
 ----
