@@ -431,7 +431,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			                .flatMap(list -> {
 				                if (markSentHeaderAndBody(list.toArray())) {
 					                if (list.isEmpty()) {
-						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))));
+						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage()));
 					                }
 
 					                Buffer output;
@@ -452,7 +452,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(output)));
 					                }
 					                output.close();
-					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))));
+					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage()));
 				                }
 				                for (Buffer bb : list) {
 				                	if (log.isDebugEnabled()) {

@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
+import reactor.core.publisher.SynchronousSink;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferFlux;
@@ -98,6 +99,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpMethod.GET;
 import static io.netty5.handler.codec.http.HttpMethod.POST;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -1043,13 +1045,32 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	void testMonoRequestBodySentAsFullRequest_MonoEmpty(HttpServer server, HttpClient client) {
+	void testMonoRequestBodySentAsFullRequest_MonoEmptyGet(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, GET, sender -> sender.send(Mono.empty()), 1, null, true);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testMonoRequestBodySentAsFullRequest_MonoEmptyPost(HttpServer server, HttpClient client) {
 		// sends "full" request
 		testRequestBody(server, client, POST, sender -> sender.send(Mono.empty()), 1, "0", false);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	void testIssue3524Flux(HttpServer server, HttpClient client) {
+	void testIssue3524FluxGet1(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, GET, sender -> sender.send((req, out) ->
+				out.send(Flux.just(preferredAllocator().allocate(0), preferredAllocator().allocate(0), preferredAllocator().allocate(0)))), 1, null, true);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524FluxGet2(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, GET, sender -> sender.send((req, out) -> out.send(Flux.generate(SynchronousSink::complete))), 1, null, true);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524FluxPost(HttpServer server, HttpClient client) {
 		// sends the message and then last http content
 		testRequestBody(server, client, POST, sender -> sender.send((req, out) -> out.sendString(Flux.just("te", "st"))), 3, null, false);
 	}
