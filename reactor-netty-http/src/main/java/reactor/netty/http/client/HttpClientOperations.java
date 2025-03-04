@@ -654,7 +654,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						"zero-length header"));
 			}
 			//"FutureReturnValueIgnored" this is deliberate
-			channel().writeAndFlush(newFullBodyMessage());
+			HttpMessage msg = Objects.equals(method(), HttpMethod.GET) ||
+					Objects.equals(method(), HttpMethod.HEAD) ||
+					Objects.equals(method(), HttpMethod.DELETE) ?
+					newFullBodyMessage() : newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+			channel().writeAndFlush(msg);
 		}
 		else if (markSentBody()) {
 			//"FutureReturnValueIgnored" this is deliberate
@@ -906,9 +910,18 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (!channel().isActive()) {
 			return Mono.error(AbortedException.beforeSend());
 		}
-		return FutureMono.deferFuture(() -> markSentHeaderAndBody() ?
-				channel().writeAndFlush(newFullBodyMessage()) :
-				channel().newSucceededFuture());
+		return FutureMono.deferFuture(() -> {
+			if (markSentHeaderAndBody()) {
+				HttpMessage msg = Objects.equals(method(), HttpMethod.GET) ||
+						Objects.equals(method(), HttpMethod.HEAD) ||
+						Objects.equals(method(), HttpMethod.DELETE) ?
+						newFullBodyMessage() : newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+				return channel().writeAndFlush(msg);
+			}
+			else {
+				return channel().newSucceededFuture();
+			}
+		});
 	}
 
 	final void setNettyResponse(HttpResponse nettyResponse) {
