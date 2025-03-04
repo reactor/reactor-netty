@@ -285,5 +285,12 @@
 		},
 		"name": "reactor.netty.http.server.logging.BaseAccessLogHandler",
 		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http2ConnectionLivenessHandler"
+		},
+		"name": "reactor.netty.http.client.Http2ConnectionLivenessHandler",
+		"queryAllPublicMethods": true
 	}
 ]
