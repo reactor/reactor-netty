@@ -622,7 +622,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
 						"zero-length header"));
 			}
-			channel().writeAndFlush(newFullBodyMessage());
+			HttpMessage msg = Objects.equals(method(), HttpMethod.GET) ||
+					Objects.equals(method(), HttpMethod.HEAD) ||
+					Objects.equals(method(), HttpMethod.DELETE) ?
+					newFullBodyMessage() : newFullBodyMessage(channel().bufferAllocator().allocate(0));
+			channel().writeAndFlush(msg);
 		}
 		else if (markSentBody()) {
 			channel().writeAndFlush(new EmptyLastHttpContent(channel().bufferAllocator()));
@@ -873,9 +877,18 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (!channel().isActive()) {
 			return Mono.error(AbortedException.beforeSend());
 		}
-		return FutureMono.deferFuture(() -> markSentHeaderAndBody() ?
-				channel().writeAndFlush(newFullBodyMessage()) :
-				channel().newSucceededFuture());
+		return FutureMono.deferFuture(() -> {
+			if (markSentHeaderAndBody()) {
+				HttpMessage msg = Objects.equals(method(), HttpMethod.GET) ||
+						Objects.equals(method(), HttpMethod.HEAD) ||
+						Objects.equals(method(), HttpMethod.DELETE) ?
+						newFullBodyMessage() : newFullBodyMessage(channel().bufferAllocator().allocate(0));
+				return channel().writeAndFlush(msg);
+			}
+			else {
+				return channel().newSucceededFuture();
+			}
+		});
 	}
 
 	final void setNettyResponse(HttpResponse nettyResponse) {

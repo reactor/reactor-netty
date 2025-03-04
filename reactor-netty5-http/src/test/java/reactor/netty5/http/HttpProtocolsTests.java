@@ -29,6 +29,7 @@ import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.LastHttpContent;
@@ -97,6 +98,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import static io.netty5.handler.codec.http.HttpMethod.GET;
+import static io.netty5.handler.codec.http.HttpMethod.POST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty5.ConnectionObserver.State.CONNECTED;
 
@@ -1030,7 +1033,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 	@ParameterizedCompatibleCombinationsTest
 	void testMonoRequestBodySentAsFullRequest_Flux(HttpServer server, HttpClient client) {
 		// sends the message and then last http content
-		testRequestBody(server, client, sender -> sender.send(BufferFlux.fromString(Mono.just("test"))), 2);
+		testRequestBody(server, client, POST, sender -> sender.send(BufferFlux.fromString(Mono.just("test"))), 2, null, false);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
@@ -1042,13 +1045,13 @@ class HttpProtocolsTests extends BaseHttpTest {
 	@ParameterizedCompatibleCombinationsTest
 	void testMonoRequestBodySentAsFullRequest_MonoEmpty(HttpServer server, HttpClient client) {
 		// sends "full" request
-		testRequestBody(server, client, sender -> sender.send(Mono.empty()), 1);
+		testRequestBody(server, client, POST, sender -> sender.send(Mono.empty()), 1, "0", false);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
 	void testIssue3524Flux(HttpServer server, HttpClient client) {
 		// sends the message and then last http content
-		testRequestBody(server, client, sender -> sender.send((req, out) -> out.sendString(Flux.just("te", "st"))), 3);
+		testRequestBody(server, client, POST, sender -> sender.send((req, out) -> out.sendString(Flux.just("te", "st"))), 3, null, false);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
@@ -1058,15 +1061,27 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	void testIssue3524MonoEmpty(HttpServer server, HttpClient client) {
+	void testIssue3524MonoEmptyGet(HttpServer server, HttpClient client) {
 		// sends "full" request
-		testRequestBody(server, client, sender -> sender.send((req, out) -> Mono.empty()), 1, true);
+		testRequestBody(server, client, GET, sender -> sender.send((req, out) -> Mono.empty()), 1, null, true);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	void testIssue3524NoBody(HttpServer server, HttpClient client) {
+	void testIssue3524MonoEmptyPost(HttpServer server, HttpClient client) {
 		// sends "full" request
-		testRequestBody(server, client, sender -> sender.send((req, out) -> out), 1, true);
+		testRequestBody(server, client, POST, sender -> sender.send((req, out) -> Mono.empty()), 1, "0", false);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524NoBodyGet(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, GET, sender -> sender.send((req, out) -> out), 1, null, true);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524NoBodyPost(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, POST, sender -> sender.send((req, out) -> out), 1, "0", false);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
@@ -1078,12 +1093,13 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	private void testRequestBody(HttpServer server, HttpClient client,
 			Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg) {
-		testRequestBody(server, client, sendFunction, expectedMsg, false);
+		testRequestBody(server, client, POST, sendFunction, expectedMsg, "4", false);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	private void testRequestBody(HttpServer server, HttpClient client,
-			Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg, boolean contentHeadersDoNotExist) {
+	private void testRequestBody(HttpServer server, HttpClient client, HttpMethod method,
+			Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg,
+			@Nullable String contentLength, boolean contentHeadersDoNotExist) {
 		disposableServer =
 				server.handle((req, res) -> req.receive()
 				                               .then(res.send()))
@@ -1132,7 +1148,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		                                  });
 		                          }
 		                      })
-		                      .post()
+		                      .request(method)
 		                      .uri("/"))
 		            .responseContent()
 		            .aggregate()
@@ -1143,6 +1159,14 @@ class HttpProtocolsTests extends BaseHttpTest {
 		if (contentHeadersDoNotExist) {
 			assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
 			assertThat(requestHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING)).isNull();
+		}
+		else if (contentLength != null) {
+			assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH)).isNotNull().isEqualTo(contentLength);
+			assertThat(requestHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING)).isNull();
+		}
+		else {
+			assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+			assertThat(requestHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING)).isNotNull();
 		}
 	}
 
