@@ -480,7 +480,7 @@ public final class NameResolverProvider {
 
 	@Override
 	@SuppressWarnings("UndefinedEquals")
-	public boolean equals(Object o) {
+	public boolean equals(@Nullable Object o) {
 		if (this == o) {
 			return true;
 		}
