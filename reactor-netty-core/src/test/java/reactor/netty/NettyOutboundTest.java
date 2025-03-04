@@ -33,6 +33,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import javax.net.ssl.SSLException;
 
+import io.github.nettyplus.leakdetector.junit.NettyLeakDetectorExtension;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -52,11 +53,13 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(NettyLeakDetectorExtension.class)
 class NettyOutboundTest {
 
 	static SelfSignedCertificate ssc;

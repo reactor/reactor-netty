@@ -15,8 +15,10 @@
  */
 package reactor.netty;
 
+import io.github.nettyplus.leakdetector.junit.NettyLeakDetectorExtension;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.provider.Arguments;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
@@ -34,6 +36,7 @@ import java.util.stream.Stream;
  * @author Violeta Georgieva
  * @since 1.0.3
  */
+@ExtendWith(NettyLeakDetectorExtension.class)
 public class BaseHttpTest {
 
 	protected @Nullable DisposableServer disposableServer;
