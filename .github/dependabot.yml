@@ -252,3 +252,14 @@ updates:
   - dependency-name: gradle/actions
   - dependency-name: actions/setup-java
   rebase-strategy: disabled
+- package-ecosystem: npm
+  directory: /docs
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  assignees:
+    - violetagg
+  target-branch: "1.2.x"
+  labels:
+    - type/dependency-upgrade
+  rebase-strategy: disabled
