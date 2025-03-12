@@ -423,14 +423,14 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
 							opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 
+					if (log.isDebugEnabled()) {
+						logStreamsState(ch, http2PooledRef.slot, "Stream opened");
+					}
+
 					ChannelOperations<?, ?> ops = ChannelOperations.get(ch);
 					if (ops != null) {
 						obs.onStateChange(ops, STREAM_CONFIGURED);
 						sink.success(ops);
-					}
-
-					if (log.isDebugEnabled()) {
-						logStreamsState(ch, http2PooledRef.slot, "Stream opened");
 					}
 				}
 			}
