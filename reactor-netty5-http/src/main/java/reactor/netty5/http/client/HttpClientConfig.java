@@ -1140,7 +1140,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		@Override
 		public void onStateChange(Connection connection, State state) {
 			if (state == State.DISCONNECTING) {
-				if (!connection.isPersistent() && connection.channel().isActive()) {
+				if (connection.channel().isActive()) {
 					// Will be released by closeFuture
 					connection.channel().close();
 				}
