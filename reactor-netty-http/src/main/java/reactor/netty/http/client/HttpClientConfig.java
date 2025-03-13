@@ -1227,7 +1227,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State state) {
 			if (state == State.DISCONNECTING) {
-				if (!connection.isPersistent() && connection.channel().isActive()) {
+				if (connection.channel().isActive()) {
 					// Will be released by closeFuture
 					// "FutureReturnValueIgnored" this is deliberate
 					connection.channel().close();

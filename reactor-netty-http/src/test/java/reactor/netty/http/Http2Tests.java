@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -695,5 +695,56 @@ class Http2Tests extends BaseHttpTest {
 		      .expectNextMatches(buf -> expectation.equals(buf.toString(Charset.defaultCharset())))
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(10));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void h2ClientSendsError(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		ConnectionProvider provider = ConnectionProvider.create("h2ClientSendsError", 1);
+		try {
+			http2ClientSendsError(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+					createClient(provider, () -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	private void http2ClientSendsError(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.http2Settings(spec -> spec.maxConcurrentStreams(1))
+				      .handle((req, res) -> Mono.empty())
+				      .bindNow();
+
+		Mono<String> content =
+				client.post()
+				      .uri("/")
+				      .send(Mono.error(new RuntimeException("http2ClientSendsError")))
+				      .responseContent()
+				      .aggregate()
+				      .asString();
+
+		List<Signal<String>> result =
+				Flux.range(1, 3)
+				    .flatMapDelayError(i -> content, 256, 32)
+				    .materialize()
+				    .collectList()
+				    .block(Duration.ofSeconds(10));
+
+		assertThat(result)
+				.isNotNull()
+				.hasSize(1)
+				.allMatch(Signal::hasError);
+		Throwable error = result.get(0).getThrowable();
+		assertThat(error).isNotNull();
+		assertThat(error.getSuppressed())
+				.isNotNull()
+				.hasSize(3)
+				.allMatch(throwable -> "http2ClientSendsError".equals(throwable.getMessage()));
 	}
 }
