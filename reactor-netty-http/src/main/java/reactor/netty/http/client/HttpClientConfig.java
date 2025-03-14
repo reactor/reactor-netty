@@ -924,7 +924,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			pipeline.remove(NettyPipeline.ReactiveBridge);
 			pipeline.remove(this);
 
-			if(idleTimeout != null) {
+			if (idleTimeout != null) {
 				IdleTimeoutHandler.removeIdleTimeoutHandler(pipeline);
 				IdleTimeoutHandler.addIdleTimeoutClientHandler(
 						pipeline,

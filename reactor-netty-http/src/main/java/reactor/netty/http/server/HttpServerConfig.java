@@ -1080,7 +1080,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			pipeline.remove(NettyPipeline.HttpTrafficHandler);
 			pipeline.remove(NettyPipeline.ReactiveBridge);
 
-			if(idleTimeout != null) {
+			if (idleTimeout != null) {
 				IdleTimeoutHandler.removeIdleTimeoutHandler(pipeline);
 				IdleTimeoutHandler.addIdleTimeoutServerHandler(
 						pipeline,
