@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.client;
+package reactor.netty.http;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2FrameCodec;
+import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2PingFrame;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.Objects;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
- * Handler that supports connection health checks using HTTP/2 Ping Frames.
+ * Supports connection health checks using HTTP/2 Ping Frames.
  *
- * <p>This Handler sends a ping frame at the specified interval when no frame is being read or written,
+ * <p> Http2ConnectionLiveness sends a ping frame at the specified interval when no frame is being read or written,
  * ensuring the connection health is monitored. If a ping ACK frame is not received within the configured interval,
  * the connection will be closed.</p>
  *
@@ -49,16 +47,16 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * <p>If no interval is specified, no ping frame checking will be performed.</p>
  *
  * @author raccoonback
- * @since 1.2.3
+ * @since 1.2.5
  */
-final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
+public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 
-	private static final Logger log = Loggers.getLogger(Http2ConnectionLivenessHandler.class);
+	static final Logger log = Loggers.getLogger(Http2ConnectionLiveness.class);
 
 	private ScheduledFuture<?> pingScheduler;
 
 	private final ChannelFutureListener pingWriteListener = new PingWriteListener();
-	private final Http2ConnectionEncoder encoder;
+	private final Http2FrameWriter http2FrameWriter;
 	private final long pingAckTimeoutNanos;
 	private final long pingScheduleIntervalNanos;
 	private final int pingAckDropThreshold;
@@ -67,14 +65,24 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 	private long lastSentPingData;
 	private long lastReceivedPingTime;
 	private long lastSendingPingTime;
-	private long lastIoTime;
 	private boolean isPingAckPending;
 
-	public Http2ConnectionLivenessHandler(Http2ConnectionEncoder encoder, @Nullable Duration pingAckTimeout,
-	                                      @Nullable Duration pintScheduleInterval, @Nullable Integer pingAckDropThreshold) {
-		Objects.requireNonNull(encoder, "encoder");
-
-		this.encoder = encoder;
+	/**
+	 * Constructs a new {@code Http2ConnectionLiveness} instance.
+	 *
+	 * @param http2FrameCodec      the HTTP/2 frame codec
+	 * @param pingAckTimeout       the ping ACK timeout duration
+	 * @param pingScheduleInterval the ping schedule interval duration
+	 * @param pingAckDropThreshold the ping ACK drop threshold
+	 */
+	public Http2ConnectionLiveness(
+			Http2FrameCodec http2FrameCodec,
+			@Nullable Duration pingAckTimeout,
+			@Nullable Duration pingScheduleInterval,
+			@Nullable Integer pingAckDropThreshold
+	) {
+		this.http2FrameWriter = http2FrameCodec.encoder()
+				.frameWriter();
 
 		if (pingAckTimeout != null) {
 			this.pingAckTimeoutNanos = pingAckTimeout.toNanos();
@@ -83,8 +91,8 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 			this.pingAckTimeoutNanos = 0L;
 		}
 
-		if (pintScheduleInterval != null) {
-			this.pingScheduleIntervalNanos = pintScheduleInterval.toNanos();
+		if (pingScheduleInterval != null) {
+			this.pingScheduleIntervalNanos = pingScheduleInterval.toNanos();
 		}
 		else {
 			this.pingScheduleIntervalNanos = 0L;
@@ -98,67 +106,72 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 		}
 	}
 
-	@Override
-	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+	/**
+	 * Checks the liveness of the connection and schedules a ping if necessary.
+	 *
+	 * @param ctx the {@link ChannelHandlerContext} of the connection
+	 */
+	public void check(ChannelHandlerContext ctx) {
 		if (isPingIntervalConfigured()) {
-			isPingAckPending = false;
-			pingAckDropCount = 0;
-			pingScheduler = ctx.executor()
-					.schedule(
-							new PingChecker(ctx),
-							pingAckTimeoutNanos,
-							NANOSECONDS
-					);
+			if (pingScheduler == null) {
+				isPingAckPending = false;
+				pingAckDropCount = 0;
+				pingScheduler = ctx.executor()
+						.schedule(
+								new PingTimeoutTask(ctx),
+								pingAckTimeoutNanos,
+								NANOSECONDS
+						);
+			}
+
+			return;
 		}
 
-		ctx.fireChannelActive();
+		ctx.close();
 	}
 
-	@Override
-	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+	/**
+	 * Receives a message from the peer and processes it if it is a ping frame.
+	 *
+	 * @param msg the message received from the peer
+	 */
+	public void receive(Object msg) {
 		if (msg instanceof Http2PingFrame) {
 			Http2PingFrame frame = (Http2PingFrame) msg;
 			if (frame.ack() && frame.content() == lastSentPingData) {
 				lastReceivedPingTime = System.nanoTime();
 			}
 		}
-		else {
-			lastIoTime = System.nanoTime();
-		}
-
-		ctx.fireChannelRead(msg);
 	}
 
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-		lastIoTime = System.nanoTime();
-
-		ctx.write(msg, promise);
-	}
-
-	@Override
-	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		cancel();
-		ctx.fireChannelInactive();
-	}
-
-	private boolean isPingIntervalConfigured() {
+	/**
+	 * Checks if the ping interval is configured.
+	 *
+	 * @return {@code true} if the ping interval is configured, {@code false} otherwise
+	 */
+	public boolean isPingIntervalConfigured() {
 		return pingAckTimeoutNanos > 0
 				&& pingScheduleIntervalNanos > 0;
 	}
 
-	private void cancel() {
+	/**
+	 * Cancels the scheduled ping task.
+	 */
+	public void cancel() {
 		if (pingScheduler != null) {
 			pingScheduler.cancel(false);
+			pingScheduler = null;
 		}
 	}
 
-	private class PingChecker implements Runnable {
+	/**
+	 * A task that handles ping timeouts.
+	 */
+	class PingTimeoutTask implements Runnable {
 
 		private final ChannelHandlerContext ctx;
 
-		PingChecker(ChannelHandlerContext ctx) {
+		PingTimeoutTask(ChannelHandlerContext ctx) {
 			this.ctx = ctx;
 		}
 
@@ -169,20 +182,9 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 				return;
 			}
 
-			if (lastIoTime == 0 || isIoInProgress()) {
-				if (log.isDebugEnabled()) {
-					log.debug("{} channel is currently reading or writing data.", channel);
-				}
-
-				isPingAckPending = false;
-				pingAckDropCount = 0;
-				pingScheduler = invokeNextSchedule();
-				return;
-			}
-
 			if (!isPingAckPending) {
 				if (log.isDebugEnabled()) {
-					log.debug("Attempting to send a ping frame to {} channel.", channel);
+					log.debug("Attempting to send a ping frame to the channel: {}", channel);
 				}
 
 				writePing(ctx);
@@ -195,15 +197,15 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 
 				if (isExceedAckDropThreshold()) {
 					if (log.isInfoEnabled()) {
-						log.info("Closing {} channel due to delayed ping frame response (timeout: {} ns). lastReceivedPingTime: {}, current: {}", channel, pingAckTimeoutNanos, lastReceivedPingTime, System.nanoTime());
+						log.info("Closing the channel due to delayed ping frame response (timeout: {} ns). {}", pingAckTimeoutNanos, channel);
 					}
 
-					close(channel);
+					close();
 					return;
 				}
 
 				if (log.isInfoEnabled()) {
-					log.info("Drop ping ack frame in {} channel. (ping: {})", channel, lastSentPingData);
+					log.info("Dropping ping ACK frame in channel (ping data: {}). channel: {}", lastSentPingData, channel);
 				}
 
 				writePing(ctx);
@@ -219,14 +221,10 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 		private void writePing(ChannelHandlerContext ctx) {
 			lastSentPingData = ThreadLocalRandom.current().nextLong();
 
-			encoder.frameWriter()
+			http2FrameWriter
 					.writePing(ctx, false, lastSentPingData, ctx.newPromise())
 					.addListener(pingWriteListener);
 			ctx.flush();
-		}
-
-		private boolean isIoInProgress() {
-			return pingAckTimeoutNanos >= (System.nanoTime() - lastIoTime);
 		}
 
 		private boolean isOutOfTimeRange() {
@@ -244,41 +242,46 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 		private ScheduledFuture<?> invokeNextSchedule() {
 			return ctx.executor()
 					.schedule(
-							new PingChecker(ctx),
+							this,
 							pingScheduleIntervalNanos,
 							NANOSECONDS
 					);
 		}
 
-		private void close(Channel channel) {
-			channel.close()
+		private void close() {
+			ctx.close()
 					.addListener(future -> {
 						if (future.isSuccess()) {
 							if (log.isDebugEnabled()) {
-								log.debug("{} channel closed an channel", channel);
+								log.debug("Channel closed after liveness check: {}", ctx.channel());
 							}
 						}
 						else if (log.isDebugEnabled()) {
-							log.debug("{} channel failed to close an channel", channel, future.cause());
+							log.debug("Failed to close the channel: {}. Cause: {}", ctx.channel(), future.cause());
 						}
 					});
 		}
 	}
 
+	/**
+	 * A listener that handles the completion of ping frame writes.
+	 */
 	private class PingWriteListener implements ChannelFutureListener {
 
 		@Override
-		public void operationComplete(ChannelFuture future) throws Exception {
+		public void operationComplete(ChannelFuture future) {
 			if (future.isSuccess()) {
 				if (log.isDebugEnabled()) {
-					log.debug("Wrote PING frame to {} channel.", future.channel());
+					log.debug("Successfully wrote PING frame to the channel: {}", future.channel());
 				}
 
 				isPingAckPending = true;
 				lastSendingPingTime = System.nanoTime();
 			}
-			else if (log.isDebugEnabled()) {
-				log.debug("Failed to wrote PING frame to {} channel.", future.channel());
+			else {
+				if (log.isDebugEnabled()) {
+					log.debug("Failed to write PING frame to the channel: {}", future.channel());
+				}
 			}
 		}
 	}
