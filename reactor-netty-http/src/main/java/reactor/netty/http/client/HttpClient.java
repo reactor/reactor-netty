@@ -59,6 +59,7 @@ import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
+import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.internal.util.Metrics;
@@ -1092,6 +1093,25 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 						return config;
 					});
 		});
+		return dup;
+	}
+
+	/**
+	 * Specifies an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms).
+	 * Once the timeout is reached the connection will be closed.
+	 * <p>If an {@code idleTimeout} is not specified, this indicates no timeout (i.e. infinite),
+	 * which means the connection will be closed only if one of the peers decides to close it.
+	 * <p>If the {@code idleTimeout} is less than {@code 1ms}, then {@code 1ms} will be the idle timeout.
+	 * <p>By default {@code idleTimeout} is not specified.
+	 *
+	 * @param idleTimeout an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms)
+	 * @return a new {@link HttpClient}
+	 * @since 1.2.5
+	 */
+	public final HttpClient idleTimeout(Duration idleTimeout) {
+		Objects.requireNonNull(idleTimeout, "idleTimeout");
+		HttpClient dup = duplicate();
+		dup.configuration().idleTimeout = idleTimeout;
 		return dup;
 	}
 
