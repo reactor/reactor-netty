@@ -402,6 +402,16 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
+			ConnectionObserver owner = connection.channel().attr(OWNER).get();
+			if (owner instanceof DisposableAcquire) {
+				Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(((DisposableAcquire) owner).pooledRef);
+				if (http2PooledRef.slot.h2cUpgradeHandlerCtx() != null &&
+						http2PooledRef.slot.http2MultiplexHandlerCtx() == null) {
+					// Error happened before H2C upgrade
+					invalidate(owner);
+				}
+			}
+
 			obs.onUncaughtException(connection, error);
 		}
 

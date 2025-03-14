@@ -699,7 +699,22 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void h2cClientSendsError(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		ConnectionProvider provider = ConnectionProvider.create("h2cClientSendsError", 1);
+		try {
+			http2ClientSendsError(createServer().protocol(serverProtocols),
+					createClient(provider, () -> disposableServer.address()).protocol(clientProtocols));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
 	void h2ClientSendsError(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
