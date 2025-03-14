@@ -68,6 +68,8 @@ import java.util.function.Function;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.getChannelContext;
 import static reactor.netty.ReactorNetty.setChannelContext;
+import static reactor.netty.http.client.Http2ConnectionProvider.http2PooledRef;
+import static reactor.netty.http.client.Http2ConnectionProvider.logStreamsState;
 
 /**
  * An HTTP/3 implementation for pooled {@link ConnectionProvider}.
@@ -181,7 +183,20 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 	}
 
 	static void registerClose(Channel channel, ConnectionObserver owner) {
-		channel.closeFuture().addListener(f -> invalidate(owner));
+		channel.closeFuture()
+		       .addListener(f -> {
+		           if (owner instanceof DisposableAcquire) {
+		               DisposableAcquire da = (DisposableAcquire) owner;
+		               da.pooledRef
+		                 .invalidate()
+		                 .subscribe(null, null, () -> {
+		                     if (log.isDebugEnabled()) {
+		                         Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(da.pooledRef);
+		                         logStreamsState(channel, http2PooledRef.slot, "Stream closed");
+		                     }
+		                 });
+		           }
+		       });
 	}
 
 	static final String CONNECTION_PROVIDER_NAME = "http3";
@@ -348,7 +363,8 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 			QuicStreamChannelBootstrap bootstrap =
 					Http3.newRequestStreamBootstrap((QuicChannel) channel,
-							new Http3Codec(obs, opsFactory, acceptGzip, loggingHandler, metricsRecorder, remoteAddress, uriTagValue, validate));
+							new Http3Codec(obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
+									opsFactory, acceptGzip, loggingHandler, metricsRecorder, remoteAddress, uriTagValue, validate));
 			attributes(bootstrap, attributes);
 			channelOptions(bootstrap, options);
 			bootstrap.create().addListener(this);

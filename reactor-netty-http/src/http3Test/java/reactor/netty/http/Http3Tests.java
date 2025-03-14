@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,8 @@ import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientResponse;
+import reactor.netty.http.client.HttpConnectionPoolMetrics;
+import reactor.netty.http.client.HttpMeterRegistrarAdapter;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -891,6 +893,58 @@ class Http3Tests {
 		      .verify(Duration.ofSeconds(5));
 	}
 
+	@Test
+	void clientSendsError() {
+		TestHttpMeterRegistrarAdapter metricsRegistrar = new TestHttpMeterRegistrarAdapter();
+
+		ConnectionProvider provider =
+				ConnectionProvider.builder("clientSendsError")
+				                  .maxConnections(1)
+				                  .metrics(true, () -> metricsRegistrar)
+				                  .build();
+		try {
+			disposableServer =
+					createServer()
+					        .handle((req, res) -> Mono.empty())
+					        .bindNow();
+
+			Mono<String> content =
+					createClient(provider, disposableServer.port())
+					        .post()
+					        .uri("/")
+					        .send(Mono.error(new RuntimeException("clientSendsError")))
+					        .responseContent()
+					        .aggregate()
+					        .asString();
+
+			List<Signal<String>> result =
+					Flux.range(1, 3)
+					    .flatMapDelayError(i -> content, 256, 32)
+					    .materialize()
+					    .collectList()
+					    .block(Duration.ofSeconds(10));
+
+			assertThat(result)
+					.isNotNull()
+					.hasSize(1)
+					.allMatch(Signal::hasError);
+			Throwable error = result.get(0).getThrowable();
+			assertThat(error).isNotNull();
+			assertThat(error.getSuppressed())
+					.isNotNull()
+					.hasSize(3)
+					.allMatch(throwable -> "clientSendsError".equals(throwable.getMessage()));
+
+			HttpConnectionPoolMetrics metrics = metricsRegistrar.metrics;
+			assertThat(metrics).isNotNull();
+			assertThat(metrics.activeStreamSize()).isEqualTo(0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 	static HttpClient createClient(int port) {
 		return createClient(null, port);
 	}
@@ -930,4 +984,13 @@ class Http3Tests {
 	private static final String SERVER_RESPONSE_TIME = HTTP_SERVER_PREFIX + RESPONSE_TIME;
 	private static final String SERVER_DATA_SENT_TIME = HTTP_SERVER_PREFIX + DATA_SENT_TIME;
 	private static final String SERVER_DATA_RECEIVED_TIME = HTTP_SERVER_PREFIX + DATA_RECEIVED_TIME;
+
+	static final class TestHttpMeterRegistrarAdapter extends HttpMeterRegistrarAdapter {
+		HttpConnectionPoolMetrics metrics;
+
+		@Override
+		protected void registerMetrics(String poolName, String id, SocketAddress remoteAddress, HttpConnectionPoolMetrics metrics) {
+			this.metrics = metrics;
+		}
+	}
 }
