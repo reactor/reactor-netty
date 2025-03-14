@@ -35,6 +35,9 @@ import java.net.SocketAddress;
 import java.util.function.Function;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.client.Http2ConnectionProvider.http2PooledRef;
+import static reactor.netty.http.client.Http2ConnectionProvider.logStreamsState;
+import static reactor.netty.http.client.Http3ConnectionProvider.OWNER;
 
 final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
@@ -107,6 +110,13 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 		if (log.isDebugEnabled()) {
 			log.debug(format(ch, "Initialized HTTP/3 stream pipeline {}"), ch.pipeline());
+
+			ConnectionObserver owner = ch.parent().attr(OWNER).get();
+			if (owner instanceof Http3ConnectionProvider.DisposableAcquire) {
+				Http3ConnectionProvider.DisposableAcquire da = (Http3ConnectionProvider.DisposableAcquire) owner;
+				Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(da.pooledRef);
+				logStreamsState(ch, http2PooledRef.slot, "Stream opened");
+			}
 		}
 	}
 
