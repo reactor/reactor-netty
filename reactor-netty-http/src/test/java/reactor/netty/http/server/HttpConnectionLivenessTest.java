@@ -143,7 +143,7 @@ class HttpConnectionLivenessTest extends BaseHttpTest {
 		@ParameterizedTest
 		@CsvSource({
 				"100,300,3", "300,100,3",
-				"100,300,3", "300,100,3",
+				"100,300,3", "300,100,3"
 		})
 		void closeConnectionIfPingFrameDelayed(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 			AtomicReference<Channel> connectedServerChannel = new AtomicReference<>();
@@ -198,7 +198,7 @@ class HttpConnectionLivenessTest extends BaseHttpTest {
 		@ParameterizedTest
 		@CsvSource({
 				"100,300,3", "300,100,3",
-				"100,300,3", "300,100,3",
+				"100,300,3", "300,100,3"
 		})
 		void closeConnectionInPoolIfPingFrameDelayed(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 			AtomicReference<Channel> connectedServerChannel = new AtomicReference<>();
@@ -475,7 +475,7 @@ class HttpConnectionLivenessTest extends BaseHttpTest {
 		@ParameterizedTest
 		@CsvSource({
 				"100,300,3", "300,100,3",
-				"100,300,3", "300,100,3",
+				"100,300,3", "300,100,3"
 		})
 		void closeConnectionIfPingFrameDelayed(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 			AtomicReference<Channel> connectedServerChannel = new AtomicReference<>();
@@ -528,7 +528,7 @@ class HttpConnectionLivenessTest extends BaseHttpTest {
 		@ParameterizedTest
 		@CsvSource({
 				"100,300,3", "300,100,3",
-				"100,300,3", "300,100,3",
+				"100,300,3", "300,100,3"
 		})
 		void closeConnectionInPoolIfPingFrameDelayed(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 			AtomicReference<Channel> connectedServerChannel = new AtomicReference<>();
