@@ -111,6 +111,7 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	 *
 	 * @param ctx the {@link ChannelHandlerContext} of the connection
 	 */
+	@Override
 	public void check(ChannelHandlerContext ctx) {
 		if (isPingIntervalConfigured()) {
 			if (pingScheduler == null) {
@@ -135,6 +136,7 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	 *
 	 * @param msg the message received from the peer
 	 */
+	@Override
 	public void receive(Object msg) {
 		if (msg instanceof Http2PingFrame) {
 			Http2PingFrame frame = (Http2PingFrame) msg;
@@ -145,23 +147,19 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	}
 
 	/**
-	 * Checks if the ping interval is configured.
-	 *
-	 * @return {@code true} if the ping interval is configured, {@code false} otherwise
-	 */
-	public boolean isPingIntervalConfigured() {
-		return pingAckTimeoutNanos > 0
-				&& pingScheduleIntervalNanos > 0;
-	}
-
-	/**
 	 * Cancels the scheduled ping task.
 	 */
+	@Override
 	public void cancel() {
 		if (pingScheduler != null) {
 			pingScheduler.cancel(false);
 			pingScheduler = null;
 		}
+	}
+
+	private boolean isPingIntervalConfigured() {
+		return pingAckTimeoutNanos > 0
+				&& pingScheduleIntervalNanos > 0;
 	}
 
 	/**
