@@ -112,6 +112,7 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	 * @param ctx the {@link ChannelHandlerContext} of the connection
 	 */
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void check(ChannelHandlerContext ctx) {
 		if (isPingIntervalConfigured()) {
 			if (pingScheduler == null) {
