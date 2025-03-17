@@ -63,6 +63,7 @@ public final class HttpConnectionImmediateClose implements HttpConnectionLivenes
 	 * @param ctx the {@link ChannelHandlerContext} of the connection
 	 */
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void check(ChannelHandlerContext ctx) {
 		ctx.close();
 	}
