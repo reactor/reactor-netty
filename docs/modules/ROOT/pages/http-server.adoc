@@ -807,7 +807,7 @@ To enable *PING* frames for HTTP/2 connections, configure the HttpServer as foll
 
 {examples-link}/liveness/Application.java
 ----
-include::{examples-dir}/liveness/Application.java[lines=23..40]
+include::{examples-dir}/liveness/Application.java[lines=26..50]
 ----
 <1> To set up a health check using HTTP2 Ping frame, `idleTimeout` must be set first.
 <2> Sets the interval for sending `HTTP/2` `PING` frames and receiving `ACK` responses

@@ -16,23 +16,33 @@
 package reactor.netty.examples.documentation.http.server.liveness;
 
 import reactor.netty.DisposableServer;
+import reactor.netty.http.Http2SslContextSpec;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 
+import java.io.File;
 import java.time.Duration;
 
 public class Application {
 
 	public static void main(String[] args) {
+		File cert = new File("certificate.crt");
+		File key = new File("private.key");
+
+		Http2SslContextSpec http2SslContextSpec = Http2SslContextSpec.forServer(cert, key);
+
 		DisposableServer server =
 				HttpServer.create()
+						.port(8080)
+						.protocol(HttpProtocol.H2)
+						.secure(spec -> spec.sslContext(http2SslContextSpec))
 						.idleTimeout(Duration.ofSeconds(1)) //<1>
-						.secure()
 						.http2Settings(
 								builder -> builder.pingAckTimeout(Duration.ofMillis(600))  // <2>
 										.pingScheduleInterval(Duration.ofMillis(300))  // <3>
 										.pingAckDropThreshold(2)  // <4>
-						);
-				          .bindNow();
+						)
+						.bindNow();
 
 		server.onDispose()
 				.block();
