@@ -786,6 +786,35 @@ include::{examples-dir}/idle/timeout/Application.java[lines=18..35]
 ----
 <1> Configures the default idle timeout to 1 second.
 
+==== Configuring Ping Frame for HTTP/2 Health Check
+When using the HTTP/2 protocol, it is recommended to configure a *PING* frame to maintain the connection and ensure timely health checks.
+The HttpServer in Reactor Netty allows setting up a  *PING* frame to prevent idle connections from being prematurely closed when *idleTimeout* is configured.
+
+[NOTE]
+====
+To enable HTTP/2 PING frame-based health checks, you must configure `idleTimeout`.
+Without `idleTimeout`, the connection may remain open indefinitely, preventing proper detection of inactive or unresponsive connections.
+Setting an appropriate `idleTimeout` ensures that PING-based health checks can effectively terminate unresponsive connections.
+====
+
+*Benefits of Using PING Frames*
+
+- Actively monitors connection health by checking real-time responses to *PING* frames.
+- Ensures that health checks detect unresponsive connections quickly.
+- Helps maintain long-lived connections in an efficient manner.
+
+To enable *PING* frames for HTTP/2 connections, configure the HttpServer as follows:
+
+{examples-link}/liveness/Application.java
+----
+include::{examples-dir}/liveness/Application.java[lines=23..40]
+----
+<1> To set up a health check using HTTP2 Ping frame, `idleTimeout` must be set first.
+<2> Sets the interval for sending `HTTP/2` `PING` frames and receiving `ACK` responses
+<3> Sets the execution interval for the scheduler that sends `HTTP/2` `PING frames and periodically checks for `ACK` responses
+<4> Sets the threshold for retrying `HTTP/2` `PING` frame transmissions.
+
+
 [[http-server-ssl-tls-timeout]]
 === SSL/TLS Timeout
 `HttpServer` supports the SSL/TLS functionality provided by Netty.
