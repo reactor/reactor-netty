@@ -17,9 +17,11 @@ package reactor.netty.transport;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -327,6 +329,20 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		T dup = duplicate();
 		dup.configuration().remoteAddress = remoteAddressSupplier;
+		return dup;
+	}
+
+	/**
+	 * Determines the resolved addresses to which this client should connect for each subscription.
+	 *
+	 * @param resolvedAddressesSelector {@link BiFunction} is invoked after resolving
+	 * the remote address to determine which addresses should be used for the connection.
+	 * @return a new {@link ClientTransport}
+	 */
+	public T resolvedAddressesSelector(BiFunction<? super CONF, List<? extends SocketAddress>, List<? extends SocketAddress>> resolvedAddressesSelector) {
+		Objects.requireNonNull(resolvedAddressesSelector, "resolvedAddressesSelector");
+		T dup = duplicate();
+		dup.configuration().resolvedAddressesSelector = resolvedAddressesSelector;
 		return dup;
 	}
 
