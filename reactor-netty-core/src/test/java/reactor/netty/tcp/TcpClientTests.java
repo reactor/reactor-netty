@@ -1402,20 +1402,20 @@ public class TcpClientTests {
 			TcpClient localClient = null;
 			if (sharedClient) {
 				localClient = client.runOn(loop)
-				               .port(disposableServer.port())
-				               .doOnConnect(config -> resolvers.get().add(config.resolver()))
-				               .doOnConnected(conn -> conn.onDispose(latch::countDown));
+				                    .port(disposableServer.port())
+				                    .doOnConnect(config -> resolvers.get().add(config.resolver()))
+				                    .doOnConnected(conn -> conn.onDispose(latch::countDown));
 			}
 			for (int i = 0; i < count; i++) {
 				if (!sharedClient) {
 					localClient = client.runOn(loop)
-					               .port(disposableServer.port())
-					               .doOnConnect(config -> resolvers.get().add(config.resolver()))
-					               .doOnConnected(conn -> conn.onDispose(latch::countDown));
+					                    .port(disposableServer.port())
+					                    .doOnConnect(config -> resolvers.get().add(config.resolver()))
+					                    .doOnConnected(conn -> conn.onDispose(latch::countDown));
 				}
 				localClient.handle((in, out) -> in.receive().then())
-				      .connect()
-				      .subscribe();
+				           .connect()
+				           .subscribe();
 			}
 
 			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
@@ -1479,36 +1479,35 @@ public class TcpClientTests {
 			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty);
 
 			server = TcpServer.create()
-					.port(0)
-					.wiretap(true)
-					.handle((req, res) -> res.sendString(req.receive()
-									.asString()
-									.log("server.receive"))
-							.then(Mono.never()))
-					.bindNow();
+					          .port(0)
+					          .wiretap(true)
+					          .handle((req, res) -> res.sendString(req.receive()
+					                                                  .asString()
+					                                                  .log("server.receive"))
+					                                   .then(Mono.never()))
+					          .bindNow();
 
 			client = TcpClient.create()
-					.wiretap(true)
-					.host("localhost")
-					.port(server.port())
-					.doOnConnected(c -> c.addHandlerFirst(cancelReceiver))
-					.handle((in, out) -> {
-						Mono<Void> receive = in
-								.receive()
-								.asString()
-								.log("client.receive")
-								.doOnCancel(cancelled::countDown)
-								.then();
+					          .wiretap(true)
+					          .host("localhost")
+					          .port(server.port())
+					          .doOnConnected(c -> c.addHandlerFirst(cancelReceiver))
+					          .handle((in, out) -> {
+					              Mono<Void> receive = in.receive()
+					                                     .asString()
+					                                     .log("client.receive")
+					                                     .doOnCancel(cancelled::countDown)
+					                                     .then();
 
-						out.sendString(Mono.just("REQUEST"))
-								.then()
-								.subscribe();
+					              out.sendString(Mono.just("REQUEST"))
+					                 .then()
+					                 .subscribe();
 
-						return Flux.zip(receive, empty.asMono())
-								.log("zip")
-								.then(Mono.never());
-					})
-					.connectNow();
+					              return Flux.zip(receive, empty.asMono())
+					                         .log("zip")
+					                         .then(Mono.never());
+					          })
+					          .connectNow();
 
 			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
 			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
@@ -1540,35 +1539,32 @@ public class TcpClientTests {
 			CountDownLatch cancelled = new CountDownLatch(1);
 
 			server = TcpServer.create()
-					.port(0)
-					.wiretap(true)
-					.handle((req, res) -> req.receive()
-							.asString()
-							.doOnNext(s -> req.withConnection(DisposableChannel::dispose))
-							.then())
-					.bindNow();
+					          .port(0)
+					          .wiretap(true)
+					          .handle((req, res) -> req.receive()
+					                                   .asString()
+					                                   .doOnNext(s -> req.withConnection(DisposableChannel::dispose))
+					                                   .then())
+					          .bindNow();
 
 			client = TcpClient.create()
-					.wiretap(true)
-					.host("localhost")
-					.port(server.port())
-					.handle((in, out) -> {
-						Mono<Void> receive = in
-								.receive()
-								.asString()
-								.log("client.receive")
-								.doOnCancel(cancelled::countDown)
-								.then();
+					          .wiretap(true)
+					          .host("localhost")
+					          .port(server.port())
+					          .handle((in, out) -> {
+					              Mono<Void> receive = in.receive()
+					                                     .asString()
+					                                     .log("client.receive")
+					                                     .doOnCancel(cancelled::countDown)
+					                                     .then();
 
-						out.sendString(Mono.just("REQUEST"))
-								.then()
-								.subscribe();
+					              out.sendString(Mono.just("REQUEST"))
+					                 .then()
+					                 .subscribe();
 
-						return receive
-								.log("receive")
-								.then(Mono.never());
-					})
-					.connectNow();
+					              return receive.log("receive").then(Mono.never());
+					          })
+					          .connectNow();
 
 			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
 			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTracker await").isTrue();
