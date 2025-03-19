@@ -262,7 +262,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	@Nullable
 	@SuppressWarnings("unchecked")
 	final List<? extends SocketAddress> applyResolvedAddressesSelector(List<? extends SocketAddress> resolvedAddresses) {
-		return resolvedAddressesSelector != null ? resolvedAddressesSelector.apply((CONF) this, resolvedAddresses) : null;
+		return resolvedAddressesSelector != null ? resolvedAddressesSelector.apply((CONF) this, resolvedAddresses) : resolvedAddresses;
 	}
 
 	static final ConcurrentMap<Integer, DnsAddressResolverGroup> RESOLVERS_CACHE = new ConcurrentHashMap<>();

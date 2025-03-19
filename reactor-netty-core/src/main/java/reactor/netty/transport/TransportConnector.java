@@ -395,7 +395,7 @@ public final class TransportConnector {
 				selectedAddresses = clientTransportConfig.applyResolvedAddressesSelector(resolvedAddresses);
 				if (selectedAddresses == null || selectedAddresses.isEmpty()) {
 					if (log.isDebugEnabled()) {
-						log.debug("No address was chosen by the configured selector for resolved addresses.");
+						log.debug("No address was chosen by the configured selector for resolved addresses {}", resolvedAddresses);
 					}
 					throw new UnknownHostException("Failed to resolve [" + remoteAddress + "]");
 				}
