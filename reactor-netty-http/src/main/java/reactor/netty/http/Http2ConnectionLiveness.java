@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2PingFrame;
@@ -144,6 +145,10 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 			if (frame.ack() && frame.content() == lastSentPingData) {
 				lastReceivedPingTime = System.nanoTime();
 			}
+		}
+
+		if (msg instanceof Http2DataFrame) {
+			cancel();
 		}
 	}
 
