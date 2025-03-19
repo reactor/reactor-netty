@@ -174,7 +174,7 @@ class HttpClientTest extends BaseHttpTest {
 	@AfterAll
 	static void cleanup() throws ExecutionException, InterruptedException, TimeoutException {
 		executor.shutdownGracefully()
-				.asStage().get(30, TimeUnit.SECONDS);
+		        .asStage().get(30, TimeUnit.SECONDS);
 	}
 
 	@Test
@@ -374,7 +374,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .handle((req, resp) -> {
-				          	req.withConnection(cn -> cn.onDispose(latch::countDown));
+				              req.withConnection(cn -> cn.onDispose(latch::countDown));
 
 				                  return Flux.interval(Duration.ofSeconds(1))
 				                             .flatMap(d -> resp.sendObject(preferredAllocator().allocate(0)));
@@ -760,12 +760,12 @@ class HttpClientTest extends BaseHttpTest {
 				          .host("localhost")
 				          .route(r -> r.post("/upload", (req, resp) ->
 				                  req.receive()
-				                    .aggregate()
-				                    .asString(StandardCharsets.UTF_8)
-				                    .doOnNext(uploaded::set)
-				                    .then(resp.status(201)
-				                              .sendString(Mono.just("Received File"))
-				                              .then())))
+				                     .aggregate()
+				                     .asString(StandardCharsets.UTF_8)
+				                     .doOnNext(uploaded::set)
+				                     .then(resp.status(201)
+				                               .sendString(Mono.just("Received File"))
+				                               .then())))
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
@@ -3374,36 +3374,35 @@ class HttpClientTest extends BaseHttpTest {
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty, 1);
 
-			disposableServer = createServer()
-					.handle((in, out) -> {
-						in.withConnection(connection -> connection.onDispose(serverClosed::countDown));
-						return in.receive()
-								.asString()
-								.log("server.receive")
-								.then(out.sendString(Mono.just("data")).neverComplete());
-					})
-					.bindNow();
+			disposableServer =
+					createServer().handle((in, out) -> {
+					                  in.withConnection(connection -> connection.onDispose(serverClosed::countDown));
+					                  return in.receive()
+					                           .asString()
+					                           .log("server.receive")
+					                           .then(out.sendString(Mono.just("data")).neverComplete());
+					              })
+					              .bindNow();
 
 			HttpClient httpClient = createHttpClientForContextWithPort(pool);
 			CountDownLatch clientCancelled = new CountDownLatch(1);
 
 			// Creates a client that should be cancelled by the Flix.zip (see below)
-			Mono<String> client = httpClient
-					.doOnRequest((req, conn) -> conn.addHandlerFirst(cancelReceiver))
-					.get()
-					.responseContent()
-					.aggregate()
-					.asString()
-					.log("client")
-					.doOnCancel(clientCancelled::countDown);
+			Mono<String> client =
+					httpClient.doOnRequest((req, conn) -> conn.addHandlerFirst(cancelReceiver))
+					          .get()
+					          .responseContent()
+					          .aggregate()
+					          .asString()
+					          .log("client")
+					          .doOnCancel(clientCancelled::countDown);
 
 			// Zip client with a mono which completes with an empty value when the server receives the request.
 			// The client should then be cancelled with a log message.
-			StepVerifier.create(Flux.zip(client, empty.asMono())
-							.log("zip"))
-					.expectNextCount(0)
-					.expectComplete()
-					.verify(Duration.ofSeconds(30));
+			StepVerifier.create(Flux.zip(client, empty.asMono()).log("zip"))
+			            .expectNextCount(0)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
 
 			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
 			assertThat(clientCancelled.await(30, TimeUnit.SECONDS)).as("latchClient await").isTrue();
@@ -3413,7 +3412,7 @@ class HttpClientTest extends BaseHttpTest {
 		}
 		finally {
 			pool.disposeLater()
-					.block(Duration.ofSeconds(30));
+			    .block(Duration.ofSeconds(30));
 		}
 	}
 
