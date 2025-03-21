@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty.handler.ssl.SslClosedEngineException;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AsciiString;
@@ -66,6 +67,8 @@ import reactor.util.context.Context;
 import reactor.util.retry.Retry;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.Http2SettingsSpec.FALSE;
+import static reactor.netty.http.client.HttpClientOperations.H2;
 import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 
 /**
@@ -537,6 +540,7 @@ class HttpClientConnect extends HttpClient {
 			return address;
 		}
 
+		@SuppressWarnings("ReferenceEquality")
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
 				ch.resourceUrl = this.resourceUrl;
@@ -580,6 +584,18 @@ class HttpClientConnect extends HttpClient {
 
 				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
 				if (websocketClientSpec != null) {
+					// ReferenceEquality is deliberate
+					if (ch.version == H2) {
+						Long value = ch.channel().parent().attr(ENABLE_CONNECT_PROTOCOL).get();
+						if (value == null) {
+							throw new WebSocketClientHandshakeException("Websocket is not supported by the server. " +
+									"Missing SETTINGS_ENABLE_CONNECT_PROTOCOL(0x8).");
+						}
+						if (FALSE.equals(value)) {
+							throw new WebSocketClientHandshakeException("Websocket is not supported by the server. " +
+									"[SETTINGS_ENABLE_CONNECT_PROTOCOL(0x8)=0] was received.");
+						}
+					}
 					Mono<Void> result =
 							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec, compress));
 					if (handler != null) {
@@ -720,6 +736,8 @@ class HttpClientConnect extends HttpClient {
 	}
 
 	static final AsciiString ALL = new AsciiString("*/*");
+
+	static final AttributeKey<Long> ENABLE_CONNECT_PROTOCOL = AttributeKey.valueOf("$ENABLE_CONNECT_PROTOCOL");
 
 	static final Logger log = Loggers.getLogger(HttpClientConnect.class);
 
