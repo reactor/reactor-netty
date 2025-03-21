@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.function.Predicate;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.netty.ByteBufFlux;
@@ -341,9 +342,10 @@ public interface HttpServerRoutes extends
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			WebsocketServerSpec websocketServerSpec) {
 		return route(condition, (req, resp) -> {
-			if (req.requestHeaders()
-			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-				HttpServerOperations ops = (HttpServerOperations) req;
+			HttpHeaders requestHeaders = req.requestHeaders();
+			HttpServerOperations ops = (HttpServerOperations) req;
+			if (requestHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) ||
+					(ops.isHttp2 && requestHeaders.containsValue("x-protocol", HttpHeaderValues.WEBSOCKET, true))) {
 				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();

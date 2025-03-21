@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,9 +32,24 @@ class Http2SettingsSpecTests {
 	}
 
 	@Test
+	public void connectProtocolEnabled() {
+		builder.connectProtocolEnabled(true);
+		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isTrue();
+		assertThat(spec.headerTableSize()).isNull();
+		assertThat(spec.initialWindowSize()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxFrameSize()).isNull();
+		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pushEnabled()).isNull();
+	}
+
+	@Test
 	void headerTableSize() {
 		builder.headerTableSize(123);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isEqualTo(123);
 		assertThat(spec.initialWindowSize()).isNull();
 		assertThat(spec.maxConcurrentStreams()).isNull();
@@ -55,6 +70,7 @@ class Http2SettingsSpecTests {
 	void initialWindowSize() {
 		builder.initialWindowSize(123);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isEqualTo(123);
 		assertThat(spec.maxConcurrentStreams()).isNull();
@@ -75,6 +91,7 @@ class Http2SettingsSpecTests {
 	void maxConcurrentStreams() {
 		builder.maxConcurrentStreams(123);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
 		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
@@ -95,6 +112,7 @@ class Http2SettingsSpecTests {
 	void maxFrameSize() {
 		builder.maxFrameSize(16384);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
 		assertThat(spec.maxConcurrentStreams()).isNull();
@@ -115,6 +133,7 @@ class Http2SettingsSpecTests {
 	void maxHeaderListSize() {
 		builder.maxHeaderListSize(123);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
 		assertThat(spec.maxConcurrentStreams()).isNull();
@@ -135,6 +154,7 @@ class Http2SettingsSpecTests {
 	public void maxStreamsNoMaxConcurrentStreams() {
 		builder.maxStreams(123);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
 		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
@@ -148,6 +168,7 @@ class Http2SettingsSpecTests {
 	public void maxStreamsWithMaxConcurrentStreams_1() {
 		builder.maxStreams(123).maxConcurrentStreams(456);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
 		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
@@ -161,6 +182,7 @@ class Http2SettingsSpecTests {
 	public void maxStreamsWithMaxConcurrentStreams_2() {
 		builder.maxStreams(456).maxConcurrentStreams(123);
 		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
 		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
