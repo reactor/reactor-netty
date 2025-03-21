@@ -104,7 +104,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -630,8 +629,6 @@ class HttpClientTest extends BaseHttpTest {
 				ConnectionProvider.builder("max-connection-pools").build();
 
 		try {
-			ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
-
 			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 
 			disposableServer =
@@ -653,17 +650,9 @@ class HttpClientTest extends BaseHttpTest {
 			    .expectComplete()
 			    .verify(Duration.ofSeconds(5));
 
-			if (withMaxConnectionPools) {
-				Mockito.verify(spyLogger)
-				       .warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
-				assertThat(argumentCaptor.getValue())
-						.isEqualTo("Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
-			}
-			else {
-				Mockito.verify(spyLogger, times(0))
-				       .warn(Mockito.eq("Connection pool creation limit exceeded: {} pools created, maximum expected is {}"),
-				               Mockito.eq(2), Mockito.eq(1));
-			}
+			Mockito.verify(spyLogger, times(0))
+					.warn(Mockito.eq("Connection pool creation limit exceeded: {} pools created, maximum expected is {}"),
+							Mockito.eq(2), Mockito.eq(1));
 		}
 		finally {
 			Loggers.resetLoggerFactory();

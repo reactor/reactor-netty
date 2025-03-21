@@ -51,6 +51,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
@@ -85,6 +86,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final HttpMessageLogFactory                                   httpMessageLogFactory;
 	final Duration                                                idleTimeout;
+	final Http2SettingsSpec  http2SettingsSpec;
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
@@ -121,6 +123,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable Duration idleTimeout,
+			@Nullable Http2SettingsSpec http2SettingsSpec,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			int maxKeepAliveRequests,
@@ -136,6 +139,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		this.cookieDecoder = decoder;
 		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.idleTimeout = idleTimeout;
+		this.http2SettingsSpec = http2SettingsSpec;
 		this.mapHandle = mapHandle;
 		this.maxKeepAliveRequests = maxKeepAliveRequests;
 		this.readTimeout = readTimeout;
@@ -154,13 +158,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	}
 
 	@Override
-	public void channelActive(ChannelHandlerContext ctx) {
-		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
-
-		ctx.fireChannelActive();
-	}
-
-	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		read = true;
 		if (secure == null) {
@@ -174,10 +171,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
 			finalizingResponse = false;
-
-			if (idleTimeout != null) {
-				IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
-			}
 
 			final HttpRequest request = (HttpRequest) msg;
 
@@ -546,7 +539,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			ctx.executor().execute(this);
 		}
 		else {
-			IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
 			ctx.read();
 		}
 	}
