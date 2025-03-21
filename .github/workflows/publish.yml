@@ -113,7 +113,7 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: download antora docs/build
-        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
             name: ${{ env.DOCS_BUILD_ARTIFACT }}
             path: docs/build
@@ -139,7 +139,7 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: download antora docs/build
-        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
             name: ${{ env.DOCS_BUILD_ARTIFACT }}
             path: docs/build
@@ -169,7 +169,7 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: download antora docs/build
-        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
             name: ${{ env.DOCS_BUILD_ARTIFACT }}
             path: docs/build
