@@ -41,6 +41,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -180,7 +181,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (c.channel() instanceof Http2StreamChannel) {
 			this.version = H2;
 		}
-		else if (c.channel() instanceof SocketChannel) {
+		else if (c.channel() instanceof SocketChannel || c.channel() instanceof DomainSocketChannel) {
 			HttpVersion version = this.nettyRequest.protocolVersion();
 			if (version.equals(HttpVersion.HTTP_1_0)) {
 				this.version = HttpVersion.HTTP_1_0;

@@ -168,6 +168,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HOST_NAME;
 import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
+import static reactor.netty.http.server.HttpTrafficHandler.H2;
 import static reactor.netty.resources.LoopResources.DEFAULT_SHUTDOWN_TIMEOUT;
 
 /**
@@ -2019,13 +2020,18 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpServerWithDomainSockets_HTTP11() {
-		doTestHttpServerWithDomainSockets(HttpServer.create(), HttpClient.create(), "http");
+	void testHttpServerWithDomainSockets_HTTP11Get() {
+		doTestHttpServerWithDomainSockets(HttpServer.create(), HttpClient.create(), HttpMethod.GET, "http", HttpVersion.HTTP_1_1);
+	}
+
+	@Test
+	void testHttpServerWithDomainSockets_HTTP11Post() {
+		doTestHttpServerWithDomainSockets(HttpServer.create(), HttpClient.create(), HttpMethod.POST, "http", HttpVersion.HTTP_1_1);
 	}
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testHttpServerWithDomainSockets_HTTP2() {
+	void testHttpServerWithDomainSockets_HTTP2Get() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
@@ -2033,10 +2039,24 @@ class HttpServerTests extends BaseHttpTest {
 		doTestHttpServerWithDomainSockets(
 				HttpServer.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
 				HttpClient.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
-				"https");
+				HttpMethod.GET, "https", H2);
 	}
 
-	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client, String expectedScheme) {
+	@Test
+	@SuppressWarnings("deprecation")
+	void testHttpServerWithDomainSockets_HTTP2Post() {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestHttpServerWithDomainSockets(
+				HttpServer.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				HttpClient.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				HttpMethod.POST, "https", H2);
+	}
+
+	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client, HttpMethod method,
+			String expectedScheme, HttpVersion expectedVersion) {
 		boolean isJava17 = System.getProperty("java.version").startsWith("17");
 		assumeThat(LoopResources.hasNativeSupport() || isJava17).isTrue();
 		disposableServer =
@@ -2049,6 +2069,7 @@ class HttpServerTests extends BaseHttpTest {
 				              assertThat(req.hostAddress()).isNull();
 				              assertThat(req.remoteAddress()).isNull();
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
+				              assertThat(req.version()).isEqualTo(expectedVersion);
 				          });
 				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
 				          return res.send(req.receive().retain());
@@ -2058,15 +2079,20 @@ class HttpServerTests extends BaseHttpTest {
 		String response =
 				client.remoteAddress(disposableServer::address)
 				      .wiretap(true)
-				      .post()
+				      .request(method)
 				      .uri("/")
-				      .send(ByteBufFlux.fromString(Flux.just("1", "2", "3")))
+				      .send((req, out) -> HttpMethod.POST.equals(method) ? out.sendString(Flux.just("1", "2", "3")) : Mono.empty())
 				      .responseContent()
 				      .aggregate()
 				      .asString()
 				      .block(Duration.ofSeconds(30));
 
-		assertThat(response).isEqualTo("123");
+		if (HttpMethod.POST.equals(method)) {
+			assertThat(response).isEqualTo("123");
+		}
+		else {
+			assertThat(response).isNull();
+		}
 	}
 
 	private static SocketAddress createDomainSocketAddress(boolean isJava17) {
