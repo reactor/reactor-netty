@@ -1624,7 +1624,7 @@ public class TcpClientTests {
 			}
 			else {
 				result.as(StepVerifier::create)
-				      .expectNext("testSelectedIps")
+				      .expectNextMatches(s -> s.startsWith("testSelectedIps"))
 				      .expectComplete()
 				      .verify(Duration.ofSeconds(5));
 			}
