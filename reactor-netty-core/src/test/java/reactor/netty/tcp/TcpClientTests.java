@@ -39,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -77,6 +76,7 @@ import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.ClientTransport;
 import reactor.netty.transport.NameResolverProvider;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
@@ -1600,7 +1600,7 @@ public class TcpClientTests {
 	}
 
 	private static void doTestSelectedIps(
-			BiFunction<TcpClientConfig, List<? extends SocketAddress>, List<? extends SocketAddress>> resolvedIpFilter,
+			ClientTransport.ResolvedAddressSelector<TcpClientConfig> resolvedIpFilter,
 			boolean expectError) {
 		DisposableServer disposableServer = null;
 		try {

@@ -137,6 +137,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
+import reactor.netty.transport.ClientTransport;
 import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
@@ -3768,7 +3769,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	private void doTestSelectedIps(
-			BiFunction<HttpClientConfig, List<? extends SocketAddress>, List<? extends SocketAddress>> resolvedIpFilter,
+			ClientTransport.ResolvedAddressSelector<HttpClientConfig> resolvedIpFilter,
 			boolean expectError) {
 		disposableServer =
 				createServer()

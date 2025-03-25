@@ -22,7 +22,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -174,7 +173,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	ProxyProvider                            proxyProvider;
 	Supplier<ProxyProvider>                  proxyProviderSupplier;
 	Supplier<? extends SocketAddress>        remoteAddress;
-	BiFunction<? super CONF, List<? extends SocketAddress>, List<? extends SocketAddress>> resolvedAddressesSelector;
+	ClientTransport.ResolvedAddressSelector<? super CONF> resolvedAddressesSelector;
 	AddressResolverGroup<?>                  resolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
