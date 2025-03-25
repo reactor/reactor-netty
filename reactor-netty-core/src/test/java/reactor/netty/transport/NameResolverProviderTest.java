@@ -27,6 +27,7 @@ import io.netty.resolver.dns.DnsNameResolverChannelStrategy;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
 import io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -71,9 +72,15 @@ class NameResolverProviderTest {
 	@Test
 	void bindAddressSupplier() {
 		assertThat(builder.build().bindAddressSupplier()).isNull();
-		Supplier<SocketAddress> addressSupplier = () -> new InetSocketAddress("localhost", 9527);
+
+		Supplier<@Nullable SocketAddress> addressSupplier = () -> new InetSocketAddress("localhost", 9527);
 		builder.bindAddressSupplier(addressSupplier);
 		assertThat(builder.build().bindAddressSupplier()).isEqualTo(addressSupplier);
+
+		addressSupplier = () -> null;
+		builder.bindAddressSupplier(addressSupplier);
+		assertThat(builder.build().bindAddressSupplier()).isEqualTo(addressSupplier);
+		assertThat(builder.build().bindAddressSupplier().get()).isNull();
 	}
 
 	@Test

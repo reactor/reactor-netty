@@ -54,13 +54,14 @@ public final class NameResolverProvider {
 
 		/**
 		 * Set a new local address supplier that supply the address to bind to.
+		 * If {@code null} is provided by the supplier, there will be no bind operation.
 		 * By default, the host is configured for any local address, and the system picks up an ephemeral port.
 		 *
 		 * @param bindAddressSupplier A supplier of local address to bind to
 		 * @return {@code this}
 		 * @since 1.0.14
 		 */
-		NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier);
+		NameResolverSpec bindAddressSupplier(Supplier<? extends @Nullable SocketAddress> bindAddressSupplier);
 
 		/**
 		 * Build a new {@link NameResolverProvider}.
@@ -309,7 +310,7 @@ public final class NameResolverProvider {
 	 * @return the configured supplier of local address to bind to or null
 	 * @since 1.0.14
 	 */
-	public @Nullable Supplier<? extends SocketAddress> bindAddressSupplier() {
+	public @Nullable Supplier<? extends @Nullable SocketAddress> bindAddressSupplier() {
 		return bindAddressSupplier;
 	}
 
@@ -595,7 +596,7 @@ public final class NameResolverProvider {
 				.socketChannelFactory(() -> loop.onChannel(SocketChannel.class, group), retryTcpOnTimeout);
 		if (bindAddressSupplier != null) {
 			// There is no check for bindAddressSupplier.get() == null
-			// This is deliberate, when null value is provided Netty will use the default behaviour
+			// This is deliberate, when null value is provided Netty will not bind
 			builder.localAddress(bindAddressSupplier.get());
 		}
 		if (hostsFileEntriesResolver != null) {
@@ -619,7 +620,7 @@ public final class NameResolverProvider {
 		return roundRobinSelection ? new RoundRobinDnsAddressResolverGroup(builder) : new DnsAddressResolverGroup(builder);
 	}
 
-	final @Nullable Supplier<? extends SocketAddress> bindAddressSupplier;
+	final @Nullable Supplier<? extends @Nullable SocketAddress> bindAddressSupplier;
 	final Duration cacheMaxTimeToLive;
 	final Duration cacheMinTimeToLive;
 	final Duration cacheNegativeTimeToLive;
@@ -678,7 +679,7 @@ public final class NameResolverProvider {
 		static final int DEFAULT_NDOTS = -1;
 		static final Duration DEFAULT_QUERY_TIMEOUT = Duration.ofSeconds(5);
 
-		@Nullable Supplier<? extends SocketAddress> bindAddressSupplier;
+		@Nullable Supplier<? extends @Nullable SocketAddress> bindAddressSupplier;
 		Duration cacheMaxTimeToLive = DEFAULT_CACHE_MAX_TIME_TO_LIVE;
 		Duration cacheMinTimeToLive = DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 		Duration cacheNegativeTimeToLive = DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
@@ -702,8 +703,8 @@ public final class NameResolverProvider {
 		@Nullable Iterable<String> searchDomains;
 
 		@Override
-		public NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier) {
-			// If the default behaviour for bindAddress is the desired behaviour, one can provide a Supplier that returns null
+		public NameResolverSpec bindAddressSupplier(Supplier<? extends @Nullable SocketAddress> bindAddressSupplier) {
+			// One can provide a Supplier that returns null if no bind operation is expected
 			Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
 			this.bindAddressSupplier = bindAddressSupplier;
 			return this;
