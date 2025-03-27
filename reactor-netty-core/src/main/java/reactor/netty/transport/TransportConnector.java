@@ -41,6 +41,7 @@ import reactor.util.context.ContextView;
 import reactor.util.retry.Retry;
 
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -223,7 +224,7 @@ public final class TransportConnector {
 	}
 
 	static void doConnect(
-			List<SocketAddress> addresses,
+			List<? extends SocketAddress> addresses,
 			@Nullable Supplier<? extends SocketAddress> bindAddress,
 			MonoChannelPromise connectPromise,
 			int index) {
@@ -316,7 +317,7 @@ public final class TransportConnector {
 			Supplier<? extends SocketAddress> bindAddress = config.bindAddress();
 			if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
 				MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
-				doConnect(Collections.singletonList(remoteAddress), bindAddress, monoChannelPromise, 0);
+				doConnect(selectedAddresses(config, remoteAddress, Collections.singletonList(remoteAddress)), bindAddress, monoChannelPromise, 0);
 				return monoChannelPromise;
 			}
 
@@ -367,7 +368,7 @@ public final class TransportConnector {
 				}
 				else {
 					MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
-					doConnect(resolveFuture.getNow(), bindAddress, monoChannelPromise, 0);
+					doConnect(selectedAddresses(config, remoteAddress, resolveFuture.getNow()), bindAddress, monoChannelPromise, 0);
 					return monoChannelPromise;
 				}
 			}
@@ -378,7 +379,7 @@ public final class TransportConnector {
 					monoChannelPromise.tryFailure(future.cause());
 				}
 				else {
-					doConnect(future.getNow(), bindAddress, monoChannelPromise, 0);
+					doConnect(selectedAddresses(config, remoteAddress, future.getNow()), bindAddress, monoChannelPromise, 0);
 				}
 			});
 			return monoChannelPromise;
@@ -386,6 +387,24 @@ public final class TransportConnector {
 		catch (Throwable t) {
 			return Mono.error(t);
 		}
+	}
+
+	static List<? extends SocketAddress> selectedAddresses(TransportConfig config, SocketAddress remoteAddress,
+			List<SocketAddress> resolvedAddresses) throws UnknownHostException {
+		List<? extends SocketAddress> selectedAddresses = resolvedAddresses;
+		if (config instanceof ClientTransportConfig) {
+			ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
+			if (clientTransportConfig.resolvedAddressesSelector != null) {
+				selectedAddresses = clientTransportConfig.applyResolvedAddressesSelector(resolvedAddresses);
+				if (selectedAddresses == null || selectedAddresses.isEmpty()) {
+					if (log.isDebugEnabled()) {
+						log.debug("No address was chosen by the configured selector for resolved addresses {}", resolvedAddresses);
+					}
+					throw new UnknownHostException("Failed to resolve [" + remoteAddress + "]");
+				}
+			}
+		}
+		return selectedAddresses;
 	}
 
 	static final class MonoChannelPromise extends Mono<Channel> implements ChannelPromise, Subscription {
@@ -658,9 +677,9 @@ public final class TransportConnector {
 
 	static final class RetryConnectException extends RuntimeException {
 
-		final List<SocketAddress> addresses;
+		final List<? extends SocketAddress> addresses;
 
-		RetryConnectException(List<SocketAddress> addresses) {
+		RetryConnectException(List<? extends SocketAddress> addresses) {
 			this.addresses = addresses;
 		}
 
