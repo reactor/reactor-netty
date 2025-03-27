@@ -17,6 +17,7 @@ package reactor.netty5.transport;
 
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -166,6 +167,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	@Nullable ProxyProvider                            proxyProvider;
 	@Nullable Supplier<ProxyProvider>                  proxyProviderSupplier;
 	Supplier<? extends SocketAddress>                  remoteAddress;
+	ClientTransport.@Nullable ResolvedAddressSelector<? super CONF> resolvedAddressesSelector;
 	@Nullable AddressResolverGroup<?>                  resolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
@@ -184,6 +186,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.doOnResolve = parent.doOnResolve;
 		this.doAfterResolve = parent.doAfterResolve;
 		this.doOnResolveError = parent.doOnResolveError;
+		this.resolvedAddressesSelector = parent.resolvedAddressesSelector;
 		this.nameResolverProvider = parent.nameResolverProvider;
 		this.proxyProvider = parent.proxyProvider;
 		this.proxyProviderSupplier = parent.proxyProviderSupplier;
@@ -248,6 +251,11 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	@Override
 	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(@Nullable ProtocolFamily protocolFamily) {
 		throw new UnsupportedOperationException();
+	}
+
+	@SuppressWarnings("unchecked")
+	final @Nullable List<? extends SocketAddress> applyResolvedAddressesSelector(List<? extends SocketAddress> resolvedAddresses) {
+		return resolvedAddressesSelector != null ? resolvedAddressesSelector.apply((CONF) this, resolvedAddresses) : resolvedAddresses;
 	}
 
 	static final ConcurrentMap<Integer, DnsAddressResolverGroup> RESOLVERS_CACHE = new ConcurrentHashMap<>();
