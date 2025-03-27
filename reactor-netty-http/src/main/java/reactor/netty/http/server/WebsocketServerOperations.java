@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensio
 import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameServerExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -52,6 +53,8 @@ import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
 import static reactor.netty.ReactorNetty.format;
@@ -62,11 +65,11 @@ import static reactor.netty.ReactorNetty.format;
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-final class WebsocketServerOperations extends HttpServerOperations
+class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
-	final WebSocketServerHandshaker           handshaker;
-	final ChannelPromise                      handshakerResult;
+	WebSocketServerHandshaker                 handshakerHttp11;
+	ChannelPromise                            handshakerResult;
 	final Sinks.One<WebSocketCloseStatus>     onCloseState;
 	final boolean                             proxyPing;
 
@@ -74,19 +77,23 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	static final String INBOUND_CANCEL_LOG = "WebSocket server inbound receiver cancelled, closing Websocket.";
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	WebsocketServerOperations(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
 		super(replaced);
 		this.proxyPing = websocketServerSpec.handlePing();
 
-		Channel channel = replaced.channel();
 		onCloseState = Sinks.unsafe().one();
+		initHandshaker(wsUrl, websocketServerSpec, replaced);
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void initHandshaker(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
+		Channel channel = replaced.channel();
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory =
 				new WebSocketServerHandshakerFactory(wsUrl, websocketServerSpec.protocols(), true, websocketServerSpec.maxFramePayloadLength());
-		handshaker = wsFactory.newHandshaker(replaced.nettyRequest);
-		if (handshaker == null) {
+		handshakerHttp11 = wsFactory.newHandshaker(replaced.nettyRequest);
+		if (handshakerHttp11 == null) {
 			//"FutureReturnValueIgnored" this is deliberate
 			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel);
 			handshakerResult = null;
@@ -141,7 +148,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 				}
 			}
 
-			handshaker.handshake(channel,
+			handshakerHttp11.handshake(channel,
 			                     request,
 			                     replaced.responseHeaders
 			                             .remove(HttpHeaderNames.TRANSFER_ENCODING),
@@ -303,7 +310,11 @@ final class WebsocketServerOperations extends HttpServerOperations
 	@Override
 	@Nullable
 	public String selectedSubprotocol() {
-		return handshaker.selectedSubprotocol();
+		return handshakerHttp11.selectedSubprotocol();
+	}
+
+	Subscriber<Void> websocketSubscriber(ContextView contextView) {
+		return new WebsocketSubscriber(this, Context.of(contextView));
 	}
 
 	static final AtomicIntegerFieldUpdater<WebsocketServerOperations> CLOSE_SENT =
