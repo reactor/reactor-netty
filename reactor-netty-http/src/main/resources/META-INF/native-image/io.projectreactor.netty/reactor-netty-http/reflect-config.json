@@ -22,6 +22,27 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$ProtocolHeaderHandler"
+		},
+		"name": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$ProtocolHeaderHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$WebsocketStreamBridgeClientHandler"
+		},
+		"name": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$WebsocketStreamBridgeClientHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientExtensionHandler"
+		},
+		"name": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientExtensionHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.client.Http3ChannelInitializer"
 		},
 		"name": "reactor.netty.http.client.Http3ChannelInitializer",
@@ -141,6 +162,20 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.server.Http2WebsocketServerOperations$WebsocketServerHandshaker$WebsocketStreamBridgeServerHandler"
+		},
+		"name": "reactor.netty.http.server.Http2WebsocketServerOperations$WebsocketServerHandshaker$WebsocketStreamBridgeServerHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.Http2WebsocketServerOperations$WebsocketServerExtensionHandler"
+		},
+		"name": "reactor.netty.http.server.Http2WebsocketServerOperations$WebsocketServerExtensionHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.server.HttpServerConfig$H2ChannelMetricsHandler"
 		},
 		"name": "reactor.netty.http.server.HttpServerConfig$H2ChannelMetricsHandler",
@@ -193,6 +228,13 @@
 			"typeReachable": "reactor.netty.http.server.Http3StreamBridgeServerHandler"
 		},
 		"name": "reactor.netty.http.server.Http3StreamBridgeServerHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerConfig$ProtocolHeaderHandler"
+		},
+		"name": "reactor.netty.http.server.HttpServerConfig$ProtocolHeaderHandler",
 		"queryAllPublicMethods": true
 	},
 	{

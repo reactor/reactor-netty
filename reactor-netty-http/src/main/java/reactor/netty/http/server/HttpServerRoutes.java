@@ -27,6 +27,7 @@ import java.util.function.Predicate;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
@@ -341,9 +342,10 @@ public interface HttpServerRoutes extends
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			WebsocketServerSpec websocketServerSpec) {
 		return route(condition, (req, resp) -> {
-			if (req.requestHeaders()
-			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-				HttpServerOperations ops = (HttpServerOperations) req;
+			HttpHeaders requestHeaders = req.requestHeaders();
+			HttpServerOperations ops = (HttpServerOperations) req;
+			if (requestHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) ||
+					(ops.isHttp2 && requestHeaders.containsValue("x-protocol", HttpHeaderValues.WEBSOCKET, true))) {
 				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();

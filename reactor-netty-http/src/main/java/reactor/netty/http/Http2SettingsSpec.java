@@ -39,6 +39,15 @@ public final class Http2SettingsSpec {
 		Http2SettingsSpec build();
 
 		/**
+		 * Sets the {@code SETTINGS_ENABLE_CONNECT_PROTOCOL} value.
+		 *
+		 * @param connectProtocolEnabled the {@code SETTINGS_ENABLE_CONNECT_PROTOCOL} value
+		 * @return {@code this}
+		 * @since 1.2.5
+		 */
+		Builder connectProtocolEnabled(boolean connectProtocolEnabled);
+
+		/**
 		 * Sets the {@code SETTINGS_HEADER_TABLE_SIZE} value.
 		 *
 		 * @param headerTableSize the {@code SETTINGS_HEADER_TABLE_SIZE} value
@@ -102,6 +111,16 @@ public final class Http2SettingsSpec {
 	 */
 	public static Builder builder() {
 		return new Build();
+	}
+
+	/**
+	 * Returns the configured {@code SETTINGS_ENABLE_CONNECT_PROTOCOL} value or null.
+	 *
+	 * @return the configured {@code SETTINGS_ENABLE_CONNECT_PROTOCOL} value or null
+	 * @since 1.2.5
+	 */
+	public @Nullable Boolean connectProtocolEnabled() {
+		return connectProtocolEnabled;
 	}
 
 	/**
@@ -179,7 +198,8 @@ public final class Http2SettingsSpec {
 			return false;
 		}
 		Http2SettingsSpec that = (Http2SettingsSpec) o;
-		return Objects.equals(headerTableSize, that.headerTableSize) &&
+		return Objects.equals(connectProtocolEnabled, that.connectProtocolEnabled) &&
+				Objects.equals(headerTableSize, that.headerTableSize) &&
 				Objects.equals(initialWindowSize, that.initialWindowSize) &&
 				Objects.equals(maxConcurrentStreams, that.maxConcurrentStreams) &&
 				Objects.equals(maxFrameSize, that.maxFrameSize) &&
@@ -191,16 +211,23 @@ public final class Http2SettingsSpec {
 	@Override
 	public int hashCode() {
 		int result = 1;
+		result = 31 * result + (connectProtocolEnabled == null ? 0 : Boolean.hashCode(connectProtocolEnabled));
 		result = 31 * result + (headerTableSize == null ? 0 : Long.hashCode(headerTableSize));
 		result = 31 * result + (initialWindowSize == null ? 0 : initialWindowSize);
 		result = 31 * result + (maxConcurrentStreams == null ? 0 : Long.hashCode(maxConcurrentStreams));
 		result = 31 * result + (maxFrameSize == null ? 0 : maxFrameSize);
-		result = 31 * result + (maxHeaderListSize == null ? 0 : Long.hashCode(maxHeaderListSize));
+		result = 31 * result + Long.hashCode(maxHeaderListSize);
 		result = 31 * result + (maxStreams == null ? 0 : Long.hashCode(maxStreams));
 		result = 31 * result + (pushEnabled == null ? 0 : Boolean.hashCode(pushEnabled));
 		return result;
 	}
 
+	// https://datatracker.ietf.org/doc/html/rfc8441#section-9.1
+	public static final char SETTINGS_ENABLE_CONNECT_PROTOCOL = 8;
+	public static final Long FALSE = 0L;
+	public static final Long TRUE = 1L;
+
+	final @Nullable Boolean connectProtocolEnabled;
 	final @Nullable Long headerTableSize;
 	final @Nullable Integer initialWindowSize;
 	final @Nullable Long maxConcurrentStreams;
@@ -211,6 +238,7 @@ public final class Http2SettingsSpec {
 
 	Http2SettingsSpec(Build build) {
 		Http2Settings settings = build.http2Settings;
+		connectProtocolEnabled = build.connectProtocolEnabled;
 		headerTableSize = settings.headerTableSize();
 		initialWindowSize = settings.initialWindowSize();
 		if (settings.maxConcurrentStreams() != null) {
@@ -227,12 +255,19 @@ public final class Http2SettingsSpec {
 	}
 
 	static final class Build implements Builder {
+		@Nullable Boolean connectProtocolEnabled;
 		@Nullable Long maxStreams;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
 
 		@Override
 		public Http2SettingsSpec build() {
 			return new Http2SettingsSpec(this);
+		}
+
+		@Override
+		public Builder connectProtocolEnabled(boolean connectProtocolEnabled) {
+			this.connectProtocolEnabled = Boolean.valueOf(connectProtocolEnabled);
+			return this;
 		}
 
 		@Override

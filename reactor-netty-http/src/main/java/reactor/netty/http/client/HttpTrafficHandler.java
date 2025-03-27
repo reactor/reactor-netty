@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL;
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.Http2SettingsSpec.SETTINGS_ENABLE_CONNECT_PROTOCOL;
+import static reactor.netty.http.client.HttpClientConnect.ENABLE_CONNECT_PROTOCOL;
 
 /**
  * {@link ChannelInboundHandlerAdapter} prior {@link reactor.netty.channel.ChannelOperationsHandler}
@@ -74,6 +76,7 @@ final class HttpTrafficHandler extends ChannelInboundHandlerAdapter {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof Http2SettingsFrame) {
+			ctx.channel().attr(ENABLE_CONNECT_PROTOCOL).set(((Http2SettingsFrame) msg).settings().get(SETTINGS_ENABLE_CONNECT_PROTOCOL));
 			sendNewState(Connection.from(ctx.channel()), ConnectionObserver.State.CONFIGURED);
 			ctx.pipeline().remove(NettyPipeline.ReactiveBridge);
 			ctx.pipeline().remove(this);

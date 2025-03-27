@@ -278,6 +278,7 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
+			'reactor.netty.http.Http2SettingsSpec$Builder#connectProtocolEnabled(boolean)'
 	]
 }
 
