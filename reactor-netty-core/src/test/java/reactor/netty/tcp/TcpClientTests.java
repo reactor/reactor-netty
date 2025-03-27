@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -40,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -74,6 +76,7 @@ import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.ClientTransport;
 import reactor.netty.transport.NameResolverProvider;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
@@ -1567,6 +1570,68 @@ public class TcpClientTests {
 			}
 			if (client != null) {
 				client.disposeNow();
+			}
+		}
+	}
+
+	@Test
+	void testSelectedIpsEmpty() {
+		doTestSelectedIps((tcpClientConfig, list) -> Collections.emptyList(), true);
+	}
+
+	@Test
+	void testSelectedIpsNull() {
+		doTestSelectedIps((tcpClientConfig, list) -> null, true);
+	}
+
+	@Test
+	void testSelectedIpsFilter() {
+		doTestSelectedIps((tcpClientConfig, list) -> list.stream().filter(o -> false).collect(Collectors.toList()), true);
+	}
+
+	@Test
+	void testSelectedIpsCheckConfig() {
+		doTestSelectedIps((tcpClientConfig, list) -> tcpClientConfig.hasProxy() ? list : null, true);
+	}
+
+	@Test
+	void testSelectedIps() {
+		doTestSelectedIps((tcpClientConfig, list) -> list, false);
+	}
+
+	private static void doTestSelectedIps(
+			ClientTransport.ResolvedAddressSelector<TcpClientConfig> resolvedIpFilter,
+			boolean expectError) {
+		DisposableServer disposableServer = null;
+		try {
+			disposableServer =
+					TcpServer.create()
+					         .handle((in, out) -> out.sendString(Mono.just("testSelectedIps")))
+					         .bindNow();
+
+			SocketAddress address = disposableServer.address();
+			Flux<String> result =
+					TcpClient.create()
+					         .resolvedAddressesSelector(resolvedIpFilter)
+					         .remoteAddress(() -> address)
+					         .connect()
+					         .flatMapMany(c -> c.inbound().receive().asString());
+
+			if (expectError) {
+				result.as(StepVerifier::create)
+				      .expectErrorMatches(t -> ("Failed to resolve [" + address + "]").equals(t.getMessage()))
+				      .verify(Duration.ofSeconds(5));
+			}
+			else {
+				result.as(StepVerifier::create)
+				      .expectNextMatches(s -> s.startsWith("testSelectedIps"))
+				      .expectComplete()
+				      .verify(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			if (disposableServer != null) {
+				disposableServer.disposeNow();
 			}
 		}
 	}

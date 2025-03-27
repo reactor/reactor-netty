@@ -16,10 +16,13 @@
 package reactor.netty.transport;
 
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -29,6 +32,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.resources.LoopResources;
+import reactor.util.annotation.Nullable;
 
 /**
  * A generic client {@link Transport} that will {@link #connect()} to a remote address and provide a {@link Connection}.
@@ -42,6 +46,29 @@ import reactor.netty.resources.LoopResources;
 public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		CONF extends ClientTransportConfig<CONF>>
 		extends Transport<T, CONF> {
+
+	/**
+	 * An interface for selecting resolved addresses based on configuration and available socket addresses.
+	 *
+	 * @param <CONF> client configuration implementation
+	 * @since 1.2.5
+	 */
+	public interface ResolvedAddressSelector<CONF>
+			extends BiFunction<CONF, List<? extends SocketAddress>, List<? extends SocketAddress>> {
+
+		/**
+		 * Selects the resolved addresses to be used for a connection.
+		 * If empty list is returned or {@code null}, the connection establishment will fail with
+		 * {@link UnknownHostException}
+		 *
+		 * @param config client configuration implementation
+		 * @param resolvedAddresses the list of resolved socket addresses
+		 * @return the selected list of socket addresses
+		 */
+		@Override
+		@Nullable
+		List<? extends SocketAddress> apply(CONF config, List<? extends SocketAddress> resolvedAddresses);
+	}
 
 	/**
 	 * Connect the {@link ClientTransport} and return a {@link Mono} of {@link Connection}. If
@@ -327,6 +354,21 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		T dup = duplicate();
 		dup.configuration().remoteAddress = remoteAddressSupplier;
+		return dup;
+	}
+
+	/**
+	 * Determines the resolved addresses to which this client should connect for each subscription.
+	 *
+	 * @param resolvedAddressesSelector a {@link ResolvedAddressSelector} invoked after resolving
+	 * the remote address to determine which addresses should be used for the connection.
+	 * @return a new {@link ClientTransport}
+	 * @since 1.2.5
+	 */
+	public T resolvedAddressesSelector(ResolvedAddressSelector<? super CONF> resolvedAddressesSelector) {
+		Objects.requireNonNull(resolvedAddressesSelector, "resolvedAddressesSelector");
+		T dup = duplicate();
+		dup.configuration().resolvedAddressesSelector = resolvedAddressesSelector;
 		return dup;
 	}
 

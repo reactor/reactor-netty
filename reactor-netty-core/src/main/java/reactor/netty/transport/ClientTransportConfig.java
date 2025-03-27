@@ -16,6 +16,7 @@
 package reactor.netty.transport;
 
 import java.net.SocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -172,6 +173,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	ProxyProvider                            proxyProvider;
 	Supplier<ProxyProvider>                  proxyProviderSupplier;
 	Supplier<? extends SocketAddress>        remoteAddress;
+	ClientTransport.ResolvedAddressSelector<? super CONF> resolvedAddressesSelector;
 	AddressResolverGroup<?>                  resolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
@@ -190,6 +192,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.doOnResolve = parent.doOnResolve;
 		this.doAfterResolve = parent.doAfterResolve;
 		this.doOnResolveError = parent.doOnResolveError;
+		this.resolvedAddressesSelector = parent.resolvedAddressesSelector;
 		this.nameResolverProvider = parent.nameResolverProvider;
 		this.proxyProvider = parent.proxyProvider;
 		this.proxyProviderSupplier = parent.proxyProviderSupplier;
@@ -253,6 +256,12 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		else {
 			return resolverGroup;
 		}
+	}
+
+	@Nullable
+	@SuppressWarnings("unchecked")
+	final List<? extends SocketAddress> applyResolvedAddressesSelector(List<? extends SocketAddress> resolvedAddresses) {
+		return resolvedAddressesSelector != null ? resolvedAddressesSelector.apply((CONF) this, resolvedAddresses) : resolvedAddresses;
 	}
 
 	static final ConcurrentMap<Integer, DnsAddressResolverGroup> RESOLVERS_CACHE = new ConcurrentHashMap<>();

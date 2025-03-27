@@ -35,6 +35,7 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -56,6 +57,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -135,6 +137,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
+import reactor.netty.transport.ClientTransport;
 import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
@@ -3738,6 +3741,61 @@ class HttpClientTest extends BaseHttpTest {
 		        .expectNext("empty".equals(requestBodyType) ? "empty null null" : "delete 6 null")
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testSelectedIpsEmpty() {
+		doTestSelectedIps((httpClientConfig, list) -> Collections.emptyList(), true);
+	}
+
+	@Test
+	void testSelectedIpsNull() {
+		doTestSelectedIps((httpClientConfig, list) -> null, true);
+	}
+
+	@Test
+	void testSelectedIpsFilter() {
+		doTestSelectedIps((httpClientConfig, list) -> list.stream().filter(o -> false).collect(Collectors.toList()), true);
+	}
+
+	@Test
+	void testSelectedIpsCheckConfig() {
+		doTestSelectedIps((httpClientConfig, list) -> "".equals(httpClientConfig.uri()) ? list : null, true);
+	}
+
+	@Test
+	void testSelectedIps() {
+		doTestSelectedIps((httpClientConfig, list) -> list, false);
+	}
+
+	private void doTestSelectedIps(
+			ClientTransport.ResolvedAddressSelector<HttpClientConfig> resolvedIpFilter,
+			boolean expectError) {
+		disposableServer =
+				createServer()
+				        .handle((in, out) -> out.sendString(Mono.just("testSelectedIps")))
+				        .bindNow();
+
+		SocketAddress address = disposableServer.address();
+		Flux<String> result =
+				createClient(() -> address)
+				        .resolvedAddressesSelector(resolvedIpFilter)
+				        .get()
+				        .uri("/")
+				        .responseContent()
+				        .asString();
+
+		if (expectError) {
+			result.as(StepVerifier::create)
+			      .expectErrorMatches(t -> ("Failed to resolve [" + address + "]").equals(t.getMessage()))
+			      .verify(Duration.ofSeconds(5));
+		}
+		else {
+			result.as(StepVerifier::create)
+			      .expectNext("testSelectedIps")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
+		}
 	}
 
 	private static final class EchoAction implements Publisher<HttpContent>, Consumer<HttpContent> {
