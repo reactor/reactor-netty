@@ -16,8 +16,6 @@
 package reactor.netty.http.server.logging.error;
 
 import io.netty.channel.Channel;
-import reactor.netty.Connection;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.server.HttpServerInfos;
