@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,7 @@ public interface NettyPipeline {
 	String RIGHT                 = "reactor.right.";
 
 	String AccessLogHandler      = LEFT + "accessLogHandler";
+	String ErrorLogHandler      = LEFT + "errorLogHandler";
 	String ChannelMetricsHandler = LEFT + "channelMetricsHandler";
 	String ChunkedWriter         = LEFT + "chunkedWriter";
 	String CompressionHandler    = LEFT + "compressionHandler";

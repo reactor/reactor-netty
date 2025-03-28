@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -193,6 +193,12 @@ public final class ReactorNetty {
 	 * By default, it is disabled.
 	 */
 	public static final String ACCESS_LOG_ENABLED = "reactor.netty.http.server.accessLogEnabled";
+
+	/**
+	 * Specifies whether the Http Server error log will be enabled.
+	 * By default, it is disabled.
+	 */
+	public static final String ERROR_LOG_ENABLED = "reactor.netty.http.server.errorLogEnabled";
 
 	/**
 	 *  Specifies the zone id used by the access log.
