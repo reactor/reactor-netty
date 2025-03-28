@@ -83,7 +83,7 @@ class ErrorLogTest extends BaseHttpTest {
 		assertThat(relevantLog.getMessage())
 				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
 		assertThat(relevantLog.getFormattedMessage())
-				.matches("\\[([0-9a-fA-F:]+):(\\d+)] -");
+				.matches("\\[([0-9a-fA-F:.]+)(:\\d)*] -");
 	}
 
 	@Test
