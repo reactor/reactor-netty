@@ -36,9 +36,7 @@ import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
-import io.netty5.handler.codec.compression.ZlibCodecFactory;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
-import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
@@ -49,7 +47,6 @@ import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
-import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -60,9 +57,6 @@ import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty.contrib.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.contrib.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.contrib.handler.codec.http.multipart.HttpPostRequestEncoder;
-import io.netty5.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
-import io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
-import io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
 import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.handler.stream.ChunkedWriteHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
@@ -94,7 +88,6 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.ContextView;
 
-import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
@@ -370,7 +363,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public boolean isWebsocket() {
 		ChannelOperations<?, ?> ops = get(channel());
-		return ops != null && ops.getClass().equals(WebsocketClientOperations.class);
+		return ops != null &&
+				(ops.getClass().equals(WebsocketClientOperations.class) ||
+				ops.getClass().equals(Http2WebsocketClientOperations.class));
 	}
 
 	@Override
@@ -903,27 +898,16 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
-			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator<DefaultHttpContent>(8192));
-			removeHandler(NettyPipeline.HttpMetricsHandler);
-
-			if (websocketClientSpec.compress()) {
-				requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
-				removeHandler(NettyPipeline.HttpDecompressor);
-				PerMessageDeflateClientExtensionHandshaker perMessageDeflateClientExtensionHandshaker =
-						new PerMessageDeflateClientExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
-								MAX_WINDOW_SIZE, websocketClientSpec.compressionAllowClientNoContext(),
-								websocketClientSpec.compressionRequestedServerNoContext());
-				addHandlerFirst(NettyPipeline.WsCompressionHandler,
-						new WebSocketClientExtensionHandler(
-								perMessageDeflateClientExtensionHandshaker,
-								new DeflateFrameClientExtensionHandshaker(false),
-								new DeflateFrameClientExtensionHandshaker(true)));
-			}
-
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Attempting to perform websocket handshake with {}"), url);
 			}
-			WebsocketClientOperations ops = new WebsocketClientOperations(url, websocketClientSpec, this);
+			WebsocketClientOperations ops;
+			if (isHttp2) {
+				ops = new Http2WebsocketClientOperations(url, websocketClientSpec, this);
+			}
+			else {
+				ops = new WebsocketClientOperations(url, websocketClientSpec, this);
+			}
 
 			if (!rebind(ops)) {
 				log.error(format(channel(), "Error while rebinding websocket in channel attribute: " +

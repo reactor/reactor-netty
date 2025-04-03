@@ -22,6 +22,7 @@ import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.compression.ZlibCodecFactory;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -34,6 +35,9 @@ import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshakeException
 import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty5.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
+import io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
+import io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -41,11 +45,13 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.netty5.FutureMono;
 import reactor.netty5.NettyOutbound;
+import reactor.netty5.NettyPipeline;
 import reactor.netty5.ReactorNetty;
 import reactor.netty5.http.HttpOperations;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
@@ -54,10 +60,10 @@ import static reactor.netty5.ReactorNetty.format;
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-final class WebsocketClientOperations extends HttpClientOperations
+class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
-	final WebSocketClientHandshaker handshaker;
+	WebSocketClientHandshaker handshakerHttp11;
 	final Sinks.One<WebSocketCloseStatus> onCloseState;
 	final boolean proxyPing;
 
@@ -70,24 +76,48 @@ final class WebsocketClientOperations extends HttpClientOperations
 			HttpClientOperations replaced) {
 		super(replaced);
 		this.proxyPing = websocketClientSpec.handlePing();
-		Channel channel = channel();
 		onCloseState = Sinks.unsafe().one();
+		initHandshaker(currentURI, websocketClientSpec);
+	}
+
+	void initHandshaker(URI currentURI, WebsocketClientSpec websocketClientSpec) {
+		// Returned value is deliberately ignored
+		addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+
+		removeHandler(NettyPipeline.HttpMetricsHandler);
+
+		if (websocketClientSpec.compress()) {
+			requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
+			// Returned value is deliberately ignored
+			removeHandler(NettyPipeline.HttpDecompressor);
+			// Returned value is deliberately ignored
+			PerMessageDeflateClientExtensionHandshaker perMessageDeflateClientExtensionHandshaker =
+					new PerMessageDeflateClientExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
+							MAX_WINDOW_SIZE, websocketClientSpec.compressionAllowClientNoContext(),
+							websocketClientSpec.compressionRequestedServerNoContext());
+			addHandlerFirst(NettyPipeline.WsCompressionHandler,
+					new WebSocketClientExtensionHandler(
+							perMessageDeflateClientExtensionHandshaker,
+							new DeflateFrameClientExtensionHandshaker(false),
+							new DeflateFrameClientExtensionHandshaker(true)));
+		}
 
 		String subprotocols = websocketClientSpec.protocols();
-		HttpHeaders replacedRequestHeaders = replaced.requestHeaders();
+		HttpHeaders replacedRequestHeaders = requestHeaders();
 		replacedRequestHeaders.remove(HttpHeaderNames.HOST);
-		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
+		handshakerHttp11 = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					websocketClientSpec.version(),
 					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
 					replacedRequestHeaders,
 					websocketClientSpec.maxFramePayloadLength());
 
-		handshaker.handshake(channel)
-		          .addListener(f -> {
-			          markPersistent(false);
-			          channel.read();
-		          });
+		Channel channel = channel();
+		handshakerHttp11.handshake(channel)
+		                .addListener(f -> {
+		                    markPersistent(false);
+		                    channel.read();
+		                });
 	}
 
 	@Override
@@ -102,7 +132,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	public @Nullable String selectedSubprotocol() {
-		return handshaker.actualSubprotocol();
+		return handshakerHttp11.actualSubprotocol();
 	}
 
 	@Override
@@ -118,7 +148,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 				if (notRedirected(response)) {
 					try {
-						handshaker.finishHandshake(channel(), response);
+						handshakerHttp11.finishHandshake(channel(), response);
 						// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 						ctx.read();
 						listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
@@ -172,13 +202,17 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	protected void onInboundClose() {
-		if (handshaker.isHandshakeComplete()) {
+		if (isHandshakeComplete()) {
 			terminate();
 		}
 		else {
 			onInboundError(new WebSocketClientHandshakeException("Connection prematurely closed BEFORE " +
 					"opening handshake is complete."));
 		}
+	}
+
+	boolean isHandshakeComplete() {
+		return handshakerHttp11.isHandshakeComplete();
 	}
 
 	@Override

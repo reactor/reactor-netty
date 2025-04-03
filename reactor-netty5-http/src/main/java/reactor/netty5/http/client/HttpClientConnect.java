@@ -39,9 +39,11 @@ import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty5.handler.ssl.SslClosedEngineException;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.AsciiString;
+import io.netty5.util.AttributeKey;
 import io.netty5.util.NetUtil;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
@@ -63,6 +65,7 @@ import reactor.util.context.Context;
 import reactor.util.retry.Retry;
 
 import static reactor.netty5.ReactorNetty.format;
+import static reactor.netty5.http.Http2SettingsSpec.FALSE;
 import static reactor.netty5.http.client.HttpClientState.STREAM_CONFIGURED;
 
 /**
@@ -514,6 +517,17 @@ class HttpClientConnect extends HttpClient {
 
 				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
 				if (websocketClientSpec != null) {
+					if (ch.isHttp2) {
+						Long value = ch.channel().parent().attr(ENABLE_CONNECT_PROTOCOL).get();
+						if (value == null) {
+							throw new WebSocketClientHandshakeException("Websocket is not supported by the server. " +
+									"Missing SETTINGS_ENABLE_CONNECT_PROTOCOL(0x8).");
+						}
+						if (FALSE.equals(value)) {
+							throw new WebSocketClientHandshakeException("Websocket is not supported by the server. " +
+									"[SETTINGS_ENABLE_CONNECT_PROTOCOL(0x8)=0] was received.");
+						}
+					}
 					Mono<Void> result =
 							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec));
 					if (handler != null) {
@@ -653,6 +667,8 @@ class HttpClientConnect extends HttpClient {
 	}
 
 	static final AsciiString ALL = new AsciiString("*/*");
+
+	static final AttributeKey<Long> ENABLE_CONNECT_PROTOCOL = AttributeKey.valueOf("$ENABLE_CONNECT_PROTOCOL");
 
 	static final Logger log = Loggers.getLogger(HttpClientConnect.class);
 

@@ -1228,6 +1228,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 								.doFinally(sig -> decoder.destroy())));
 	}
 
+	@SuppressWarnings("ReferenceEquality")
 	final Mono<Void> withWebsocketSupport(String url,
 			WebsocketServerSpec websocketServerSpec,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
@@ -1235,13 +1236,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
 			isWebsocket = true;
-			WebsocketServerOperations ops = new WebsocketServerOperations(url, websocketServerSpec, this);
+			WebsocketServerOperations ops;
+			// ReferenceEquality is deliberate
+			if (version() == H2) {
+				ops = new Http2WebsocketServerOperations(url, websocketServerSpec, this);
+			}
+			else {
+				ops = new WebsocketServerOperations(url, websocketServerSpec, this);
+			}
 
 			return FutureMono.from(ops.handshakerResult)
 			                 .doOnEach(signal -> {
 			                     if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
 			                         websocketHandler.apply(ops, ops)
-			                                         .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
+			                                         .subscribe(ops.websocketSubscriber(signal.getContextView()));
 			                     }
 			                 });
 		}
@@ -1253,11 +1261,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	static final class WebsocketSubscriber implements CoreSubscriber<Void>, FutureListener<Void> {
 		final WebsocketServerOperations ops;
-		final Context                context;
+		final Context                   context;
+		final @Nullable FutureListener<Void> listener;
 
 		WebsocketSubscriber(WebsocketServerOperations ops, Context context) {
+			this(ops, context, null);
+		}
+
+		WebsocketSubscriber(WebsocketServerOperations ops, Context context, @Nullable FutureListener<Void> listener) {
 			this.ops = ops;
 			this.context = context;
+			this.listener = listener;
 		}
 
 		@Override
@@ -1282,10 +1296,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		@Override
 		public void onComplete() {
-			if (ops.channel()
-			       .isActive()) {
+			if (ops.channel().isActive()) {
 				ops.sendCloseNow(new CloseWebSocketFrame(ops.channel().bufferAllocator(),
-						WebSocketCloseStatus.NORMAL_CLOSURE), this);
+						WebSocketCloseStatus.NORMAL_CLOSURE),
+						listener == null ? this : listener);
 			}
 		}
 

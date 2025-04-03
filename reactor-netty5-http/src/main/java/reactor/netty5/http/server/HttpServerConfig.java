@@ -37,11 +37,13 @@ import io.netty5.handler.codec.http2.Http2ConnectionAdapter;
 import io.netty5.handler.codec.http2.Http2FrameCodec;
 import io.netty5.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty5.handler.codec.http2.Http2FrameLogger;
+import io.netty5.handler.codec.http2.Http2HeadersFrame;
 import io.netty5.handler.codec.http2.Http2MultiplexHandler;
 import io.netty5.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty5.handler.codec.http2.Http2Settings;
 import io.netty5.handler.codec.http2.Http2Stream;
 import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.AbstractSniHandler;
@@ -86,8 +88,12 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static reactor.netty5.NettyPipeline.LEFT;
 import static reactor.netty5.ReactorNetty.ACCESS_LOG_ENABLED;
 import static reactor.netty5.ReactorNetty.format;
+import static reactor.netty5.http.Http2SettingsSpec.FALSE;
+import static reactor.netty5.http.Http2SettingsSpec.SETTINGS_ENABLE_CONNECT_PROTOCOL;
+import static reactor.netty5.http.Http2SettingsSpec.TRUE;
 import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 
 /**
@@ -378,6 +384,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		Http2Settings settings = Http2Settings.defaultSettings();
 
 		if (http2Settings != null) {
+			Boolean connectProtocolEnabled = http2Settings.connectProtocolEnabled();
+			if (connectProtocolEnabled != null) {
+				settings.put(SETTINGS_ENABLE_CONNECT_PROTOCOL, connectProtocolEnabled ? TRUE : FALSE);
+			}
+
 			Long headerTableSize = http2Settings.headerTableSize();
 			if (headerTableSize != null) {
 				settings.headerTableSize(headerTableSize);
@@ -414,6 +425,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+			@Nullable Boolean connectProtocolEnabled,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -429,6 +441,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		ChannelPipeline pipeline = ch.pipeline();
 		if (accessLogEnabled) {
 			pipeline.addLast(NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H2.create(accessLog));
+		}
+		if (Boolean.TRUE.equals(connectProtocolEnabled)) {
+			pipeline.addLast(ProtocolHeaderHandler.NAME, ProtocolHeaderHandler.INSTANCE);
 		}
 		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, HTTP2_STREAM_FRAME_TO_HTTP_OBJECT)
 		        .addLast(NettyPipeline.HttpTrafficHandler,
@@ -570,6 +585,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		p.addLast(NettyPipeline.HttpCodec, http2FrameCodec)
 		 .addLast(NettyPipeline.H2MultiplexHandler,
 		          new Http2MultiplexHandler(new H2Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate,
+		                  http2SettingsSpec != null ? http2SettingsSpec.connectProtocolEnabled() : null,
 		                  formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue,
 		                  metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue)));
 
@@ -911,6 +927,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final @Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
 		final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
 		final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final @Nullable Boolean                                                 connectProtocolEnabled;
 		final HttpServerFormDecoderProvider                                     formDecoderProvider;
 		final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final HttpMessageLogFactory                                             httpMessageLogFactory;
@@ -930,6 +947,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 				@Nullable HttpCompressionOptionsSpec compressionOptions,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+				@Nullable Boolean connectProtocolEnabled,
 				HttpServerFormDecoderProvider formDecoderProvider,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				HttpMessageLogFactory httpMessageLogFactory,
@@ -946,6 +964,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.accessLog = accessLog;
 			this.compressionOptions = compressionOptions;
 			this.compressPredicate = compressPredicate;
+			this.connectProtocolEnabled = connectProtocolEnabled;
 			this.formDecoderProvider = formDecoderProvider;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.httpMessageLogFactory = httpMessageLogFactory;
@@ -963,7 +982,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		@Override
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
-			addStreamHandlers(ch, accessLogEnabled, accessLog, compressionOptions, compressPredicate,
+			addStreamHandlers(ch, accessLogEnabled, accessLog, compressionOptions, compressPredicate, connectProtocolEnabled,
 					formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue,
 					metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue);
 		}
@@ -976,6 +995,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final @Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
 		final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
 		final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final @Nullable Boolean                                                 connectProtocolEnabled;
 		final HttpServerFormDecoderProvider                                     formDecoderProvider;
 		final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2FrameCodecBuilder                                            http2FrameCodecBuilder;
@@ -1017,6 +1037,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.accessLog = accessLog;
 			this.compressionOptions = compressionOptions;
 			this.compressPredicate = compressPredicate;
+			this.connectProtocolEnabled = http2SettingsSpec != null ? http2SettingsSpec.connectProtocolEnabled() : null;
 			this.formDecoderProvider = formDecoderProvider;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.http2FrameCodecBuilder =
@@ -1058,7 +1079,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		@Override
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
-			addStreamHandlers(ch, accessLogEnabled, accessLog, compressionOptions, compressPredicate,
+			addStreamHandlers(ch, accessLogEnabled, accessLog, compressionOptions, compressPredicate, connectProtocolEnabled,
 					formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue,
 					metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue);
 		}
@@ -1403,6 +1424,29 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				channel.pipeline()
 				       .addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDetector());
 			}
+		}
+	}
+
+	static final class ProtocolHeaderHandler implements ChannelHandler {
+		static final ProtocolHeaderHandler INSTANCE = new ProtocolHeaderHandler();
+		static final String NAME = LEFT + "protocolHeaderHandler";
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+			if (msg instanceof Http2HeadersFrame) {
+				Http2Headers headers = ((Http2HeadersFrame) msg).headers();
+				CharSequence value = headers.get(Http2Headers.PseudoHeaderName.PROTOCOL.value());
+				if (value != null) {
+					headers.set("x-protocol", value);
+				}
+				ctx.pipeline().remove(this);
+			}
+			ctx.fireChannelRead(msg);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 	}
 

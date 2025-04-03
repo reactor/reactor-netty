@@ -28,6 +28,7 @@ import java.util.function.Predicate;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpMethod;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.reactivestreams.Publisher;
 import reactor.netty5.BufferFlux;
 import reactor.netty5.http.websocket.WebsocketInbound;
@@ -341,9 +342,10 @@ public interface HttpServerRoutes extends
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			WebsocketServerSpec websocketServerSpec) {
 		return route(condition, (req, resp) -> {
-			if (req.requestHeaders()
-			       .containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)) {
-				HttpServerOperations ops = (HttpServerOperations) req;
+			HttpHeaders requestHeaders = req.requestHeaders();
+			HttpServerOperations ops = (HttpServerOperations) req;
+			if (requestHeaders.containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE) ||
+					(ops.isHttp2 && requestHeaders.containsIgnoreCase("x-protocol", HttpHeaderValues.WEBSOCKET))) {
 				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();

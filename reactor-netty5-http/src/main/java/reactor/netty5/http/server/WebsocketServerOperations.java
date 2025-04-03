@@ -43,6 +43,7 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -53,6 +54,8 @@ import reactor.netty5.ReactorNetty;
 import reactor.netty5.http.HttpOperations;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
 import static reactor.netty5.ReactorNetty.format;
@@ -63,11 +66,12 @@ import static reactor.netty5.ReactorNetty.format;
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-final class WebsocketServerOperations extends HttpServerOperations
+class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
-	final WebSocketServerHandshaker           handshaker;
-	final Future<Void>                        handshakerResult;
+	WebSocketServerHandshaker                 handshakerHttp11;
+	Future<Void>                              handshakerResult;
+
 	final Sinks.One<WebSocketCloseStatus>     onCloseState;
 	final boolean                             proxyPing;
 
@@ -79,14 +83,18 @@ final class WebsocketServerOperations extends HttpServerOperations
 		super(replaced);
 		this.proxyPing = websocketServerSpec.handlePing();
 
-		Channel channel = replaced.channel();
 		onCloseState = Sinks.unsafe().one();
+		initHandshaker(wsUrl, websocketServerSpec, replaced);
+	}
+
+	void initHandshaker(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
+		Channel channel = replaced.channel();
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory =
 				new WebSocketServerHandshakerFactory(wsUrl, websocketServerSpec.protocols(), true, websocketServerSpec.maxFramePayloadLength());
-		handshaker = wsFactory.newHandshaker(replaced.nettyRequest);
-		if (handshaker == null) {
+		handshakerHttp11 = wsFactory.newHandshaker(replaced.nettyRequest);
+		if (handshakerHttp11 == null) {
 			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel);
 			handshakerResult = null;
 		}
@@ -141,20 +149,18 @@ final class WebsocketServerOperations extends HttpServerOperations
 			HttpHeaders responseHeaders = replaced.responseHeaders();
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			handshakerResult =
-					handshaker.handshake(channel,
-					                     request,
-					                     responseHeaders)
-					          .addListener(f -> {
-					              request.close();
-					              if (replaced.rebind(this)) {
-					                  markPersistent(false);
-					                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-					                  channel.read();
-					              }
-					              else if (log.isDebugEnabled()) {
-					                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
-					              }
-					          });
+					handshakerHttp11.handshake(channel, request, responseHeaders)
+					                .addListener(f -> {
+					                    request.close();
+					                    if (replaced.rebind(this)) {
+					                        markPersistent(false);
+					                        // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+					                        channel.read();
+					                    }
+					                    else if (log.isDebugEnabled()) {
+					                        log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
+					                    }
+					                });
 		}
 	}
 
@@ -298,7 +304,11 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	@Override
 	public @Nullable String selectedSubprotocol() {
-		return handshaker.selectedSubprotocol();
+		return handshakerHttp11.selectedSubprotocol();
+	}
+
+	Subscriber<Void> websocketSubscriber(ContextView contextView) {
+		return new WebsocketSubscriber(this, Context.of(contextView));
 	}
 
 	static final AtomicIntegerFieldUpdater<WebsocketServerOperations> CLOSE_SENT =
