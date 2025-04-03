@@ -150,7 +150,6 @@ updates:
   - dependency-name: org.awaitility:awaitility
   - dependency-name: com.aayushatharva.brotli4j:brotli4j
   - dependency-name: io.netty.incubator:netty-incubator-transport-native-io_uring
-  - dependency-name: io.netty.incubator:netty-incubator-codec-http3
   - dependency-name: com.diffplug.spotless
   rebase-strategy: disabled
 - package-ecosystem: gradle
@@ -219,6 +218,7 @@ updates:
   - dependency-name: org.awaitility:awaitility
   - dependency-name: com.aayushatharva.brotli4j:brotli4j
   - dependency-name: io.netty.incubator:netty-incubator-transport-native-io_uring
+  - dependency-name: io.netty.incubator:netty-incubator-codec-http3
   - dependency-name: com.diffplug.spotless
   - dependency-name: com.github.luben:zstd-jni
   rebase-strategy: disabled
