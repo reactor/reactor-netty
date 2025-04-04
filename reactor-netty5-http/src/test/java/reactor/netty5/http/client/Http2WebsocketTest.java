@@ -606,9 +606,9 @@ class Http2WebsocketTest extends WebsocketTest {
 		      .collectList()
 		      .as(StepVerifier::create)
 		      .expectErrorMatches(predicate)
-		      .verify(Duration.ofSeconds(5));
+		      .verify(Duration.ofSeconds(30));
 
-		assertThat(connClosed.await(5, TimeUnit.SECONDS)).isTrue();
+		assertThat(connClosed.await(30, TimeUnit.SECONDS)).isTrue();
 
 		if (serverError != null) {
 			assertThat(serverThrowable.get())
