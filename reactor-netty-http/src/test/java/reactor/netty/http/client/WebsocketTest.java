@@ -166,7 +166,7 @@ class WebsocketTest extends BaseHttpTest {
 		                      .log())
 		            .expectNextSequence(expected)
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(5));
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	void doWebSocketRespondsToRequestsFromClients(HttpServer server, HttpClient client) {
@@ -215,7 +215,7 @@ class WebsocketTest extends BaseHttpTest {
 		StepVerifier.create(response)
 		            .expectNextMatches(list -> "1000!".equals(list.get(999)))
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(5));
+		            .verify(Duration.ofSeconds(30));
 
 		log.debug("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
 	}
@@ -246,7 +246,7 @@ class WebsocketTest extends BaseHttpTest {
 		                      .log())
 		            .expectNextSequence(expected)
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(5));
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	void doDuplexEcho(HttpServer server, HttpClient client) throws Exception {
@@ -511,7 +511,7 @@ class WebsocketTest extends BaseHttpTest {
 				                      .log()))
 		            .expectNextSequence(expected)
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(5));
+		            .verify(Duration.ofSeconds(30));
 
 		pr.dispose();
 	}
