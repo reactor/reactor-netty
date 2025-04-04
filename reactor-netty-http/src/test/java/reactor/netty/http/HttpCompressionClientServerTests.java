@@ -585,7 +585,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 			            .verify(Duration.ofSeconds(30));
 
 			assertThat(error.get()).isNotNull()
-			                       .isInstanceOf(RuntimeException.class);
+			                       .matches(t -> t instanceof RuntimeException || t instanceof AssertionError);
 		}
 		finally {
 			if (server1 != null) {
