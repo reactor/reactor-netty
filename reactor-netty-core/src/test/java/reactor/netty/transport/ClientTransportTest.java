@@ -17,8 +17,10 @@ package reactor.netty.transport;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesProvider;
@@ -89,8 +91,16 @@ class ClientTransportTest {
 
 	@Test
 	void testDefaultResolverWithCustomEventLoop() throws Exception {
+		testDefaultResolverWithCustomEventLoop(new NioEventLoopGroup(1));
+	}
+
+	@Test
+	void testDefaultResolverWithCustomEventLoopOnNetty42() throws Exception {
+		testDefaultResolverWithCustomEventLoop(new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
+	}
+
+	private void testDefaultResolverWithCustomEventLoop(EventLoopGroup loopGroup) throws Exception {
 		final LoopResources loop1 = LoopResources.create("test", 1, true);
-		final EventLoopGroup loop2 = new NioEventLoopGroup(1);
 		final ConnectionProvider provider = ConnectionProvider.create("test");
 		final TestClientTransportConfig config =
 				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
@@ -100,7 +110,7 @@ class ClientTransportTest {
 
 			config.loopResources = loop1;
 			config.resolverInternal()
-			      .getResolver(loop2.next())
+			      .getResolver(loopGroup.next())
 			      .resolve(new InetSocketAddress("example.com", 443))
 			      .addListener(f -> assertThat(Thread.currentThread().getName()).startsWith("test-"));
 		}
@@ -112,7 +122,7 @@ class ClientTransportTest {
 			     .block(Duration.ofSeconds(10));
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(10));
-			loop2.shutdownGracefully()
+			loopGroup.shutdownGracefully()
 			     .get(10, TimeUnit.SECONDS);
 		}
 	}
@@ -261,7 +271,7 @@ class ClientTransportTest {
 	@Test
 	@DisabledOnOs(WINDOWS)
 	void testDefaultHostsFileEntriesResolver() throws Exception {
-		doTestHostsFileEntriesResolver(false);
+		doTestHostsFileEntriesResolver(false, new NioEventLoopGroup(1));
 	}
 
 	/**
@@ -270,13 +280,29 @@ class ClientTransportTest {
 	@Test
 	@DisabledOnOs(WINDOWS)
 	void testCustomHostsFileEntriesResolver() throws Exception {
-		doTestHostsFileEntriesResolver(true);
+		doTestHostsFileEntriesResolver(true, new NioEventLoopGroup(1));
 	}
 
-	@SuppressWarnings("unchecked")
-	private void doTestHostsFileEntriesResolver(boolean customResolver) throws Exception {
+	/**
+	 * On Windows OS it is rare to have hosts file.
+	 */
+	@Test
+	@DisabledOnOs(WINDOWS)
+	void testDefaultHostsFileEntriesResolverOnNetty42() throws Exception {
+		doTestHostsFileEntriesResolver(false, new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
+	}
+
+	/**
+	 * On Windows OS it is rare to have hosts file.
+	 */
+	@Test
+	@DisabledOnOs(WINDOWS)
+	void testCustomHostsFileEntriesResolverOnNetty42() throws Exception {
+		doTestHostsFileEntriesResolver(true, new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
+	}
+
+	private void doTestHostsFileEntriesResolver(boolean customResolver, EventLoopGroup loopGroup) throws Exception {
 		LoopResources loop1 = LoopResources.create("test", 1, true);
-		EventLoopGroup loop2 = new NioEventLoopGroup(1);
 		ConnectionProvider provider = ConnectionProvider.create("test");
 		TestClientTransportConfig config =
 				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
@@ -296,7 +322,7 @@ class ClientTransportTest {
 			AtomicReference<List<InetAddress>> resolved = new AtomicReference<>();
 			CountDownLatch latch = new CountDownLatch(1);
 			config.resolverInternal()
-			      .getResolver(loop2.next())
+			      .getResolver(loopGroup.next())
 			      .resolveAll(InetSocketAddress.createUnresolved("localhost", 443))
 			      .addListener(f -> {
 			          resolved.set(
@@ -328,7 +354,7 @@ class ClientTransportTest {
 			     .block(Duration.ofSeconds(10));
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(10));
-			loop2.shutdownGracefully()
+			loopGroup.shutdownGracefully()
 			     .get(10, TimeUnit.SECONDS);
 		}
 	}

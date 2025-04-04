@@ -68,9 +68,11 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelId;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -3257,12 +3259,20 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testIssue1547() throws Exception {
+		testIssue1547(new NioEventLoopGroup(1));
+	}
+
+	@Test
+	void testIssue1547OnNetty42() throws Exception {
+		testIssue1547(new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
+	}
+
+	void testIssue1547(EventLoopGroup loop) throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("testIssue1547")))
 				        .bindNow();
 
-		EventLoopGroup loop = new NioEventLoopGroup(1);
 		AtomicReference<List<@Nullable AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<List<AddressResolverGroup<?>>> resolversInternal = new AtomicReference<>(new ArrayList<>());
 		try {

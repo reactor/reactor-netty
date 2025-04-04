@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.X509Bundle;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -194,6 +195,21 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 * }
 	 * </pre>
 	 *
+	 * If {@link X509Bundle} needs to be used, the sample below can be
+	 * used. Note that {@link X509Bundle} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     X509Bundle cert = new CertificateBuilder().rsa2048()
+	 * 				.subject("CN=testca, OU=dept, O=your-org")
+	 * 				.setIsCertificateAuthority(true)
+	 * 				.addSanDnsName("localhost")
+	 * 				.buildSelfSigned();
+	 *     TcpSslContextSpec tcpSslContextSpec =
+	 *             TcpSslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(tcpSslContextSpec));
+	 * }
+	 * </pre>
+	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 * @return a new {@link TcpServer}
 	 */
@@ -216,6 +232,21 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
 	 *     TcpSslContextSpec tcpSslContextSpec =
 	 *             TcpSslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(tcpSslContextSpec));
+	 * }
+	 * </pre>
+	 *
+	 * If {@link X509Bundle} needs to be used, the sample below can be
+	 * used. Note that {@link X509Bundle} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     X509Bundle cert = new CertificateBuilder().rsa2048()
+	 * 				.subject("CN=testca, OU=dept, O=your-org")
+	 * 				.setIsCertificateAuthority(true)
+	 * 				.addSanDnsName("localhost")
+	 * 				.buildSelfSigned();
+	 *     TcpSslContextSpec tcpSslContextSpec =
+	 *             TcpSslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(tcpSslContextSpec));
 	 * }
 	 * </pre>

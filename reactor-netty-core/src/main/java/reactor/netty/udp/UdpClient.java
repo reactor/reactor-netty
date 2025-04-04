@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.AttributeKey;
 import org.jspecify.annotations.Nullable;
@@ -199,12 +200,29 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	 * @param loopResources a new loop resources
 	 * @param family a specific {@link InternetProtocolFamily} to run with
 	 * @return a new {@link UdpClient} reference
+	 * @deprecated Prefer {@link #runOn(LoopResources, SocketProtocolFamily)}
 	 */
+	@Deprecated
 	public final UdpClient runOn(LoopResources loopResources, InternetProtocolFamily family) {
 		Objects.requireNonNull(loopResources, "loopResources");
 		Objects.requireNonNull(family, "family");
 		UdpClient dup = super.runOn(loopResources, false);
 		dup.configuration().family = family;
+		return dup;
+	}
+
+	/**
+	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
+	 *
+	 * @param loopResources a new loop resources
+	 * @param socketFamily a specific {@link SocketProtocolFamily} to run with
+	 * @return a new {@link UdpClient} reference
+	 */
+	public final UdpClient runOn(LoopResources loopResources, SocketProtocolFamily socketFamily) {
+		Objects.requireNonNull(loopResources, "loopResources");
+		Objects.requireNonNull(socketFamily, "socketFamily");
+		UdpClient dup = super.runOn(loopResources, false);
+		dup.configuration().socketFamily = socketFamily;
 		return dup;
 	}
 

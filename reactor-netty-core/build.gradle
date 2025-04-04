@@ -65,6 +65,7 @@ dependencies {
 	api "io.netty:netty-handler:$nettyVersion"
 	api "io.netty:netty-handler-proxy:$nettyVersion"
 	api "io.netty:netty-resolver-dns:$nettyVersion"
+	api "io.netty:netty-pkitesting:$nettyVersion"
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
 		if (osdetector.classifier == "osx-x86_64" || osdetector.classifier == "osx-aarch_64") {
 			api "io.netty:netty-resolver-dns-native-macos:$nettyVersion$os_suffix"
