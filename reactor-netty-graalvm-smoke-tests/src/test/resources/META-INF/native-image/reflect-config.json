@@ -1,0 +1,24 @@
+[
+	{
+		"condition": {
+			"typeReachable": "io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueConsumerIndexField"
+		},
+		"name": "io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueConsumerIndexField",
+		"fields": [
+			{
+				"name": "consumerIndex"
+			}
+		]
+	},
+	{
+		"condition": {
+			"typeReachable": "io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueProducerIndexField"
+		},
+		"name": "io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueProducerIndexField",
+		"fields": [
+			{
+				"name": "producerIndex"
+			}
+		]
+	}
+]
