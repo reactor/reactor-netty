@@ -24,7 +24,7 @@ It has transitive dependencies on:
 
 * Reactive Streams v1.0.4
 * Reactor Core v3.x
-* Netty v4.1.x
+* Netty v4.2.x
 
 [[getting-started-understanding-bom]]
 == Understanding the BOM and versioning scheme

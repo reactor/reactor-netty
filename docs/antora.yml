@@ -24,7 +24,7 @@ asciidoc:
     core-source-link: '{reactor-netty-github-repo}/reactor-netty-core/src/main/java'
     http-source-link: '{reactor-netty-github-repo}/reactor-netty-http/src/main/java'
     javadoc: 'https://projectreactor.io/docs/netty/{project-version}/api'
-    nettyjavadoc: 'https://netty.io/4.1/api'
+    nettyjavadoc: 'https://netty.io/4.2/api'
     author:
         - Stephane Maldini
         - Violeta Georgieva
