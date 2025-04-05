@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.handler.logging.LogLevel;
@@ -92,6 +93,14 @@ public final class UdpServerConfig extends TransportConfig {
 		return family;
 	}
 
+	/**
+	 * Return the configured {@link SocketProtocolFamily} to run with or null.
+	 *
+	 * @return the configured {@link SocketProtocolFamily} to run with or null
+	 */
+	public final @Nullable SocketProtocolFamily socketFamily() {
+		return socketFamily;
+	}
 
 	// Protected/Package private write API
 
@@ -99,6 +108,7 @@ public final class UdpServerConfig extends TransportConfig {
 	@Nullable Consumer<? super Connection>      doOnBound;
 	@Nullable Consumer<? super Connection>      doOnUnbound;
 	@Nullable InternetProtocolFamily            family;
+	@Nullable SocketProtocolFamily              socketFamily;
 
 	UdpServerConfig(Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> bindAddress) {
 		super(options, bindAddress);

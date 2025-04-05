@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import reactor.core.publisher.Mono;
@@ -195,8 +196,9 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 		EventLoopGroup eventLoopGroup = serverSelectLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = new NioEventLoopGroup(selectCount,
-					threadFactory(this, "select-nio"));
+			EventLoopGroup newEventLoopGroup = new MultiThreadIoEventLoopGroup(selectCount,
+					threadFactory(this, "select-nio"),
+					NioIoHandler.newFactory());
 			if (!serverSelectLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
@@ -210,8 +212,9 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNioServerLoops() {
 		EventLoopGroup eventLoopGroup = serverLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = new NioEventLoopGroup(workerCount,
-					threadFactory(this, "nio"));
+			EventLoopGroup newEventLoopGroup = new MultiThreadIoEventLoopGroup(workerCount,
+					threadFactory(this, "nio"),
+					NioIoHandler.newFactory());
 			if (!serverLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
