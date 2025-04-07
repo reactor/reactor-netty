@@ -3533,7 +3533,7 @@ class HttpServerTests extends BaseHttpTest {
 											((msg instanceof ByteBuf) ? (ByteBuf) msg : null);
 									int expectedRefCount = 0;
 									if (buf != null) {
-										expectedRefCount = buf.refCnt() -1;
+										expectedRefCount = buf.refCnt() - 1;
 									}
 									ctx.fireChannelRead(msg);
 									// At this point, the message has been handled and must have been released.
