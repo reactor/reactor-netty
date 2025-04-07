@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -112,21 +114,30 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	void testClientTransportWarmupNative() throws Exception {
-		testClientTransportWarmup(true);
+		testClientTransportWarmup(true, new NioEventLoopGroup(1));
 	}
 
 	@Test
 	void testClientTransportWarmupNio() throws Exception {
-		testClientTransportWarmup(false);
+		testClientTransportWarmup(false, new NioEventLoopGroup(1));
 	}
 
-	private void testClientTransportWarmup(boolean preferNative) throws Exception {
+	@Test
+	void testClientTransportWarmupNativeOnNetty42() throws Exception {
+		testClientTransportWarmup(true, new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
+	}
+
+	@Test
+	void testClientTransportWarmupNioOnNetty42() throws Exception {
+		testClientTransportWarmup(false, new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
+	}
+
+	private void testClientTransportWarmup(boolean preferNative, final EventLoopGroup loopGroup) throws Exception {
 		final DefaultLoopResources loop1 =
 				(DefaultLoopResources) LoopResources.create("testClientTransportWarmup", 1, true);
-		final EventLoopGroup loop2 = new NioEventLoopGroup(1);
 		try {
 			TcpClient tcpClient = TcpClient.create()
-			                               .resolver(spec -> spec.runOn(loop2))
+			                               .resolver(spec -> spec.runOn(loopGroup))
 			                               .runOn(loop1, preferNative);
 
 			Mono<Void> warmupMono = tcpClient.warmup();
@@ -148,7 +159,7 @@ class DefaultLoopResourcesTest {
 		finally {
 			loop1.disposeLater()
 			     .block(Duration.ofSeconds(5));
-			loop2.shutdownGracefully()
+			loopGroup.shutdownGracefully()
 			     .get(5, TimeUnit.SECONDS);
 		}
 	}

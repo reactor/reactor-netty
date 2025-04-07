@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.client;
 
-import reactor.netty.http.Http2SslContextSpec;
+import io.netty.handler.ssl.SslContextBuilder;
 import reactor.netty.tcp.SslProvider;
 
 import static reactor.netty.http.client.HttpClientSecurityUtils.HOSTNAME_VERIFICATION_CONFIGURER;
@@ -61,7 +61,7 @@ final class HttpClientSecure {
 		SslProvider sslProvider;
 		try {
 			sslProvider = SslProvider.builder()
-			                         .sslContext(Http2SslContextSpec.forClient())
+			                         .sslContext(SslContextBuilder.forClient().build())
 			                         .build();
 		}
 		catch (Exception e) {
