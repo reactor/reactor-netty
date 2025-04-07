@@ -3531,9 +3531,13 @@ class HttpServerTests extends BaseHttpTest {
 								public void channelRead(@NotNull ChannelHandlerContext ctx, @NotNull Object msg) {
 									ByteBuf buf = (msg instanceof ByteBufHolder) ? ((ByteBufHolder) msg).content() :
 											((msg instanceof ByteBuf) ? (ByteBuf) msg : null);
+									int expectedRefCount = 0;
+									if (buf != null) {
+										expectedRefCount = buf.refCnt() -1;
+									}
 									ctx.fireChannelRead(msg);
 									// At this point, the message has been handled and must have been released.
-									if (buf != null && buf.refCnt() == 0) {
+									if (buf != null && buf.refCnt() == expectedRefCount) {
 										serverInboundReleased.countDown();
 										log.debug("Server handled received message, which is now released");
 									}
