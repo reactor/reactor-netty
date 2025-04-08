@@ -140,6 +140,7 @@ dependencies {
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
+	testImplementation "io.netty:netty-pkitesting:$nettyVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

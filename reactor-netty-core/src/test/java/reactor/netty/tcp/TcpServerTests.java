@@ -28,7 +28,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +59,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
@@ -106,12 +106,12 @@ class TcpServerTests {
 
 	final Logger log     = Loggers.getLogger(TcpServerTests.class);
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 	static final EventExecutor executor = new DefaultEventExecutor();
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@AfterAll
@@ -124,7 +124,7 @@ class TcpServerTests {
 	void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		SslContext serverOptions = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+		SslContext serverOptions = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem())
 		                                            .sslProvider(SslProvider.JDK)
 		                                            .build();
 		SslContext clientOptions = SslContextBuilder.forClient()
@@ -332,7 +332,7 @@ class TcpServerTests {
 	@Test
 	void sendFileSecure() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
 		DisposableServer context =
@@ -1132,13 +1132,13 @@ class TcpServerTests {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testSniSupport() throws Exception {
-		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
+		X509Bundle defaultCert = new CertificateBuilder().subject("CN=default").setIsCertificateAuthority(true).buildSelfSigned();
 		TcpSslContextSpec defaultTcpSslContextSpec =
-				TcpSslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
+				TcpSslContextSpec.forServer(defaultCert.toTempCertChainPem(), defaultCert.toTempPrivateKeyPem());
 
-		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
+		X509Bundle testCert = new CertificateBuilder().subject("CN=test.com").setIsCertificateAuthority(true).buildSelfSigned();
 		TcpSslContextSpec testTcpSslContextSpec =
-				TcpSslContextSpec.forServer(testCert.certificate(), testCert.privateKey());
+				TcpSslContextSpec.forServer(testCert.toTempCertChainPem(), testCert.toTempPrivateKeyPem());
 
 		TcpSslContextSpec clientTcpSslContextSpec =
 				TcpSslContextSpec.forClient()
