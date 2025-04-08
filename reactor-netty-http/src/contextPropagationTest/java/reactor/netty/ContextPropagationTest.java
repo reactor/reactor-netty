@@ -28,7 +28,8 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,7 +57,7 @@ class ContextPropagationTest {
 	static final ConnectionProvider provider = ConnectionProvider.create("testContextPropagation", 1);
 	static final ContextRegistry registry = ContextRegistry.getInstance();
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	HttpServer baseServer;
 	Http2SslContextSpec serverCtx;
@@ -64,7 +65,7 @@ class ContextPropagationTest {
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
-		ssc = new SelfSignedCertificate();
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@AfterAll
@@ -74,8 +75,8 @@ class ContextPropagationTest {
 	}
 
 	@BeforeEach
-	void setUp() {
-		serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void setUp() throws Exception {
+		serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		baseServer =
 				HttpServer.create()
 				          .wiretap(true)
