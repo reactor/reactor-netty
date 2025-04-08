@@ -107,8 +107,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
@@ -155,7 +153,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static org.mockito.Mockito.times;
 
 /**
  * This test class verifies {@link HttpClient}.
@@ -624,17 +621,15 @@ class HttpClientTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
-	void testMaxConnectionPools(boolean withMaxConnectionPools) throws SSLException {
-		Logger spyLogger = Mockito.spy(log);
-		Loggers.useCustomLoggers(s -> spyLogger);
-
+	void testMaxConnectionPools(boolean withMaxConnectionPools) throws Exception {
 		ConnectionProvider connectionProvider = withMaxConnectionPools ?
 				ConnectionProvider.builder("max-connection-pools").maxConnectionPools(1).build() :
 				ConnectionProvider.builder("max-connection-pools").build();
 
-		try {
-			ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
-
+		String msg = "Connection pool creation limit exceeded: 2 pools created, maximum expected is 1";
+		String loggerName = "reactor.netty.resources.PooledConnectionProvider";
+		int count = withMaxConnectionPools ? 1 : 0;
+		try (LogTracker logTracker = new LogTracker(loggerName, count, msg)) {
 			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 
 			disposableServer =
@@ -656,20 +651,10 @@ class HttpClientTest extends BaseHttpTest {
 			    .expectComplete()
 			    .verify(Duration.ofSeconds(5));
 
-			if (withMaxConnectionPools) {
-				Mockito.verify(spyLogger)
-				       .warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
-				assertThat(argumentCaptor.getValue())
-						.isEqualTo("Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
-			}
-			else {
-				Mockito.verify(spyLogger, times(0))
-				       .warn(Mockito.eq("Connection pool creation limit exceeded: {} pools created, maximum expected is {}"),
-				               Mockito.eq(2), Mockito.eq(1));
-			}
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(logTracker.actualMessages).hasSize(count);
 		}
 		finally {
-			Loggers.resetLoggerFactory();
 			connectionProvider.dispose();
 		}
 	}
