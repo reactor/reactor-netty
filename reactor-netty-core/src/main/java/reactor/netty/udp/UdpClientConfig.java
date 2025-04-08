@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.handler.logging.LogLevel;
@@ -57,15 +58,29 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	 * Return the configured {@link InternetProtocolFamily} to run with or null.
 	 *
 	 * @return the configured {@link InternetProtocolFamily} to run with or null
+	 * @deprecated as of 1.3.0. Prefer {@link #socketFamily()}. This method will be removed in version 1.4.0.
 	 */
+	@Deprecated
 	public final @Nullable InternetProtocolFamily family() {
 		return family;
+	}
+
+	/**
+	 * Return the configured {@link SocketProtocolFamily} to run with or null.
+	 *
+	 * @return the configured {@link SocketProtocolFamily} to run with or null
+	 * @since 1.3.0
+	 */
+	public final @Nullable SocketProtocolFamily socketFamily() {
+		return socketFamily;
 	}
 
 
 	// Protected/Package private write API
 
+	@SuppressWarnings("deprecation")
 	@Nullable InternetProtocolFamily family;
+	@Nullable SocketProtocolFamily socketFamily;
 
 	UdpClientConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -75,6 +90,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	UdpClientConfig(UdpClientConfig parent) {
 		super(parent);
 		this.family = parent.family;
+		this.socketFamily = parent.socketFamily;
 	}
 
 	@Override
@@ -88,7 +104,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 			return super.connectionFactory(elg, isDomainSocket);
 		}
 		else {
-			return () -> new NioDatagramChannel(family());
+			return () -> new NioDatagramChannel(socketFamily());
 		}
 	}
 
