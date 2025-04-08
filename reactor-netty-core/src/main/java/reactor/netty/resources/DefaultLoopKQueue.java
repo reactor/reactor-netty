@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,15 @@ import java.util.concurrent.ThreadFactory;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.kqueue.KQueueDomainDatagramChannel;
 import io.netty.channel.kqueue.KQueueDomainSocketChannel;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueIoHandle;
+import io.netty.channel.kqueue.KQueueIoHandler;
 import io.netty.channel.kqueue.KQueueServerDomainSocketChannel;
 import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.kqueue.KQueueSocketChannel;
@@ -89,15 +93,17 @@ final class DefaultLoopKQueue implements DefaultLoop {
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new KQueueEventLoopGroup(threads, factory);
+		return new MultiThreadIoEventLoopGroup(threads, factory, KQueueIoHandler.newFactory());
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public boolean supportGroup(EventLoopGroup group) {
 		if (group instanceof ColocatedEventLoopGroup) {
 			group = ((ColocatedEventLoopGroup) group).get();
 		}
-		return group instanceof KQueueEventLoopGroup;
+		return (group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isCompatible(KQueueIoHandle.class)) ||
+				group instanceof KQueueEventLoopGroup;
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopKQueue.class);
