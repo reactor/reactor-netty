@@ -221,11 +221,6 @@ public final class Http2SettingsSpec {
 		return result;
 	}
 
-	// https://datatracker.ietf.org/doc/html/rfc8441#section-9.1
-	public static final char SETTINGS_ENABLE_CONNECT_PROTOCOL = 8;
-	public static final Long FALSE = 0L;
-	public static final Long TRUE = 1L;
-
 	final @Nullable Boolean connectProtocolEnabled;
 	final @Nullable Long headerTableSize;
 	final @Nullable Integer initialWindowSize;
