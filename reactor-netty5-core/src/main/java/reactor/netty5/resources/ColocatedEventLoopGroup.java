@@ -32,7 +32,7 @@ import org.jspecify.annotations.Nullable;
 final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoopGroup> {
 
 	final EventLoopGroup eventLoopGroup;
-	final FastThreadLocal<EventLoop> localLoop = new FastThreadLocal<>();
+	final FastThreadLocal<@Nullable EventLoop> localLoop = new FastThreadLocal<>();
 
 	ColocatedEventLoopGroup(EventLoopGroup eventLoopGroup) {
 		this.eventLoopGroup = eventLoopGroup;
