@@ -3549,6 +3549,9 @@ class HttpClientTest extends BaseHttpTest {
 		try (LogTracker logTracker = new LogTracker("reactor.netty5.channel.ChannelOperationsHandler", 2, "Decoding failed.")) {
 			testIssue3285SendRequest(client, expectedException);
 
+			// Delay a bit the next request so that we do not acquire immediately
+			Thread.sleep(100);
+
 			testIssue3285SendRequest(client, expectedException);
 
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
