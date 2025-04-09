@@ -315,7 +315,7 @@ public class Metrics {
 		return context.hasKey(OBSERVATION_KEY) ? context : context.put(OBSERVATION_KEY, observation);
 	}
 
-	static final AttributeKey<ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
+	static final AttributeKey<@Nullable ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
 
 	/**
 	 * Updates the {@link ContextView} in the channel attributes with this {@link Observation}.
