@@ -99,9 +99,6 @@ import java.util.function.Supplier;
 import static reactor.netty.NettyPipeline.LEFT;
 import static reactor.netty.ReactorNetty.ACCESS_LOG_ENABLED;
 import static reactor.netty.ReactorNetty.format;
-import static reactor.netty.http.Http2SettingsSpec.FALSE;
-import static reactor.netty.http.Http2SettingsSpec.SETTINGS_ENABLE_CONNECT_PROTOCOL;
-import static reactor.netty.http.Http2SettingsSpec.TRUE;
 import static reactor.netty.http.server.Http3Codec.newHttp3ServerConnectionHandler;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 
@@ -898,6 +895,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * fallback to SSL debugging disabled.
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_SERVER_DEBUG, "false"));
+
+	// https://datatracker.ietf.org/doc/html/rfc8441#section-9.1
+	static final char SETTINGS_ENABLE_CONNECT_PROTOCOL = 8;
+	static final Long FALSE = 0L;
+	static final Long TRUE = 1L;
 
 	static final class H2ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
