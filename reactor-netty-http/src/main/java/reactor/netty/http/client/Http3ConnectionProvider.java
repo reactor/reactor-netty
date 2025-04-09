@@ -208,7 +208,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	static final Logger log = Loggers.getLogger(Http3ConnectionProvider.class);
 
-	static final AttributeKey<ConnectionObserver> OWNER = AttributeKey.valueOf("http3ConnectionOwner");
+	static final AttributeKey<@Nullable ConnectionObserver> OWNER = AttributeKey.valueOf("http3ConnectionOwner");
 
 	static final class DelegatingConnectionObserver implements ConnectionObserver {
 

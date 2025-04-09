@@ -34,7 +34,7 @@ import reactor.netty.transport.AddressUtils;
  */
 final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 
-	private static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_FROM_PROXY_PROTOCOL =
+	private static final AttributeKey<@Nullable InetSocketAddress> REMOTE_ADDRESS_FROM_PROXY_PROTOCOL =
 			AttributeKey.valueOf("remoteAddressFromProxyProtocol");
 
 	private static final boolean isProxyProtocolAvailable;
