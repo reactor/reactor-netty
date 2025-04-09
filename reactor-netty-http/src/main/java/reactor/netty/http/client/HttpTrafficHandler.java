@@ -30,7 +30,6 @@ import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL;
 import static reactor.netty.ReactorNetty.format;
-import static reactor.netty.http.Http2SettingsSpec.SETTINGS_ENABLE_CONNECT_PROTOCOL;
 import static reactor.netty.http.client.HttpClientConnect.ENABLE_CONNECT_PROTOCOL;
 
 /**
@@ -127,4 +126,7 @@ final class HttpTrafficHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	static final Logger log = Loggers.getLogger(HttpTrafficHandler.class);
+
+	// https://datatracker.ietf.org/doc/html/rfc8441#section-9.1
+	static final char SETTINGS_ENABLE_CONNECT_PROTOCOL = 8;
 }

@@ -67,7 +67,6 @@ import reactor.util.context.Context;
 import reactor.util.retry.Retry;
 
 import static reactor.netty.ReactorNetty.format;
-import static reactor.netty.http.Http2SettingsSpec.FALSE;
 import static reactor.netty.http.client.HttpClientOperations.H2;
 import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 
@@ -464,6 +463,7 @@ class HttpClientConnect extends HttpClient {
 
 	static final class HttpClientHandler extends SocketAddress
 			implements Predicate<Throwable>, Supplier<SocketAddress> {
+		static final Long FALSE = 0L;
 
 		volatile HttpMethod           method;
 		final HttpHeaders             defaultHeaders;
