@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import brave.Span;
 import brave.http.HttpServerRequest;
 import brave.http.HttpTracing;
 import io.netty.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 
@@ -99,7 +100,7 @@ public final class ReactorNettyHttpTracing {
 		return httpServerDecorator.decorate(server);
 	}
 
-	static final AttributeKey<HttpServerRequest> REQUEST_ATTR_KEY = AttributeKey.valueOf(HttpServerRequest.class.getName());
+	static final AttributeKey<@Nullable HttpServerRequest> REQUEST_ATTR_KEY = AttributeKey.valueOf(HttpServerRequest.class.getName());
 
-	static final AttributeKey<Span> SPAN_ATTR_KEY = AttributeKey.valueOf(Span.class.getName());
+	static final AttributeKey<@Nullable Span> SPAN_ATTR_KEY = AttributeKey.valueOf(Span.class.getName());
 }

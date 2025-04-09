@@ -739,7 +739,7 @@ class HttpClientConnect extends HttpClient {
 
 	static final AsciiString ALL = new AsciiString("*/*");
 
-	static final AttributeKey<Long> ENABLE_CONNECT_PROTOCOL = AttributeKey.valueOf("$ENABLE_CONNECT_PROTOCOL");
+	static final AttributeKey<@Nullable Long> ENABLE_CONNECT_PROTOCOL = AttributeKey.valueOf("$ENABLE_CONNECT_PROTOCOL");
 
 	static final Logger log = Loggers.getLogger(HttpClientConnect.class);
 

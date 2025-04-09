@@ -215,7 +215,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	static final Logger log = Loggers.getLogger(Http2ConnectionProvider.class);
 
-	static final AttributeKey<ConnectionObserver> OWNER = AttributeKey.valueOf("http2ConnectionOwner");
+	static final AttributeKey<@Nullable ConnectionObserver> OWNER = AttributeKey.valueOf("http2ConnectionOwner");
 
 	static final class DelegatingConnectionObserver implements ConnectionObserver {
 
@@ -521,7 +521,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			return false;
 		}
 
-		static final AttributeKey<Http2StreamChannelBootstrap> HTTP2_STREAM_CHANNEL_BOOTSTRAP =
+		static final AttributeKey<@Nullable Http2StreamChannelBootstrap> HTTP2_STREAM_CHANNEL_BOOTSTRAP =
 				AttributeKey.valueOf("http2StreamChannelBootstrap");
 
 		static Http2StreamChannelBootstrap http2StreamChannelBootstrap(Channel channel) {

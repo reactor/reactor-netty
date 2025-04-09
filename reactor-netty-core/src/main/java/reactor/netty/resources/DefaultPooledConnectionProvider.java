@@ -110,7 +110,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	static final Logger log = Loggers.getLogger(DefaultPooledConnectionProvider.class);
 
-	static final AttributeKey<ConnectionObserver> OWNER = AttributeKey.valueOf("connectionOwner");
+	static final AttributeKey<@Nullable ConnectionObserver> OWNER = AttributeKey.valueOf("connectionOwner");
 
 	static final class DisposableAcquire
 			implements ConnectionObserver, Runnable, CoreSubscriber<PooledRef<PooledConnection>>, Disposable {
