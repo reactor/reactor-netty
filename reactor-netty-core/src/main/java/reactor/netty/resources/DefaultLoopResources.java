@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.NonBlocking;
 import reactor.netty.FutureMono;
@@ -41,12 +42,12 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	final boolean                         daemon;
 	final int                             selectCount;
 	final int                             workerCount;
-	final AtomicReference<EventLoopGroup> serverLoops;
-	final AtomicReference<EventLoopGroup> clientLoops;
-	final AtomicReference<EventLoopGroup> serverSelectLoops;
-	final AtomicReference<EventLoopGroup> cacheNativeClientLoops;
-	final AtomicReference<EventLoopGroup> cacheNativeServerLoops;
-	final AtomicReference<EventLoopGroup> cacheNativeSelectLoops;
+	final AtomicReference<@Nullable EventLoopGroup> serverLoops;
+	final AtomicReference<@Nullable EventLoopGroup> clientLoops;
+	final AtomicReference<@Nullable EventLoopGroup> serverSelectLoops;
+	final AtomicReference<@Nullable EventLoopGroup> cacheNativeClientLoops;
+	final AtomicReference<@Nullable EventLoopGroup> cacheNativeServerLoops;
+	final AtomicReference<@Nullable EventLoopGroup> cacheNativeSelectLoops;
 	final AtomicBoolean                   running;
 	final boolean colocate;
 
