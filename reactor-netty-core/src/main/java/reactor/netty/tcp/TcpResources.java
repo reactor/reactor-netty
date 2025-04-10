@@ -405,7 +405,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 			BiFunction<LoopResources, ConnectionProvider, T> onNew) {
 		if (previous == null) {
 			loops = loops == null ? LoopResources.create("reactor-" + name) : loops;
-			int defaultMaxConnections = Math.max(ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS , 500);
+			int defaultMaxConnections = Math.max(ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS, 500);
 			provider = provider == null ? ConnectionProvider.create(name, defaultMaxConnections) : provider;
 		}
 		else {
