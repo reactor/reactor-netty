@@ -27,6 +27,7 @@ import java.util.function.BiFunction;
  * Provides information for logging errors that occur on the HTTP Server.
  *
  * @author raccoonback
+ * @since 1.2.5
  */
 public interface ErrorLogArgProvider {
 

@@ -296,6 +296,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *
 	 * @param enable enable or disable the error log
 	 * @return a new {@link HttpServer}
+	 * @since 1.2.5
 	 */
 	public final HttpServer errorLog(boolean enable) {
 		HttpServer dup = duplicate();
@@ -316,8 +317,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
 	 *                                    .sendString(Mono.just("Hello World!"))))
 	 *           .errorLog(true, ErrorLogFactory.createFilter(
-	 * 								args -> args.cause() instanceof RuntimeException,
-	 * 								args -> ErrorLog.create("host-name={}", args.httpServerInfos().hostName())))
+	 *                              args -> args.cause() instanceof RuntimeException,
+	 *                              args -> ErrorLog.create("host-name={}", args.httpServerInfos().hostName())))
 	 *           .bindNow()
 	 *           .onDispose()
 	 *           .block();
@@ -332,6 +333,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param enable enable or disable the error log
 	 * @param errorLogFactory the {@link ErrorLogFactory} that creates an {@link ErrorLog} given an {@link ErrorLogArgProvider}
 	 * @return a new {@link HttpServer}
+	 * @since 1.2.5
 	 */
 	public final HttpServer errorLog(boolean enable, ErrorLogFactory errorLogFactory) {
 		Objects.requireNonNull(errorLogFactory, "errorLogFactory");

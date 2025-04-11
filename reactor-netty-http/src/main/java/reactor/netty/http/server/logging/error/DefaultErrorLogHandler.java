@@ -24,6 +24,7 @@ import java.util.function.Function;
  * Handler for logging errors that occur in the HTTP Server.
  *
  * @author raccoonback
+ * @since 1.2.5
  */
 public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 

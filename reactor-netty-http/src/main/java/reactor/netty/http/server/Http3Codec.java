@@ -56,7 +56,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final boolean                                                 accessLogEnabled;
 	final Function<AccessLogArgProvider, AccessLog>               accessLog;
 	final boolean                                                 errorLogEnabled;
-	final Function<ErrorLogArgProvider, ErrorLog>               errorLog;
+	final Function<ErrorLogArgProvider, ErrorLog>                 errorLog;
 	final HttpCompressionOptionsSpec                              compressionOptions;
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 	final ServerCookieDecoder                                     cookieDecoder;

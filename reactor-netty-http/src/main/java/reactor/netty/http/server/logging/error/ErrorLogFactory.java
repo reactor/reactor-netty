@@ -25,6 +25,7 @@ import java.util.function.Predicate;
  * Can be used in {@link reactor.netty.http.server.HttpServer#errorLog(boolean, ErrorLogFactory) errorLog} method for example.
  *
  * @author raccoonback
+ * @since 1.2.5
  */
 public interface ErrorLogFactory extends Function<ErrorLogArgProvider, ErrorLog> {
 
