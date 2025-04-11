@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,11 +46,11 @@ class Http2ConnectionInfoTests extends ConnectionInfoTests {
 	@Override
 	protected HttpServer customizeServerOptions(HttpServer httpServer) {
 		try {
-			SslContext ctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+			SslContext ctx = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 			return httpServer.protocol(HttpProtocol.H2)
 			                 .secure(ssl -> ssl.sslContext(ctx));
 		}
-		catch (SSLException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}

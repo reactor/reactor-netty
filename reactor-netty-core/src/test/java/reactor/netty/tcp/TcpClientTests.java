@@ -50,7 +50,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.resolver.AddressResolverGroup;
@@ -1216,7 +1217,7 @@ public class TcpClientTests {
 				TcpClient.create()
 				         .bootstrap(b ->
 				             b.attr(AttributeKey.valueOf("testBootstrap"), "testBootstrap")
-				              .group(new NioEventLoopGroup())
+				              .group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()))
 				              .option(ChannelOption.valueOf("testBootstrap"), "testBootstrap")
 				              .remoteAddress(server.address())
 				              .resolver(DefaultAddressResolverGroup.INSTANCE)
@@ -1284,7 +1285,7 @@ public class TcpClientTests {
 	@Test
 	void testDefaultResolverWithCustomEventLoop() throws Exception {
 		LoopResources loop1 = LoopResources.create("test", 1, true);
-		EventLoopGroup loop2 = new NioEventLoopGroup(1);
+		EventLoopGroup loop2 = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 		TcpClient client = TcpClient.create();
 		TcpClient newClient = null;
 		try {
