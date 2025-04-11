@@ -31,7 +31,6 @@ import io.netty5.handler.codec.http2.Http2HeadersFrame;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -303,7 +302,6 @@ class Http2WebsocketTest extends WebsocketTest {
 
 	@ParameterizedTest
 	@MethodSource("http2CompatibleCombinations")
-	@Disabled
 	void websocketOverH2TestIssue821(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
 		doTestIssue821(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx));

@@ -171,7 +171,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 		else if (!CONNECT.equals(method())) {
 			msg = "Invalid websocket request handshake method [" + method() + "].";
 		}
-		else if (!requestHeaders().containsIgnoreCase("x-protocol", HttpHeaderValues.WEBSOCKET)) {
+		else if (!requestHeaders().containsIgnoreCase("x-http2-protocol", HttpHeaderValues.WEBSOCKET)) {
 			msg = "Invalid websocket request, missing [:protocol=websocket] header.";
 		}
 		else {

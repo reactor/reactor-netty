@@ -35,6 +35,9 @@ import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 import org.jspecify.annotations.Nullable;
 
+import static reactor.netty.http.server.HttpPredicate.http;
+import static reactor.netty.http.server.HttpTrafficHandler.H2;
+
 /**
  * Server routes are unique and only the first matching in order of declaration will be
  * invoked.
@@ -326,7 +329,7 @@ public interface HttpServerRoutes extends
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			WebsocketServerSpec configurer) {
-		return ws(HttpPredicate.get(path), handler, configurer);
+		return ws(HttpPredicate.get(path), handler, configurer).ws(http(path, H2, HttpMethod.CONNECT), handler, configurer);
 	}
 
 	/**
@@ -345,7 +348,7 @@ public interface HttpServerRoutes extends
 			HttpHeaders requestHeaders = req.requestHeaders();
 			HttpServerOperations ops = (HttpServerOperations) req;
 			if (requestHeaders.containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE) ||
-					(ops.isHttp2 && requestHeaders.containsIgnoreCase("x-protocol", HttpHeaderValues.WEBSOCKET))) {
+					(ops.isHttp2 && requestHeaders.containsIgnoreCase("x-http2-protocol", HttpHeaderValues.WEBSOCKET))) {
 				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();

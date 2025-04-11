@@ -197,6 +197,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.isHttp2 = isHttp2;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
+		if (isHttp2) {
+			CharSequence uri = this.nettyRequest.headers().get("x-http2-path");
+			if (uri != null) {
+				this.nettyRequest.headers().remove("x-http2-path");
+				this.nettyRequest.setUri(uri.toString());
+			}
+		}
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
 				headersFactory().withNameValidation(validateHeaders).withValueValidation(validateHeaders));
 		this.readTimeout = readTimeout;
