@@ -35,6 +35,9 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
+import static reactor.netty.http.server.HttpPredicate.http;
+import static reactor.netty.http.server.HttpTrafficHandler.H2;
+
 /**
  * Server routes are unique and only the first matching in order of declaration will be
  * invoked.
@@ -326,7 +329,7 @@ public interface HttpServerRoutes extends
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			WebsocketServerSpec configurer) {
-		return ws(HttpPredicate.get(path), handler, configurer);
+		return ws(HttpPredicate.get(path), handler, configurer).ws(http(path, H2, HttpMethod.CONNECT), handler, configurer);
 	}
 
 	/**
@@ -345,7 +348,7 @@ public interface HttpServerRoutes extends
 			HttpHeaders requestHeaders = req.requestHeaders();
 			HttpServerOperations ops = (HttpServerOperations) req;
 			if (requestHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) ||
-					(ops.isHttp2 && requestHeaders.containsValue("x-protocol", HttpHeaderValues.WEBSOCKET, true))) {
+					(ops.isHttp2 && requestHeaders.containsValue("x-http2-protocol", HttpHeaderValues.WEBSOCKET, true))) {
 				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();
