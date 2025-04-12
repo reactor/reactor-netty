@@ -47,8 +47,10 @@ final class DefaultErrorLogArgProvider extends AbstractErrorLogArgProvider<Defau
 		return cause;
 	}
 
-	public void clear() {
+	void clear() {
 		cause = null;
+		errorDateTime = null;
+		httpServerInfos = null;
 	}
 
 	void applyThrowable(Throwable cause) {
