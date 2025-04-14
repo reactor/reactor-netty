@@ -18,20 +18,37 @@ package reactor.netty.http.server.logging.error;
 import io.netty.channel.ChannelDuplexHandler;
 import reactor.util.annotation.Nullable;
 
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.format.DateTimeFormatter;
 import java.util.function.Function;
 
 class BaseErrorLogHandler extends ChannelDuplexHandler {
 
-	static final String DEFAULT_LOG_FORMAT = "[{}] {}";
+	static String PID;
+
+	static {
+		String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+		if (jvmName.contains("@")) {
+			PID = jvmName.split("@")[0];
+		}
+		else {
+			PID = jvmName;
+		}
+	}
+
+	static final String DEFAULT_LOG_FORMAT = "[{}] [pid " + PID + "] [client {}] {}";
+	static final DateTimeFormatter DATE_TIME_FORMATTER =
+			DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
 	static final String MISSING = "-";
 
 	static final Function<ErrorLogArgProvider, ErrorLog> DEFAULT_ERROR_LOG =
 			args -> ErrorLog.create(
 					DEFAULT_LOG_FORMAT,
+					args.errorDateTime().format(DATE_TIME_FORMATTER),
 					refinedRemoteAddress(args.remoteAddress()),
-					refinedExceptionMessage(args.cause().getMessage()),
+					refinedExceptionMessage(args.cause()),
 					args.cause()
 			);
 
@@ -49,11 +66,13 @@ class BaseErrorLogHandler extends ChannelDuplexHandler {
 		return MISSING;
 	}
 
-	private static String refinedExceptionMessage(@Nullable String message) {
-		if (message != null) {
-			return message;
+	private static String refinedExceptionMessage(Throwable throwable) {
+		String error = throwable.getClass().getName();
+		String message = throwable.getLocalizedMessage();
+		if (message == null) {
+			return error;
 		}
 
-		return MISSING;
+		return error + "." + message;
 	}
 }
