@@ -34,7 +34,7 @@ abstract class AbstractErrorLogArgProvider<SELF extends AbstractErrorLogArgProvi
 	protected HttpServerInfos httpServerInfos;
 	protected ZonedDateTime errorDateTime;
 
-	AbstractErrorLogArgProvider(SocketAddress remoteAddress) {
+	AbstractErrorLogArgProvider(@Nullable SocketAddress remoteAddress) {
 		this.remoteAddress = remoteAddress;
 	}
 
