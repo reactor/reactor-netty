@@ -293,6 +293,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * <p>
 	 *
 	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ERROR_LOG_ENABLED} system property.
+	 * By default, error logs are formatted as "[{datetime}] [pid {pid}] [client {remote address}] {error message}".
 	 *
 	 * @param enable enable or disable the error log
 	 * @return a new {@link HttpServer}
