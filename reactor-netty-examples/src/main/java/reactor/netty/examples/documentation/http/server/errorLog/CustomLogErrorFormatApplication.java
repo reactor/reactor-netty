@@ -17,7 +17,7 @@ package reactor.netty.examples.documentation.http.server.errorLog;
 
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.logging.error.ErrorLog;
+import reactor.netty.http.server.logging.error.DefaultErrorLog;
 
 public class CustomLogErrorFormatApplication {
 
@@ -26,7 +26,7 @@ public class CustomLogErrorFormatApplication {
 				HttpServer.create()
 						.errorLog(
 								true,
-								x -> ErrorLog.create("method={}, uri={}", x.httpServerInfos().method(), x.httpServerInfos().uri())
+								x -> DefaultErrorLog.create("method={}, uri={}", x.httpServerInfos().method(), x.httpServerInfos().uri())
 						)
 						.bindNow();
 

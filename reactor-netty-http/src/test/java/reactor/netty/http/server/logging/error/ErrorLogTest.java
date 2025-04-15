@@ -44,7 +44,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty.http.server.logging.error.ErrorLog.LOGGER;
+import static reactor.netty.http.server.logging.error.DefaultErrorLog.LOGGER;
 
 /**
  * This test class verifies {@link DefaultErrorLogHandler}.
@@ -115,7 +115,7 @@ class ErrorLogTest extends BaseHttpTest {
 				})
 				.errorLog(
 						true,
-						args -> ErrorLog.create(
+						args -> DefaultErrorLog.create(
 								CUSTOM_FORMAT,
 								args.httpServerInfos().method(),
 								args.httpServerInfos().uri()
@@ -150,7 +150,7 @@ class ErrorLogTest extends BaseHttpTest {
 				})
 				.errorLog(
 						true,
-						args -> ErrorLog.create(
+						args -> DefaultErrorLog.create(
 								CUSTOM_FORMAT,
 								args.httpServerInfos().method(),
 								args.httpServerInfos().uri()
@@ -182,7 +182,7 @@ class ErrorLogTest extends BaseHttpTest {
 						true,
 						ErrorLogFactory.createFilter(
 								p -> p.httpServerInfos().uri().startsWith("/filtered"),
-								args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri())
+								args -> DefaultErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri())
 						)
 				)
 				.bindNow();

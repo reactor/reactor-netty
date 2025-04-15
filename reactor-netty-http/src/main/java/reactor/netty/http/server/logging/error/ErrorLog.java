@@ -15,44 +15,16 @@
  */
 package reactor.netty.http.server.logging.error;
 
-import reactor.util.Logger;
-import reactor.util.Loggers;
-
-import java.util.Objects;
-
 /**
- * Log the http error information into a Logger named {@code reactor.netty.http.server.ErrorLog} at ERROR level.
- * <p>
- * See {@link ErrorLogFactory} for convenience methods to create an access log factory to be passed to
- * {@link reactor.netty.http.server.HttpServer#errorLog(boolean, ErrorLogFactory)} during server configuration.
+ * Represents a log entry for HTTP server errors.
+ * Implementations of this interface define how the error information is logged.
  *
  * @author raccoonback
  */
-public final class ErrorLog {
-
-	static final Logger LOGGER = Loggers.getLogger("reactor.netty.http.server.ErrorLog");
-
-	final String logFormat;
-	final Object[] args;
-
-	private ErrorLog(String logFormat, Object... args) {
-		Objects.requireNonNull(logFormat, "logFormat");
-		this.logFormat = logFormat;
-		this.args = args;
-	}
+public interface ErrorLog {
 
 	/**
-	 * Creates an ErrorLog with the given format and arguments.
-	 *
-	 * @return exception
+	 * Logs the error information.
 	 */
-	public static ErrorLog create(String logFormat, Object... args) {
-		return new ErrorLog(logFormat, args);
-	}
-
-	void log() {
-		if (LOGGER.isErrorEnabled()) {
-			LOGGER.error(logFormat, args);
-		}
-	}
+	void log();
 }

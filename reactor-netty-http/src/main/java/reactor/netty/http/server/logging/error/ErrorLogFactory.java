@@ -51,9 +51,8 @@ public interface ErrorLogFactory extends Function<ErrorLogArgProvider, ErrorLog>
 	 * Any exception (represented as an {@link ErrorLogArgProvider}) that doesn't match the
 	 * provided {@link Predicate} is excluded from the error log. Other exceptions are logged
 	 * using the provided formatting {@link Function}.
-	 * Said function is expected to {@link ErrorLog#create(String, Object...) create} an {@link ErrorLog} instance,
-	 * defining both the String format and a vararg of the relevant arguments, extracted from the
-	 * {@link ErrorLogArgProvider}.
+	 * Create an {@link ErrorLog} instance by defining both the String format and a vararg of the relevant arguments,
+	 * extracted from the {@link ErrorLogArgProvider}.
 	 * <p>
 	 *
 	 * @param predicate      the filter that returns {@code true} if the exception should be logged, {@code false} otherwise

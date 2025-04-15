@@ -30,8 +30,9 @@ class BaseErrorLogHandler extends ChannelDuplexHandler {
 
 	static {
 		String jvmName = ManagementFactory.getRuntimeMXBean().getName();
-		if (jvmName.contains("@")) {
-			PID = jvmName.split("@")[0];
+		int index = jvmName.indexOf('@');
+		if (index != -1) {
+			PID = jvmName.substring(0, index);
 		}
 		else {
 			PID = jvmName;
@@ -44,7 +45,7 @@ class BaseErrorLogHandler extends ChannelDuplexHandler {
 	static final String MISSING = "-";
 
 	static final Function<ErrorLogArgProvider, ErrorLog> DEFAULT_ERROR_LOG =
-			args -> ErrorLog.create(
+			args -> DefaultErrorLog.create(
 					DEFAULT_LOG_FORMAT,
 					args.errorDateTime().format(DATE_TIME_FORMATTER),
 					refinedRemoteAddress(args.remoteAddress()),
