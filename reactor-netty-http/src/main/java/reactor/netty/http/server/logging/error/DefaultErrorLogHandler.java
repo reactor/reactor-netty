@@ -28,7 +28,7 @@ import java.util.function.Function;
  */
 public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 
-	DefaultErrorLogArgProvider errorLogArgProvider;
+	private DefaultErrorLogArgProvider errorLogArgProvider;
 
 	public DefaultErrorLogHandler(@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog) {
 		super(errorLog);
@@ -52,5 +52,14 @@ public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 		}
 
 		super.exceptionCaught(ctx, cause);
+	}
+
+	@Override
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+		if (evt instanceof DefaultErrorLoggingEvent) {
+			exceptionCaught(ctx, ((DefaultErrorLoggingEvent) evt).getThrowable());
+		}
+
+		super.userEventTriggered(ctx, evt);
 	}
 }

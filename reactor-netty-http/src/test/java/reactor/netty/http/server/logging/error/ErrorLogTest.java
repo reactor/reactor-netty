@@ -29,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
@@ -74,7 +75,7 @@ class ErrorLogTest extends BaseHttpTest {
 	}
 
 	@ParameterizedTest
-	@MethodSource("dataCompatibleCombinations")
+	@MethodSource("httpProtocolsCompatibleCombinations")
 	void errorLogDefaultFormat(HttpServer httpServer, HttpClient httpClient) {
 		disposableServer = httpServer
 				.handle((req, resp) -> {
@@ -102,7 +103,51 @@ class ErrorLogTest extends BaseHttpTest {
 	}
 
 	@ParameterizedTest
-	@MethodSource("dataCompatibleCombinations")
+	@MethodSource("httpProtocolsCompatibleCombinations")
+	void errorLogDefaultFormat_whenReactivePipelineThrowsException() {
+		disposableServer = createServer()
+				.handle((req, resp) -> Mono.error(new RuntimeException()))
+				.errorLog(true)
+				.bindNow();
+
+		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+
+		Mockito.verify(mockedAppender, Mockito.times(1))
+				.doAppend(loggingEventArgumentCaptor.capture());
+		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+
+		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
+		assertThat(relevantLog.getMessage())
+				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
+		assertThat(relevantLog.getFormattedMessage())
+				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpProtocolsCompatibleCombinations")
+	void errorLogDefaultFormat_whenUnhandledThrowsException() {
+		disposableServer = createServer()
+				.handle((req, resp) -> {
+					throw new RuntimeException();
+				})
+				.errorLog(true)
+				.bindNow();
+
+		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+
+		Mockito.verify(mockedAppender, Mockito.times(1))
+				.doAppend(loggingEventArgumentCaptor.capture());
+		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+
+		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
+		assertThat(relevantLog.getMessage())
+				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
+		assertThat(relevantLog.getFormattedMessage())
+				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpProtocolsCompatibleCombinations")
 	void errorLogCustomFormat(HttpServer httpServer, HttpClient httpClient) {
 		disposableServer = httpServer
 				.handle((req, resp) -> {
@@ -137,7 +182,7 @@ class ErrorLogTest extends BaseHttpTest {
 	}
 
 	@ParameterizedTest
-	@MethodSource("dataCompatibleCombinations")
+	@MethodSource("httpProtocolsCompatibleCombinations")
 	void secondCallToErrorLogOverridesPreviousOne(HttpServer httpServer, HttpClient httpClient) {
 		disposableServer = httpServer
 				.handle((req, resp) -> {
@@ -167,7 +212,7 @@ class ErrorLogTest extends BaseHttpTest {
 	}
 
 	@ParameterizedTest
-	@MethodSource("dataCompatibleCombinations")
+	@MethodSource("httpProtocolsCompatibleCombinations")
 	void errorLogFilteringAndFormatting(HttpServer httpServer, HttpClient httpClient) {
 		disposableServer = httpServer
 				.handle((req, resp) -> {
@@ -213,7 +258,7 @@ class ErrorLogTest extends BaseHttpTest {
 		}
 	}
 
-	static Object[][] dataCompatibleCombinations() throws Exception {
+	static Object[][] httpProtocolsCompatibleCombinations() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
 		Http11SslContextSpec clientCtxHttp11 =

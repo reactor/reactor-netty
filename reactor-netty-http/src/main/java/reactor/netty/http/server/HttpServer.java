@@ -52,6 +52,7 @@ import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogFactory;
 import reactor.netty.http.server.logging.error.ErrorLog;
 import reactor.netty.http.server.logging.error.ErrorLogArgProvider;
+import reactor.netty.http.server.logging.error.DefaultErrorLoggingEvent;
 import reactor.netty.http.server.logging.error.ErrorLogFactory;
 import reactor.netty.internal.util.Metrics;
 import reactor.netty.tcp.SslProvider;
@@ -1324,6 +1325,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 				}
 				catch (Throwable t) {
 					log.error(format(connection.channel(), ""), t);
+					connection.channel().pipeline()
+							.fireUserEventTriggered(new DefaultErrorLoggingEvent(t));
 					//"FutureReturnValueIgnored" this is deliberate
 					connection.channel()
 					          .close();
