@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -292,7 +292,7 @@ class QuicServerTests extends BaseQuicTests {
 	private void testSniSupport(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
 			String expectedAppProtocol, String expectedHostname) throws Exception {
 		QuicSslContext sniServerCtx =
-					QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
+					QuicSslContextBuilder.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem())
 					                     .applicationProtocols("http/1.1")
 					                     .build();
 

@@ -18,7 +18,8 @@ package reactor.netty.http.client;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -26,9 +27,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.resources.ConnectionProvider;
 
-import javax.net.ssl.SSLException;
 import java.net.SocketAddress;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -45,9 +44,9 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 	static SslContext sslClient;
 
 	@BeforeAll
-	static void setUp() throws CertificateException, SSLException {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
-		sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+	static void setUp() throws Exception {
+		X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 		sslClient = SslContextBuilder.forClient()
 		                             .trustManager(InsecureTrustManagerFactory.INSTANCE)
 		                             .build();

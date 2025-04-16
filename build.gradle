@@ -109,7 +109,7 @@ ext {
 	logbackVersion = '1.2.13'
 
 	// Netty
-	nettyDefaultVersion = '4.1.119.Final'
+	nettyDefaultVersion = '4.2.0.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -117,7 +117,6 @@ ext {
 		nettyVersion = forceNettyVersion
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
-	nettyIoUringVersion = '0.0.26.Final'
 	nettyQuicVersion = '0.0.71.Final'
 	nettyHttp3Version = '0.0.29.Final'
 
@@ -138,7 +137,7 @@ ext {
 	reflectionsVersion = '0.10.2'
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
-	bouncycastleVersion = '1.70'
+	bouncycastleVersion = '1.80'
 
 	// Antora
 	antoraPluginVersion = '1.0.0'
