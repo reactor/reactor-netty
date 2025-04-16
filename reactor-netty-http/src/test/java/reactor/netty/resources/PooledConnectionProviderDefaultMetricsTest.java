@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -388,6 +388,8 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	/* https://github.com/reactor/reactor-netty/issues/3519 */
 	@Test
 	public void testConnectionProviderDisableAllBuiltInMetrics() throws Exception {
+		REGISTRY.clear();
+
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("testConnectionProviderDisableAllBuiltInMetrics")))
