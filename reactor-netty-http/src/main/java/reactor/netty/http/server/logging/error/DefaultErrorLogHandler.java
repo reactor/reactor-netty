@@ -18,6 +18,7 @@ package reactor.netty.http.server.logging.error;
 import io.netty.channel.ChannelHandlerContext;
 import reactor.util.annotation.Nullable;
 
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 /**
@@ -28,6 +29,8 @@ import java.util.function.Function;
  */
 public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 
+	private final ReentrantLock lock = new ReentrantLock();
+
 	private DefaultErrorLogArgProvider errorLogArgProvider;
 
 	public DefaultErrorLogHandler(@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog) {
@@ -36,17 +39,25 @@ public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		if (errorLogArgProvider == null) {
-			errorLogArgProvider = new DefaultErrorLogArgProvider(ctx.channel().remoteAddress());
+		ErrorLog log;
+
+		lock.lock();
+		try {
+			if (errorLogArgProvider == null) {
+				errorLogArgProvider = new DefaultErrorLogArgProvider(ctx.channel().remoteAddress());
+			}
+			else {
+				errorLogArgProvider.clear();
+			}
+
+			errorLogArgProvider.applyThrowable(cause);
+			errorLogArgProvider.applyConnectionInfo(ctx.channel());
+			log = errorLog.apply(errorLogArgProvider);
 		}
-		else {
-			errorLogArgProvider.clear();
+		finally {
+			lock.unlock();
 		}
 
-		errorLogArgProvider.applyThrowable(cause);
-		errorLogArgProvider.applyConnectionInfo(ctx.channel());
-
-		ErrorLog log = errorLog.apply(errorLogArgProvider);
 		if (log != null) {
 			log.log();
 		}
