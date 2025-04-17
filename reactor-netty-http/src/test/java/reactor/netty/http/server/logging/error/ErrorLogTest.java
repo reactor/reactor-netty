@@ -148,6 +148,50 @@ class ErrorLogTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
+	void errorLogDefaultFormat_whenReactivePipelineThrowsException_inRoute() {
+		disposableServer = createServer()
+				.route(r -> r.get("/example/test", (req, res) -> Mono.error(new RuntimeException())))
+				.errorLog(true)
+				.bindNow();
+
+		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+
+		Mockito.verify(mockedAppender, Mockito.times(1))
+				.doAppend(loggingEventArgumentCaptor.capture());
+		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+
+		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
+		assertThat(relevantLog.getMessage())
+				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
+		assertThat(relevantLog.getFormattedMessage())
+				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpProtocolsCompatibleCombinations")
+	void errorLogDefaultFormat_whenUnhandledThrowsException_inRoute() {
+		disposableServer = createServer()
+				.route(r -> r.get("/example/test", (req, res) -> {
+					throw new RuntimeException();
+				}))
+				.errorLog(true)
+				.bindNow();
+
+		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+
+		Mockito.verify(mockedAppender, Mockito.times(1))
+				.doAppend(loggingEventArgumentCaptor.capture());
+		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+
+		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
+		assertThat(relevantLog.getMessage())
+				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
+		assertThat(relevantLog.getFormattedMessage())
+				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpProtocolsCompatibleCombinations")
 	void errorLogCustomFormat(HttpServer httpServer, HttpClient httpClient) {
 		disposableServer = httpServer
 				.handle((req, resp) -> {
@@ -308,9 +352,8 @@ class ErrorLogTest extends BaseHttpTest {
 							clientProtocols.size() == 2) {
 						return false;
 					}
-					return serverProtocols.containsAll(clientProtocols) ||
-							clientProtocols.containsAll(serverProtocols);
-
+					return serverProtocols.containsAll(clientProtocols)
+							|| clientProtocols.containsAll(serverProtocols);
 				})
 				.map(Tuple2::toArray)
 				.collectList()
