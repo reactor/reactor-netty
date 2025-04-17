@@ -35,6 +35,9 @@ import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogHandlerFactory;
+import reactor.netty.http.server.logging.error.DefaultErrorLogHandler;
+import reactor.netty.http.server.logging.error.ErrorLog;
+import reactor.netty.http.server.logging.error.ErrorLogArgProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -52,6 +55,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 	final boolean                                                 accessLogEnabled;
 	final Function<AccessLogArgProvider, AccessLog>               accessLog;
+	final boolean                                                 errorLogEnabled;
+	final Function<ErrorLogArgProvider, ErrorLog>                 errorLog;
 	final HttpCompressionOptionsSpec                              compressionOptions;
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 	final ServerCookieDecoder                                     cookieDecoder;
@@ -74,6 +79,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	Http3Codec(
 			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			boolean errorLogEnabled,
+			@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
@@ -93,6 +100,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			boolean validate) {
 		this.accessLogEnabled = accessLogEnabled;
 		this.accessLog = accessLog;
+		this.errorLogEnabled = errorLogEnabled;
+		this.errorLog = errorLog;
 		this.compressionOptions = compressionOptions;
 		this.compressPredicate = compressPredicate;
 		this.cookieDecoder = decoder;
@@ -149,6 +158,10 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			}
 		}
 
+		if (errorLogEnabled) {
+			p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.ErrorLogHandler, new DefaultErrorLogHandler(errorLog));
+		}
+
 		channel.pipeline().remove(this);
 
 		if (log.isDebugEnabled()) {
@@ -159,6 +172,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	static ChannelHandler newHttp3ServerConnectionHandler(
 			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			boolean errorLogEnabled,
+			@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
@@ -177,8 +192,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
-				new Http3Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
-						opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
+				new Http3Codec(accessLogEnabled, accessLog, errorLogEnabled, errorLog, compressionOptions, compressPredicate, decoder, encoder,
+						formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder,
+						minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 	}
 }
