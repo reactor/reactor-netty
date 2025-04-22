@@ -195,9 +195,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				if (isHttp11 && LAST_FLUSH_WHEN_NO_READ) {
 					copy = createMetricsArgProvider();
 					ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+					HttpServerOperations ops = null;
 					if (channelOps instanceof HttpServerOperations) {
-						recordInactiveConnectionOrStream(ctx.channel(), (HttpServerOperations) channelOps);
+						ops = (HttpServerOperations) channelOps;
 					}
+					recordInactiveConnectionOrStream(ctx.channel(), ops);
 				}
 				else {
 					copy = null;
@@ -220,9 +222,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 					if (copy == null) {
 						ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+						HttpServerOperations ops = null;
 						if (channelOps instanceof HttpServerOperations) {
-							recordInactiveConnectionOrStream(ctx.channel(), (HttpServerOperations) channelOps);
+							ops = (HttpServerOperations) channelOps;
 						}
+						recordInactiveConnectionOrStream(ctx.channel(), ops);
 					}
 				});
 			}
