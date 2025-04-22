@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -195,9 +195,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				if (isHttp11 && LAST_FLUSH_WHEN_NO_READ) {
 					copy = createMetricsArgProvider();
 					ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+					HttpServerOperations ops = null;
 					if (channelOps instanceof HttpServerOperations) {
-						recordInactiveConnectionOrStream(ctx.channel(), (HttpServerOperations) channelOps);
+						ops = (HttpServerOperations) channelOps;
 					}
+					recordInactiveConnectionOrStream(ctx.channel(), ops);
 				}
 				else {
 					copy = null;
@@ -220,9 +222,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 					if (copy == null) {
 						ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+						HttpServerOperations ops = null;
 						if (channelOps instanceof HttpServerOperations) {
-							recordInactiveConnectionOrStream(ctx.channel(), (HttpServerOperations) channelOps);
+							ops = (HttpServerOperations) channelOps;
 						}
+						recordInactiveConnectionOrStream(ctx.channel(), ops);
 					}
 				});
 			}
