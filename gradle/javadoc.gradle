@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,17 @@ project.tasks.withType(Javadoc) {
 	title = "${project.name} ${version}"
 
 	compileTestJava.options.compilerArgs += "-parameters"
-	tasks.withType(Javadoc) {
-		options.addStringOption('Xdoclint:none', '-quiet')
+
+	options {
+		addStringOption('Xdoclint:none', '-quiet')
+		addStringOption('charSet', 'UTF-8')
+		memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
+		author = true
+		header = "${project.name}"
+		overview = "$rootDir/docs/api/overview.html"
+		stylesheetFile = file("$rootDir/docs/api/stylesheet.css")
+		links(rootProject.ext.javadocLinks)
 	}
-
-	options.addStringOption('charSet', 'UTF-8')
-
-	options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
-	options.author = true
-	options.header = "${project.name}"
-	options.overview = "$rootDir/docs/api/overview.html"
-	options.stylesheetFile = file("$rootDir/docs/api/stylesheet.css")
-	options.links(rootProject.ext.javadocLinks)
 
 	maxMemory = "1024m"
 	destinationDir = new File(buildDir, "docs/javadoc")
