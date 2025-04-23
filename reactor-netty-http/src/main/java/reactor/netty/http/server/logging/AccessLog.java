@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,14 +29,14 @@ import java.util.Objects;
  * @author limaoning
  * @since 1.0.1
  */
-public final class AccessLog {
+public class AccessLog {
 
 	static final Logger LOG = Loggers.getLogger("reactor.netty.http.server.AccessLog");
 
 	final String logFormat;
 	final Object[] args;
 
-	private AccessLog(String logFormat, Object... args) {
+	protected AccessLog(String logFormat, Object... args) {
 		Objects.requireNonNull(logFormat, "logFormat");
 		this.logFormat = logFormat;
 		this.args = args;
@@ -46,7 +46,7 @@ public final class AccessLog {
 		return new AccessLog(logFormat, args);
 	}
 
-	void log() {
+	protected void log() {
 		if (LOG.isInfoEnabled()) {
 			LOG.info(logFormat, args);
 		}

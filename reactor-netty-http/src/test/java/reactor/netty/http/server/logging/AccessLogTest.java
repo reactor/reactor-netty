@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.server.logging.AccessLog.LOG;
@@ -173,6 +174,32 @@ class AccessLogTest extends BaseHttpTest {
 		assertAccessLogging(response, true, true, CUSTOM_FORMAT);
 	}
 
+	@Test
+	@SuppressWarnings("unchecked")
+	void accessLogCustomImplementation() {
+		Consumer<AccessLogArgProvider> argConsumer = (Consumer<AccessLogArgProvider>) Mockito.mock(Consumer.class);
+		ArgumentCaptor<AccessLogArgProvider> accessLogArgProviderArgumentCaptor = ArgumentCaptor.forClass(AccessLogArgProvider.class);
+		disposableServer = createServer()
+				.handle((req, resp) -> {
+					resp.withConnection(conn -> {
+						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
+					});
+					return resp.send();
+				})
+				.accessLog(true, argProvider -> new CustomAccessLog(argProvider, argConsumer))
+				.bindNow();
+
+		Tuple2<String, String> response = getHttpClientResponse(URI_1);
+		assertThat(response).isNotNull();
+		assertThat(response.getT2()).isEqualTo(FOUND);
+		Mockito.verify(argConsumer, Mockito.times(1)).accept(accessLogArgProviderArgumentCaptor.capture());
+		AccessLogArgProvider capturedArgs = accessLogArgProviderArgumentCaptor.getValue();
+		assertThat(capturedArgs.protocol()).isEqualTo("HTTP/1.1");
+		assertThat(capturedArgs.method()).isEqualTo("GET");
+		assertThat(capturedArgs.uri()).isEqualTo(URI_1);
+	}
+
 	void assertAccessLogging(
 			@Nullable Tuple2<String, String> response,
 			boolean enable, boolean filteringEnabled,
@@ -239,5 +266,23 @@ class AccessLogTest extends BaseHttpTest {
 			}
 		}
 		return "";
+	}
+
+	private static class CustomAccessLog extends AccessLog {
+
+		private final AccessLogArgProvider argProvider;
+		private final Consumer<AccessLogArgProvider> argConsumer;
+
+		public CustomAccessLog(AccessLogArgProvider argProvider, Consumer<AccessLogArgProvider> argConsumer) {
+			super("");
+			this.argProvider = argProvider;
+			this.argConsumer = argConsumer;
+		}
+
+		@Override
+		public void log() {
+			argConsumer.accept(argProvider);
+		}
+
 	}
 }
