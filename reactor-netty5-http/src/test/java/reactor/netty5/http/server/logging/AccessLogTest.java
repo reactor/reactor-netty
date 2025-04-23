@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.NettyPipeline;
+import reactor.netty5.http.server.HttpServer;
 import reactor.util.function.Tuple2;
 
 import java.time.Duration;
@@ -64,6 +65,7 @@ class AccessLogTest extends BaseHttpTest {
 
 	private Appender<ILoggingEvent> mockedAppender;
 	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
+	private HttpServer server;
 
 	@BeforeEach
 	@SuppressWarnings("unchecked")
@@ -72,6 +74,15 @@ class AccessLogTest extends BaseHttpTest {
 		loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
 		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
 		ROOT.addAppender(mockedAppender);
+
+		server = createServer()
+				.handle((req, resp) -> {
+					resp.withConnection(conn -> {
+						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
+					});
+					return resp.send();
+				});
 	}
 
 	@AfterEach
@@ -81,16 +92,7 @@ class AccessLogTest extends BaseHttpTest {
 
 	@Test
 	void accessLogDefaultFormat() {
-		disposableServer = createServer()
-				.handle((req, resp) -> {
-					resp.withConnection(conn -> {
-						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
-						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
-					});
-					return resp.send();
-				})
-				.accessLog(true)
-				.bindNow();
+		disposableServer = server.accessLog(true).bindNow();
 
 		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
@@ -99,16 +101,7 @@ class AccessLogTest extends BaseHttpTest {
 
 	@Test
 	void accessLogCustomFormat() {
-		disposableServer = createServer()
-				.handle((req, resp) -> {
-					resp.withConnection(conn -> {
-						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
-						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
-					});
-					return resp.send();
-				})
-				.accessLog(true, CUSTOM_ACCESS_LOG)
-				.bindNow();
+		disposableServer = server.accessLog(true, CUSTOM_ACCESS_LOG).bindNow();
 
 		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
@@ -117,17 +110,10 @@ class AccessLogTest extends BaseHttpTest {
 
 	@Test
 	void secondCallToAccessLogOverridesPreviousOne() {
-		disposableServer = createServer()
-				.handle((req, resp) -> {
-					resp.withConnection(conn -> {
-						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
-						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
-					});
-					return resp.send();
-				})
-				.accessLog(true, CUSTOM_ACCESS_LOG)
-				.accessLog(false)
-				.bindNow();
+		disposableServer =
+				server.accessLog(true, CUSTOM_ACCESS_LOG)
+				      .accessLog(false)
+				      .bindNow();
 
 		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
@@ -136,16 +122,9 @@ class AccessLogTest extends BaseHttpTest {
 
 	@Test
 	void accessLogFiltering() {
-		disposableServer = createServer()
-				.handle((req, resp) -> {
-					resp.withConnection(conn -> {
-						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
-						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
-					});
-					return resp.send();
-				})
-				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/")))
-				.bindNow();
+		disposableServer =
+				server.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/")))
+				      .bindNow();
 
 		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
@@ -157,17 +136,9 @@ class AccessLogTest extends BaseHttpTest {
 
 	@Test
 	void accessLogFilteringAndFormatting() {
-		disposableServer = createServer()
-				.handle((req, resp) -> {
-					resp.withConnection(conn -> {
-						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
-						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
-					});
-					return resp.send();
-				})
-				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/"),
-						CUSTOM_ACCESS_LOG))
-				.bindNow();
+		disposableServer =
+				server.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/"), CUSTOM_ACCESS_LOG))
+				      .bindNow();
 
 		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
@@ -181,16 +152,9 @@ class AccessLogTest extends BaseHttpTest {
 	void accessLogCustomImplementation() {
 		Consumer<AccessLogArgProvider> argConsumer = (Consumer<AccessLogArgProvider>) Mockito.mock(Consumer.class);
 		ArgumentCaptor<AccessLogArgProvider> accessLogArgProviderArgumentCaptor = ArgumentCaptor.forClass(AccessLogArgProvider.class);
-		disposableServer = createServer()
-				.handle((req, resp) -> {
-					resp.withConnection(conn -> {
-						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
-						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
-					});
-					return resp.send();
-				})
-				.accessLog(true, argProvider -> new CustomAccessLog(argProvider, argConsumer))
-				.bindNow();
+		disposableServer =
+				server.accessLog(true, argProvider -> new CustomAccessLog(argProvider, argConsumer))
+				      .bindNow();
 
 		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 		assertThat(response).isNotNull();
@@ -220,7 +184,6 @@ class AccessLogTest extends BaseHttpTest {
 					assertThat(relevantLog.getFormattedMessage()).doesNotContain("filtered");
 				}
 			}
-
 			else {
 				assertThat(relevantLog.getMessage()).isEqualTo(loggerFormat);
 				assertThat(relevantLog.getFormattedMessage()).isEqualTo(EXPECTED_FORMATTED_MESSAGE_2);
@@ -247,7 +210,7 @@ class AccessLogTest extends BaseHttpTest {
 				.block(Duration.ofSeconds(30));
 	}
 
-	private void sleep(long ms) {
+	private static void sleep(long ms) {
 		try {
 			TimeUnit.MILLISECONDS.sleep(ms);
 		}
