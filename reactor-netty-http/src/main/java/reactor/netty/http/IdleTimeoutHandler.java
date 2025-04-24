@@ -84,6 +84,13 @@ public final class IdleTimeoutHandler extends IdleStateHandler {
 		super.channelInactive(ctx);
 	}
 
+	@Override
+	public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+		httpConnectionLiveness.cancel();
+
+		super.handlerRemoved(ctx);
+	}
+
 	/**
 	 * Adds an idle timeout handler to the server pipeline.
 	 *
