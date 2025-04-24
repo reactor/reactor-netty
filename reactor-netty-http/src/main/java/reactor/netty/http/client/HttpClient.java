@@ -1096,25 +1096,6 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Specifies an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms).
-	 * Once the timeout is reached the connection will be closed.
-	 * <p>If an {@code idleTimeout} is not specified, this indicates no timeout (i.e. infinite),
-	 * which means the connection will be closed only if one of the peers decides to close it.
-	 * <p>If the {@code idleTimeout} is less than {@code 1ms}, then {@code 1ms} will be the idle timeout.
-	 * <p>By default {@code idleTimeout} is not specified.
-	 *
-	 * @param idleTimeout an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms)
-	 * @return a new {@link HttpClient}
-	 * @since 1.2.5
-	 */
-	public final HttpClient idleTimeout(Duration idleTimeout) {
-		Objects.requireNonNull(idleTimeout, "idleTimeout");
-		HttpClient dup = duplicate();
-		dup.configuration().idleTimeout = idleTimeout;
-		return dup;
-	}
-
-	/**
 	 * Apply HTTP/2 configuration.
 	 *
 	 * @param http2Settings configures {@link Http2SettingsSpec} before requesting

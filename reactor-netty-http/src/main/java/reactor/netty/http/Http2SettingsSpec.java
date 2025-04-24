@@ -456,32 +456,4 @@ public final class Http2SettingsSpec {
 		}
 		*/
 	}
-
-	public Http2Settings http2Settings() {
-		Http2Settings settings = Http2Settings.defaultSettings();
-
-		if (headerTableSize != null) {
-			settings.headerTableSize(headerTableSize);
-		}
-
-		if (initialWindowSize != null) {
-			settings.initialWindowSize(initialWindowSize);
-		}
-
-		if (maxConcurrentStreams != null) {
-			settings.maxConcurrentStreams(maxConcurrentStreams);
-		}
-
-		if (maxFrameSize != null) {
-			settings.maxFrameSize(maxFrameSize);
-		}
-
-		settings.maxHeaderListSize(maxHeaderListSize);
-
-		if (pushEnabled != null) {
-			settings.pushEnabled(pushEnabled);
-		}
-
-		return settings;
-	}
 }

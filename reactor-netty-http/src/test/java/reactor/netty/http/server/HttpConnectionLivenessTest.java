@@ -752,9 +752,11 @@ class HttpConnectionLivenessTest extends BaseHttpTest {
 					.handle((req, resp) -> resp.sendString(Mono.just("Test")))
 					.bindNow();
 
-			createClient(disposableServer::address)
+			ConnectionProvider provider = ConnectionProvider.builder("closeWithoutDelay")
+					.maxIdleTime(Duration.ofMillis(100))
+					.build();
+			createClient(provider, disposableServer::address)
 					.protocol(HTTP11)
-					.idleTimeout(Duration.ofMillis(100))
 					.secure(spec -> spec.sslContext(sslClient))
 					.get()
 					.uri("/")

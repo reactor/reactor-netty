@@ -18,8 +18,6 @@ package reactor.netty.http;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.timeout.IdleState;
@@ -114,45 +112,6 @@ public final class IdleTimeoutHandler extends IdleStateHandler {
 			}
 
 			pipeline.addAfter(baseName,
-					NettyPipeline.IdleTimeoutHandler,
-					new IdleTimeoutHandler(
-							idleTimeout.toMillis(),
-							httpConnectionLiveness
-					)
-			);
-		}
-	}
-
-	/**
-	 * Adds an idle timeout handler to the client pipeline.
-	 * This handler will close the connection if it remains idle for the specified duration.
-	 *
-	 * @param pipeline               the channel pipeline to which the handler will be added
-	 * @param idleTimeout            the duration of idle time after which the connection will be closed
-	 * @param httpConnectionLiveness the HTTP connection liveness checker to be used
-	 */
-	public static void addIdleTimeoutClientHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout,
-	                                               HttpConnectionLiveness httpConnectionLiveness) {
-		if (idleTimeout != null && pipeline.get(NettyPipeline.IdleTimeoutHandler) == null) {
-			String baseName = null;
-			if (pipeline.get(NettyPipeline.HttpCodec) != null) {
-				baseName = NettyPipeline.HttpCodec;
-			}
-			else {
-				ChannelHandler httpClientUpgradeHandler = pipeline.get(HttpClientUpgradeHandler.class);
-				if (httpClientUpgradeHandler != null) {
-					baseName = pipeline.context(httpClientUpgradeHandler).name();
-				}
-				else {
-					ChannelHandler httpClientCodec = pipeline.get(HttpClientCodec.class);
-					if (httpClientCodec != null) {
-						baseName = pipeline.context(httpClientCodec).name();
-					}
-				}
-			}
-
-			pipeline.addAfter(
-					baseName,
 					NettyPipeline.IdleTimeoutHandler,
 					new IdleTimeoutHandler(
 							idleTimeout.toMillis(),

@@ -78,13 +78,10 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
-import reactor.netty.http.HttpConnectionImmediateClose;
-import reactor.netty.http.Http2ConnectionLiveness;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
-import reactor.netty.http.IdleTimeoutHandler;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty.resources.ConnectionProvider;
@@ -364,7 +361,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError;
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	HttpHeaders headers;
-	Duration idleTimeout;
 	Http2SettingsSpec http2Settings;
 	Http3SettingsSpec http3Settings;
 	HttpMessageLogFactory httpMessageLogFactory;
@@ -417,7 +413,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.doOnResponseError = parent.doOnResponseError;
 		this.followRedirectPredicate = parent.followRedirectPredicate;
 		this.headers = parent.headers;
-		this.idleTimeout = parent.idleTimeout;
 		this.http2Settings = parent.http2Settings;
 		this.http3Settings = parent.http3Settings;
 		this.httpMessageLogFactory = parent.httpMessageLogFactory;
@@ -563,6 +558,41 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		return (_protocols & protocol) == protocol;
 	}
 
+	Http2Settings http2Settings() {
+		Http2Settings settings = Http2Settings.defaultSettings();
+
+		if (http2Settings != null) {
+			Long headerTableSize = http2Settings.headerTableSize();
+			if (headerTableSize != null) {
+				settings.headerTableSize(headerTableSize);
+			}
+
+			Integer initialWindowSize = http2Settings.initialWindowSize();
+			if (initialWindowSize != null) {
+				settings.initialWindowSize(initialWindowSize);
+			}
+
+			Long maxConcurrentStreams = http2Settings.maxConcurrentStreams();
+			if (maxConcurrentStreams != null) {
+				settings.maxConcurrentStreams(maxConcurrentStreams);
+			}
+
+			Integer maxFrameSize = http2Settings.maxFrameSize();
+			if (maxFrameSize != null) {
+				settings.maxFrameSize(maxFrameSize);
+			}
+
+			settings.maxHeaderListSize(http2Settings.maxHeaderListSize());
+
+			Boolean pushEnabled = http2Settings.pushEnabled();
+			if (pushEnabled != null) {
+				settings.pushEnabled(pushEnabled);
+			}
+		}
+
+		return settings;
+	}
+
 	static void addStreamHandlers(
 			Channel ch,
 			ConnectionObserver obs,
@@ -649,37 +679,24 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	static void configureHttp2Pipeline(ChannelPipeline p, HttpResponseDecoderSpec decoder,
-			Duration idleTimeout, @Nullable Http2SettingsSpec http2SettingsSpec, ConnectionObserver observer) {
+			Http2Settings http2Settings, ConnectionObserver observer) {
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forClient()
 				                      .validateHeaders(decoder.validateHeaders())
-				                      .initialSettings(http2SettingsSpec == null ? Http2Settings.defaultSettings() : http2SettingsSpec.http2Settings());
+				                      .initialSettings(http2Settings);
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
 			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
 					"reactor.netty.http.client.h2"));
 		}
 
-		Http2FrameCodec codec = http2FrameCodecBuilder.build();
-
 		p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
-		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, codec)
+		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE))
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
-
-		IdleTimeoutHandler.addIdleTimeoutClientHandler(
-				p,
-				idleTimeout,
-				new Http2ConnectionLiveness(
-						codec,
-						http2SettingsSpec != null ? http2SettingsSpec.pingAckTimeout() : null,
-						http2SettingsSpec != null ? http2SettingsSpec.pingScheduleInterval() : null,
-						http2SettingsSpec != null ? http2SettingsSpec.pingAckDropThreshold() : null
-				)
-		);
 	}
 
-	static void configureHttp3Pipeline(ChannelPipeline p, Duration idleTimeout, boolean removeMetricsRecorder, boolean removeProxyProvider) {
+	static void configureHttp3Pipeline(ChannelPipeline p, boolean removeMetricsRecorder, boolean removeProxyProvider) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
 		p.addLast(NettyPipeline.HttpCodec, newHttp3ClientConnectionHandler());
@@ -692,12 +709,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		if (removeProxyProvider) {
 			p.remove(NettyPipeline.ProxyHandler);
 		}
-
-		IdleTimeoutHandler.addIdleTimeoutClientHandler(
-				p,
-				idleTimeout,
-				new HttpConnectionImmediateClose()
-		);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -705,8 +716,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ChannelPipeline p,
 			boolean acceptGzip,
 			HttpResponseDecoderSpec decoder,
-			Duration idleTimeout,
-			@Nullable Http2SettingsSpec http2SettingsSpec,
+			Http2Settings http2Settings,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			ConnectionObserver observer,
 			ChannelOperations.OnSetup opsFactory,
@@ -727,7 +737,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forClient()
 						.validateHeaders(decoder.validateHeaders())
-						.initialSettings(http2SettingsSpec == null ? Http2Settings.defaultSettings() : http2SettingsSpec.http2Settings());
+						.initialSettings(http2Settings);
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
 			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
@@ -737,7 +747,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		Http2FrameCodec http2FrameCodec = http2FrameCodecBuilder.build();
 
 		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec,
-				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, uriTagValue, idleTimeout, http2SettingsSpec));
+				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, uriTagValue));
 
 		HttpClientUpgradeHandler upgradeHandler =
 				new ReactorNettyHttpClientUpgradeHandler(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
@@ -766,18 +776,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 		}
 
-		IdleTimeoutHandler.addIdleTimeoutClientHandler(
-				p,
-				idleTimeout,
-				new HttpConnectionImmediateClose()
-		);
 	}
 
 	@SuppressWarnings("deprecation")
 	static void configureHttp11Pipeline(ChannelPipeline p,
 			boolean acceptGzip,
 			HttpResponseDecoderSpec decoder,
-			Duration idleTimeout,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			@Nullable SocketAddress proxyAddress,
 			SocketAddress remoteAddress,
@@ -812,14 +816,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				}
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
-
 		}
-
-		IdleTimeoutHandler.addIdleTimeoutClientHandler(
-				p,
-				idleTimeout,
-				new HttpConnectionImmediateClose()
-		);
 	}
 
 	static final Pattern FOLLOW_REDIRECT_CODES = Pattern.compile("30[12378]");
@@ -868,8 +865,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final SocketAddress proxyAddress;
 		final SocketAddress remoteAddress;
 		final Function<String, String> uriTagValue;
-		final Duration idleTimeout;
-		final Http2SettingsSpec http2SettingsSpec;
 
 		H2CleartextCodec(
 				Http2FrameCodec http2FrameCodec,
@@ -878,10 +873,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				@Nullable SocketAddress proxyAddress,
 				SocketAddress remoteAddress,
-				@Nullable Function<String, String> uriTagValue,
-				@Nullable Duration idleTimeout,
-				@Nullable Http2SettingsSpec http2SettingsSpec
-		) {
+				@Nullable Function<String, String> uriTagValue) {
 			this.acceptGzip = acceptGzip;
 			this.http2FrameCodec = http2FrameCodec;
 			this.metricsRecorder = metricsRecorder;
@@ -889,8 +881,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.proxyAddress = proxyAddress;
 			this.remoteAddress = remoteAddress;
 			this.uriTagValue = uriTagValue;
-			this.idleTimeout = idleTimeout;
-			this.http2SettingsSpec = http2SettingsSpec;
 		}
 
 		@Override
@@ -923,20 +913,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 			pipeline.remove(NettyPipeline.ReactiveBridge);
 			pipeline.remove(this);
-
-			if (idleTimeout != null) {
-				IdleTimeoutHandler.removeIdleTimeoutHandler(pipeline);
-				IdleTimeoutHandler.addIdleTimeoutClientHandler(
-						pipeline,
-						idleTimeout,
-						new Http2ConnectionLiveness(
-								http2FrameCodec,
-								http2SettingsSpec != null ? http2SettingsSpec.pingAckTimeout() : null,
-								http2SettingsSpec != null ? http2SettingsSpec.pingScheduleInterval() : null,
-								http2SettingsSpec != null ? http2SettingsSpec.pingAckDropThreshold() : null
-						)
-				);
-			}
 		}
 	}
 
@@ -1020,8 +996,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static final class H2OrHttp11Codec extends ChannelInboundHandlerAdapter {
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
-		final Duration idleTimeout;
-		final Http2SettingsSpec http2SettingsSpec;
+		final Http2Settings                              http2Settings;
 		final ChannelMetricsRecorder                     metricsRecorder;
 		final ConnectionObserver                         observer;
 		final SocketAddress                              proxyAddress;
@@ -1031,8 +1006,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		H2OrHttp11Codec(HttpClientChannelInitializer initializer, ConnectionObserver observer, SocketAddress remoteAddress) {
 			this.acceptGzip = initializer.acceptGzip;
 			this.decoder = initializer.decoder;
-			this.idleTimeout = initializer.idleTimeout;
-			this.http2SettingsSpec = initializer.http2SettingsSpec;
+			this.http2Settings = initializer.http2Settings;
 			this.metricsRecorder = initializer.metricsRecorder;
 			this.observer = observer;
 			this.proxyAddress = initializer.proxyAddress;
@@ -1051,10 +1025,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					log.debug(format(ctx.channel(), "Negotiated application-level protocol [" + protocol + "]"));
 				}
 				if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-					configureHttp2Pipeline(ctx.channel().pipeline(), decoder, idleTimeout,  http2SettingsSpec, observer);
+					configureHttp2Pipeline(ctx.channel().pipeline(), decoder, http2Settings, observer);
 				}
 				else if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-					configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, idleTimeout, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else {
 					throw new IllegalStateException("unknown protocol: " + protocol);
@@ -1074,8 +1048,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
-		final Duration idleTimeout;
-		final Http2SettingsSpec http2SettingsSpec;
+		final Http2Settings                              http2Settings;
 		final ChannelMetricsRecorder                     metricsRecorder;
 		final ChannelOperations.OnSetup                  opsFactory;
 		final int                                        protocols;
@@ -1086,8 +1059,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		HttpClientChannelInitializer(HttpClientConfig config) {
 			this.acceptGzip = config.acceptGzip;
 			this.decoder = config.decoder;
-			this.idleTimeout = config.idleTimeout;
-			this.http2SettingsSpec = config.http2SettingsSpec();
+			this.http2Settings = config.http2Settings();
 			this.metricsRecorder = config.metricsRecorderInternal();
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;
@@ -1109,24 +1081,24 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					               new H2OrHttp11Codec(this, observer, remoteAddress));
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, idleTimeout, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h2) == h2) {
-					configureHttp2Pipeline(channel.pipeline(), decoder, idleTimeout,  http2SettingsSpec, observer);
+					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
 				}
 				else if ((protocols & h3) == h3) {
-					configureHttp3Pipeline(channel.pipeline(), idleTimeout, metricsRecorder != null, proxyAddress != null);
+					configureHttp3Pipeline(channel.pipeline(), metricsRecorder != null, proxyAddress != null);
 				}
 			}
 			else {
 				if ((protocols & h11orH2C) == h11orH2C) {
-					configureHttp11OrH2CleartextPipeline(channel.pipeline(), acceptGzip, decoder, idleTimeout,  http2SettingsSpec, metricsRecorder, observer, opsFactory, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11OrH2CleartextPipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, metricsRecorder, observer, opsFactory, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, idleTimeout, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h2c) == h2c) {
-					configureHttp2Pipeline(channel.pipeline(), decoder, idleTimeout,  http2SettingsSpec, observer);
+					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
 				}
 			}
 		}
