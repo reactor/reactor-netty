@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import io.netty.incubator.codec.http3.Http3HeadersFrame;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 
 final class AccessLogArgProviderH3 extends AbstractAccessLogArgProvider<AccessLogArgProviderH3> {
@@ -61,6 +63,18 @@ final class AccessLogArgProviderH3 extends AbstractAccessLogArgProvider<AccessLo
 	public CharSequence responseHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return responseHeaders == null ? null : responseHeaders.headers().get(name);
+	}
+
+	@Override
+	@Nullable
+	public Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
+		return requestHeaders == null ? null : requestHeaders.headers().iterator();
+	}
+
+	@Override
+	@Nullable
+	public Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
+		return responseHeaders == null ? null : responseHeaders.headers().iterator();
 	}
 
 	@Override

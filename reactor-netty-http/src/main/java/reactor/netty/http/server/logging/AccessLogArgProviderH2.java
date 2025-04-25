@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import io.netty.handler.codec.http2.Http2HeadersFrame;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -66,6 +68,18 @@ final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider<AccessLo
 	public CharSequence responseHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return responseHeaders == null ? null : responseHeaders.headers().get(name);
+	}
+
+	@Override
+	@Nullable
+	public Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
+		return requestHeaders == null ? null : requestHeaders.headers().iterator();
+	}
+
+	@Override
+	@Nullable
+	public Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
+		return responseHeaders == null ? null : responseHeaders.headers().iterator();
 	}
 
 	@Override
