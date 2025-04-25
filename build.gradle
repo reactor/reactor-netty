@@ -201,6 +201,7 @@ subprojects {
 	apply from: "${rootDir}/gradle/setup.gradle"
 	apply from: "${rootDir}/gradle/javadoc.gradle"
 	apply from: "${rootDir}/gradle/errorprone.gradle"
+	apply from: "${rootDir}/gradle/toolchains.gradle"
 
 
 	java {

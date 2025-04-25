@@ -236,7 +236,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
-	 * Will prefer native (epoll/kqueue) implementation if available
+	 * Will prefer native (epoll/io_uring/kqueue) implementation if available
 	 * unless the environment property {@code reactor.netty.native} is set to {@code false}.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime expectation and
@@ -252,7 +252,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
 	 *
 	 * @param loopResources a new loop resources
-	 * @param preferNative should prefer running on epoll, kqueue or similar instead of java NIO
+	 * @param preferNative should prefer running on epoll, io_uring, kqueue or similar instead of java NIO
 	 * @return a new {@link Transport} reference
 	 */
 	public T runOn(LoopResources loopResources, boolean preferNative) {

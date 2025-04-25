@@ -145,9 +145,9 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue).
+	 * Return {@code true} if prefer native event loop and channel factory (e.g. epoll, io_uring or kqueue).
 	 *
-	 * @return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue)
+	 * @return {@code true} if prefer native event loop and channel factory (e.g. epoll, io_uring or kqueue)
 	 */
 	public final boolean isPreferNative() {
 		return this.preferNative;

@@ -20,8 +20,6 @@ apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 apply plugin: 'biz.aQute.bnd.builder'
 
-apply from: "${rootDir}/gradle/toolchains.gradle"
-
 ext {
 	bndOptions = [
 			"Export-Package" : "reactor.netty.http*;version=$osgiVersion;-noimport:=true",
@@ -29,6 +27,7 @@ ext {
 					"!javax.annotation",
 					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.2,5)\"",
 					"io.netty.handler.codec.haproxy;resolution:=optional;version=\"[4.2,5)\"",
+					"io.netty.channel.uring;resolution:=optional;version=\"[4.2,5)\"",
 					"io.netty.incubator.channel.uring;resolution:=optional",
 					"io.netty.incubator.codec.http3;resolution:=optional",
 					"io.micrometer.*;resolution:=optional",
@@ -98,6 +97,7 @@ dependencies {
 		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
@@ -108,10 +108,10 @@ dependencies {
 			}
 		}
 		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-			testRuntimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+			testRuntimeOnly "io.netty:netty-transport-native-io_uring:$nettyVersion$os_suffix"
 		}
 		else if (forceTransport != "nio") {
-			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
+			throw new InvalidUserDataException("invalid -PforceTransport option " + forceTransport + ", should be native|nio|io_uring")
 		}
 	}
 	else {
@@ -119,6 +119,7 @@ dependencies {
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 	}
 
 	//Metrics
