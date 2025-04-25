@@ -986,6 +986,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			@Nullable ProtocolSslContextSpec serverCtx,
 			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		//IO_Uring does not support UDS
+		assumeThat(System.getProperty("forceTransport")).isNotEqualTo("io_uring");
 		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1, false,
 				client -> client.bindAddress(() -> new DomainSocketAddress("/tmp/test.sockclient"))
 						.remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")),
@@ -998,6 +1000,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			@Nullable ProtocolSslContextSpec serverCtx,
 			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		//IO_Uring does not support UDS
+		assumeThat(System.getProperty("forceTransport")).isNotEqualTo("io_uring");
 		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1, true,
 				client -> client.bindAddress(() -> new DomainSocketAddress("/tmp/test.sockclient"))
 						.remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")),

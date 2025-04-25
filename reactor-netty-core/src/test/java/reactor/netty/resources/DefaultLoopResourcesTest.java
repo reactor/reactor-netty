@@ -24,6 +24,7 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.uring.IoUring;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -204,6 +205,15 @@ class DefaultLoopResourcesTest {
 	void testEpollIsAvailable() {
 		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
 		assertThat(Epoll.isAvailable()).isTrue();
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	void testIoUringIsAvailable() {
+		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
+		boolean isJava17 = System.getProperty("java.version").startsWith("17");
+		assumeThat(isTransportIoUring && isJava17).isTrue();
+		assertThat(IoUring.isAvailable()).isTrue();
 	}
 
 	@Test

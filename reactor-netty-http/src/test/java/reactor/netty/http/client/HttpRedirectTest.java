@@ -694,6 +694,8 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client) {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		//IO_Uring does not support UDS
+		assumeThat(System.getProperty("forceTransport")).isNotEqualTo("io_uring");
 		disposableServer =
 				server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
 				      .wiretap(true)
