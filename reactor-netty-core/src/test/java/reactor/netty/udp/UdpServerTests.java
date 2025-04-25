@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -153,7 +153,7 @@ class UdpServerTests {
 					UdpServer.create()
 					         .option(ChannelOption.SO_REUSEADDR, true)
 					         .bindAddress(() -> new InetSocketAddress(port))
-					         .runOn(resources, InternetProtocolFamily.IPv4)
+					         .runOn(resources, SocketProtocolFamily.INET)
 					         .handle((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
 					                             // Suppressed "JdkObsolete", usage of Enumeration is deliberate
