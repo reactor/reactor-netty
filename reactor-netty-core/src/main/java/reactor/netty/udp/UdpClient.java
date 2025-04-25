@@ -183,7 +183,7 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
 	 *
 	 * @param loopResources a new loop resources
-	 * @param preferNative should prefer running on epoll, kqueue or similar instead of java NIO
+	 * @param preferNative should prefer running on epoll, io_uring, kqueue or similar instead of java NIO
 	 * @return a new {@link UdpClient} reference
 	 */
 	@Override

@@ -118,8 +118,11 @@ public final class ReactorNetty {
 	public static final String SHUTDOWN_TIMEOUT = "reactor.netty.ioShutdownTimeout";
 
 	/**
-	 * Default value whether the native transport (epoll, kqueue) will be preferred,
+	 * Default value whether the native transport (epoll, io_uring, kqueue) will be preferred,
 	 * fallback it will be preferred when available.
+	 * <p><strong>Note:</strong> On {@code Linux}, {@code Epoll} will be preferred by default.
+	 * If {@code IO_Uring} needs to be configured, a dependency to {@code io.netty:netty-transport-native-io_uring}
+	 * has to be added.
 	 */
 	public static final String NATIVE = "reactor.netty.native";
 
