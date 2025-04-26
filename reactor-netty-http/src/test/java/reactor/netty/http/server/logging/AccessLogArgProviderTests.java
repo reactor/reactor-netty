@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@ import org.junit.jupiter.api.Test;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.server.logging.LoggingTests.URI;
@@ -138,16 +136,6 @@ class AccessLogArgProviderTests {
 		@Override
 		public CharSequence responseHeader(CharSequence name) {
 			return "responseHeader";
-		}
-
-		@Override
-		public Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
-			return Collections.emptyIterator();
-		}
-
-		@Override
-		public Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
-			return Collections.emptyIterator();
 		}
 
 		@Override
