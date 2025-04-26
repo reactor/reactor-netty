@@ -169,7 +169,9 @@ public interface AccessLogArgProvider {
 	 * @since 1.2.6
 	 */
 	@Nullable
-	Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator();
+	default Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
+		return null;
+	}
 
 	/**
 	 * Returns an iterator over all response headers.
@@ -178,5 +180,7 @@ public interface AccessLogArgProvider {
 	 * @since 1.2.6
 	 */
 	@Nullable
-	Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator();
+	default Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
+		return null;
+	}
 }
