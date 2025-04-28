@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -160,4 +161,26 @@ public interface AccessLogArgProvider {
 	 */
 	@Nullable
 	Map<CharSequence, Set<Cookie>> cookies();
+
+	/**
+	 * Returns an iterator over all request headers.
+	 *
+	 * @return an iterator over all request headers or {@code null} if request is not available
+	 * @since 1.2.6
+	 */
+	@Nullable
+	default Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
+		return null;
+	}
+
+	/**
+	 * Returns an iterator over all response headers.
+	 *
+	 * @return an iterator over all response headers or {@code null} if response is not available
+	 * @since 1.2.6
+	 */
+	@Nullable
+	default Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
+		return null;
+	}
 }

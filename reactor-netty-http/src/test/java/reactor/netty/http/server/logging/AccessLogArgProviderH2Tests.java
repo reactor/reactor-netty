@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
@@ -133,6 +135,33 @@ class AccessLogArgProviderH2Tests {
 		accessLogArgProvider.responseHeaders(responseHeaders);
 		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE))
 				.isEqualTo(HttpHeaderValues.APPLICATION_JSON);
+	}
+
+	@Test
+	@SuppressWarnings({"CollectionUndefinedEquality", "DataFlowIssue"})
+	void requestHeaderIterator() {
+		assertThat(accessLogArgProvider.requestHeaderIterator()).isNull();
+		accessLogArgProvider.requestHeaders(requestHeaders);
+		assertThat(accessLogArgProvider.requestHeaderIterator()).isNotNull();
+		Map<CharSequence, CharSequence> requestHeaders = new HashMap<>();
+		accessLogArgProvider.requestHeaderIterator().forEachRemaining(e -> requestHeaders.put(e.getKey(), e.getValue()));
+		assertThat(requestHeaders.size()).isEqualTo(3);
+		assertThat(requestHeaders.get(HEADER_TEST_NAME)).isEqualTo(HEADER_TEST_VALUE);
+		assertThat(requestHeaders.get(Http2Headers.PseudoHeaderName.METHOD.value())).isEqualTo(HttpMethod.GET.name());
+		assertThat(requestHeaders.get(Http2Headers.PseudoHeaderName.PATH.value())).isEqualTo(URI);
+	}
+
+	@Test
+	@SuppressWarnings({"CollectionUndefinedEquality", "DataFlowIssue"})
+	void responseHeaderIterator() {
+		assertThat(accessLogArgProvider.responseHeaderIterator()).isNull();
+		accessLogArgProvider.responseHeaders(responseHeaders);
+		assertThat(accessLogArgProvider.responseHeaderIterator()).isNotNull();
+		Map<CharSequence, CharSequence> responseHeaders = new HashMap<>();
+		accessLogArgProvider.responseHeaderIterator().forEachRemaining(e -> responseHeaders.put(e.getKey(), e.getValue()));
+		assertThat(responseHeaders.size()).isEqualTo(2);
+		assertThat(responseHeaders.get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(HttpHeaderValues.APPLICATION_JSON);
+		assertThat(responseHeaders.get(Http2Headers.PseudoHeaderName.STATUS.value())).isEqualTo(HttpResponseStatus.OK.codeAsText());
 	}
 
 }
