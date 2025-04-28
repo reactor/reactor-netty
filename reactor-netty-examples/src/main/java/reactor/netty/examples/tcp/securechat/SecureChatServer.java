@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 package reactor.netty.examples.tcp.securechat;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +26,8 @@ import io.netty.channel.ChannelId;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -40,11 +39,12 @@ public class SecureChatServer {
 	private static final int PORT = Integer.parseInt(System.getProperty("port", "8992"));
 	private static final boolean WIRETAP = System.getProperty("wiretap") != null;
 
-	public static void main(String[] args) throws UnknownHostException, CertificateException {
+	public static void main(String[] args) throws Exception {
 		ConcurrentHashMap<ChannelId, Connection> conns = new ConcurrentHashMap<>();
 		String hostname = InetAddress.getLocalHost().getHostName();
 
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		TcpSslContextSpec tcpSslContextSpec = TcpSslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		TcpServer.create()
 		         .port(PORT)
 		         .wiretap(WIRETAP)
@@ -90,7 +90,7 @@ public class SecureChatServer {
 
 		             return out.sendString(Flux.concat(welcomeFlux, flux));
 		         })
-		         .secure(spec -> spec.sslContext(TcpSslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
+		         .secure(spec -> spec.sslContext(tcpSslContextSpec))
 		         .bindNow()
 		         .onDispose()
 		         .block();
