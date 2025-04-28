@@ -26,6 +26,8 @@ project.tasks.withType(Javadoc) {
 
 	compileTestJava.options.compilerArgs += "-parameters"
 
+	failOnError = true
+
 	options {
 		addStringOption('Xdoclint:none', '-quiet')
 		addStringOption('charSet', 'UTF-8')
