@@ -20,6 +20,8 @@ import reactor.netty5.http.server.HttpServerRequest;
 import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -68,6 +70,16 @@ final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLo
 	public @Nullable CharSequence responseHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return response == null ? null : response.headers().get(name);
+	}
+
+	@Override
+	public @Nullable Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
+		return request == null ? null : request.requestHeaders().iteratorCharSequence();
+	}
+
+	@Override
+	public @Nullable Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
+		return response == null ? null : response.headers().iteratorCharSequence();
 	}
 
 	@Override

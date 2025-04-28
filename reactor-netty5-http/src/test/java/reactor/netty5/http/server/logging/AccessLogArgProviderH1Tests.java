@@ -33,6 +33,8 @@ import reactor.netty5.http.server.HttpServerRequest;
 
 import java.net.InetSocketAddress;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
@@ -157,6 +159,30 @@ class AccessLogArgProviderH1Tests {
 		accessLogArgProvider.response(response);
 		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE))
 				.isEqualTo(HttpHeaderValues.APPLICATION_JSON);
+	}
+
+	@Test
+	@SuppressWarnings({"CollectionUndefinedEquality", "DataFlowIssue"})
+	void requestHeaderIterator() {
+		assertThat(accessLogArgProvider.requestHeaderIterator()).isNull();
+		accessLogArgProvider.request(request);
+		assertThat(accessLogArgProvider.requestHeaderIterator()).isNotNull();
+		Map<CharSequence, CharSequence> requestHeaders = new HashMap<>();
+		accessLogArgProvider.requestHeaderIterator().forEachRemaining(e -> requestHeaders.put(e.getKey(), e.getValue()));
+		assertThat(requestHeaders.size()).isEqualTo(1);
+		assertThat(requestHeaders.get(HEADER_CONNECTION_NAME)).isEqualTo(HEADER_CONNECTION_VALUE);
+	}
+
+	@Test
+	@SuppressWarnings({"CollectionUndefinedEquality", "DataFlowIssue"})
+	void responseHeaderIterator() {
+		assertThat(accessLogArgProvider.responseHeaderIterator()).isNull();
+		accessLogArgProvider.response(response);
+		assertThat(accessLogArgProvider.responseHeaderIterator()).isNotNull();
+		Map<CharSequence, CharSequence> responseHeaders = new HashMap<>();
+		accessLogArgProvider.responseHeaderIterator().forEachRemaining(e -> responseHeaders.put(e.getKey(), e.getValue()));
+		assertThat(responseHeaders.size()).isEqualTo(1);
+		assertThat(responseHeaders.get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(HttpHeaderValues.APPLICATION_JSON);
 	}
 
 }

@@ -21,6 +21,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -139,4 +140,24 @@ public interface AccessLogArgProvider {
 	 * @since 1.0.6
 	 */
 	@Nullable Map<CharSequence, Set<HttpCookiePair>> cookies();
+
+	/**
+	 * Returns an iterator over all request headers.
+	 *
+	 * @return an iterator over all request headers or {@code null} if request is not available
+	 * @since 1.2.6
+	 */
+	default @Nullable Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
+		return null;
+	}
+
+	/**
+	 * Returns an iterator over all response headers.
+	 *
+	 * @return an iterator over all response headers or {@code null} if response is not available
+	 * @since 1.2.6
+	 */
+	default @Nullable Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
+		return null;
+	}
 }
