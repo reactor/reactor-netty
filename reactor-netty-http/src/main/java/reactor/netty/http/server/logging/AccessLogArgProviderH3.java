@@ -19,6 +19,8 @@ import io.netty.incubator.codec.http3.Http3HeadersFrame;
 import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 
 final class AccessLogArgProviderH3 extends AbstractAccessLogArgProvider<AccessLogArgProviderH3> {
@@ -58,6 +60,16 @@ final class AccessLogArgProviderH3 extends AbstractAccessLogArgProvider<AccessLo
 	public @Nullable CharSequence responseHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return responseHeaders == null ? null : responseHeaders.headers().get(name);
+	}
+
+	@Override
+	public @Nullable Iterator<Map.Entry<CharSequence, CharSequence>> requestHeaderIterator() {
+		return requestHeaders == null ? null : requestHeaders.headers().iterator();
+	}
+
+	@Override
+	public @Nullable Iterator<Map.Entry<CharSequence, CharSequence>> responseHeaderIterator() {
+		return responseHeaders == null ? null : responseHeaders.headers().iterator();
 	}
 
 	@Override
