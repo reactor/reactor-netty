@@ -99,7 +99,7 @@ ext {
 		println "Context Propagation version defined from command line: ${forceContextPropagationVersion}"
 	}
 
-	braveVersion = '6.1.0'
+	braveVersion = '6.2.0'
 	zipkinSenderVersion = '3.5.0'
 
 	jspecifyVersion = '1.0.0'
