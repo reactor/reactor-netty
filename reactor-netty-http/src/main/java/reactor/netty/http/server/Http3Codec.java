@@ -55,12 +55,12 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 	final boolean                                                 accessLogEnabled;
 	final Function<AccessLogArgProvider, AccessLog>               accessLog;
-	final boolean                                                 errorLogEnabled;
-	final Function<ErrorLogArgProvider, ErrorLog>                 errorLog;
 	final HttpCompressionOptionsSpec                              compressionOptions;
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
+	final boolean                                                 errorLogEnabled;
+	final Function<ErrorLogArgProvider, ErrorLog>                 errorLog;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final HttpMessageLogFactory                                   httpMessageLogFactory;
@@ -79,12 +79,12 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	Http3Codec(
 			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
-			boolean errorLogEnabled,
-			@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			boolean errorLogEnabled,
+			@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -100,12 +100,12 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			boolean validate) {
 		this.accessLogEnabled = accessLogEnabled;
 		this.accessLog = accessLog;
-		this.errorLogEnabled = errorLogEnabled;
-		this.errorLog = errorLog;
 		this.compressionOptions = compressionOptions;
 		this.compressPredicate = compressPredicate;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
+		this.errorLogEnabled = errorLogEnabled;
+		this.errorLog = errorLog;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.httpMessageLogFactory = httpMessageLogFactory;
@@ -172,12 +172,12 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	static ChannelHandler newHttp3ServerConnectionHandler(
 			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
-			boolean errorLogEnabled,
-			@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			boolean errorLogEnabled,
+			@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -192,7 +192,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
-				new Http3Codec(accessLogEnabled, accessLog, errorLogEnabled, errorLog, compressionOptions, compressPredicate, decoder, encoder,
+				new Http3Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate, decoder, encoder, errorLogEnabled, errorLog,
 						formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder,
 						minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 	}

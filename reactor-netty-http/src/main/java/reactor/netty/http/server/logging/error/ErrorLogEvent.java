@@ -16,29 +16,29 @@
 package reactor.netty.http.server.logging.error;
 
 /**
- * Represents a log entry for HTTP server errors.
- * Implementations of this interface define how the error information is logged.
+ * Define an interface to handle error log events propagated through UserEvent.
  *
  * @author raccoonback
  * @author Violeta Georgieva
  * @since 1.2.6
  */
-public interface ErrorLog {
+public interface ErrorLogEvent {
 
 	/**
-	 * Creates a default {@code ErrorLog} with the given log format and arguments.
+	 * Creates a default {@code ErrorLogEvent} with the given throwable.
 	 *
-	 * @param logFormat the log format string
-	 * @param args the list of arguments
-	 * @return a new {@link DefaultErrorLog}
-	 * @see DefaultErrorLog
+	 * @param t the throwable that occurred
+	 * @return a new {@link DefaultErrorLogEvent}
+	 * @see DefaultErrorLogEvent
 	 */
-	static ErrorLog create(String logFormat, Object... args) {
-		return new DefaultErrorLog(logFormat, args);
+	static ErrorLogEvent create(Throwable t) {
+		return new DefaultErrorLogEvent(t);
 	}
 
 	/**
-	 * Logs the error information.
+	 * Returns the throwable that occurred.
+	 *
+	 * @return the throwable that occurred
 	 */
-	void log();
+	Throwable cause();
 }

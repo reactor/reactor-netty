@@ -89,11 +89,11 @@ public interface NettyPipeline {
 	String RIGHT                 = "reactor.right.";
 
 	String AccessLogHandler      = LEFT + "accessLogHandler";
-	String ErrorLogHandler       = LEFT + "errorLogHandler";
 	String ChannelMetricsHandler = LEFT + "channelMetricsHandler";
 	String ChunkedWriter         = LEFT + "chunkedWriter";
 	String CompressionHandler    = LEFT + "compressionHandler";
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
+	String ErrorLogHandler       = LEFT + "errorLogHandler";
 	String H2CUpgradeHandler     = LEFT + "h2cUpgradeHandler";
 	String H2Flush               = LEFT + "h2Flush";
 	String H2MultiplexHandler    = LEFT + "h2MultiplexHandler";

@@ -17,20 +17,17 @@ package reactor.netty.examples.documentation.http.server.errorLog;
 
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.logging.error.DefaultErrorLog;
+import reactor.netty.http.server.logging.error.ErrorLog;
 
 public class CustomLogErrorFormatApplication {
 
 	public static void main(String[] args) {
 		DisposableServer server =
 				HttpServer.create()
-						.errorLog(
-								true,
-								x -> DefaultErrorLog.create("method={}, uri={}", x.httpServerInfos().method(), x.httpServerInfos().uri())
-						)
-						.bindNow();
+				          .errorLog(true, x -> ErrorLog.create("method={}, uri={}", x.httpServerInfos().method(), x.httpServerInfos().uri()))
+				          .bindNow();
 
 		server.onDispose()
-				.block();
+		      .block();
 	}
 }

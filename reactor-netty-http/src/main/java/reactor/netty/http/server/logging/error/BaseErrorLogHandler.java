@@ -27,7 +27,6 @@ import java.util.function.Function;
 class BaseErrorLogHandler extends ChannelDuplexHandler {
 
 	static String PID;
-
 	static {
 		String jvmName = ManagementFactory.getRuntimeMXBean().getName();
 		int index = jvmName.indexOf('@');
@@ -45,13 +44,11 @@ class BaseErrorLogHandler extends ChannelDuplexHandler {
 	static final String MISSING = "-";
 
 	static final Function<ErrorLogArgProvider, ErrorLog> DEFAULT_ERROR_LOG =
-			args -> DefaultErrorLog.create(
+			args -> ErrorLog.create(
 					DEFAULT_LOG_FORMAT,
 					args.errorDateTime().format(DATE_TIME_FORMATTER),
 					refinedRemoteAddress(args.remoteAddress()),
-					refinedExceptionMessage(args.cause()),
-					args.cause()
-			);
+					refinedExceptionMessage(args.cause()));
 
 	final Function<ErrorLogArgProvider, ErrorLog> errorLog;
 
@@ -70,10 +67,6 @@ class BaseErrorLogHandler extends ChannelDuplexHandler {
 	private static String refinedExceptionMessage(Throwable throwable) {
 		String error = throwable.getClass().getName();
 		String message = throwable.getLocalizedMessage();
-		if (message == null) {
-			return error;
-		}
-
-		return error + "." + message;
+		return message == null ? error : error + "." + message;
 	}
 }

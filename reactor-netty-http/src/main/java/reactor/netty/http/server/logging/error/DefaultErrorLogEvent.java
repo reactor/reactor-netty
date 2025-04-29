@@ -16,10 +16,20 @@
 package reactor.netty.http.server.logging.error;
 
 /**
- * Define an interface to handle error logging events propagated through UserEvent.
+ * Provide a default implementation of an error logging event for UserEvent delivery.
  *
  * @author raccoonback
- * @since 1.2.5
  */
-public interface ErrorLoggingEvent {
+final class DefaultErrorLogEvent implements ErrorLogEvent {
+
+	private final Throwable throwable;
+
+	DefaultErrorLogEvent(Throwable throwable) {
+		this.throwable = throwable;
+	}
+
+	@Override
+	public Throwable cause() {
+		return throwable;
+	}
 }

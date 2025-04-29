@@ -25,16 +25,28 @@ import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 
 /**
- * Provides default information for logging errors that occur on the HTTP Server.
+ * A default implementation of the args required for error log.
  *
  * @author raccoonback
  */
 final class DefaultErrorLogArgProvider extends AbstractErrorLogArgProvider<DefaultErrorLogArgProvider> {
 
 	private Throwable cause;
+	private ZonedDateTime errorDateTime;
+	private HttpServerInfos httpServerInfos;
 
 	DefaultErrorLogArgProvider(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);
+	}
+
+	@Override
+	public Throwable cause() {
+		return cause;
+	}
+
+	@Override
+	public ZonedDateTime errorDateTime() {
+		return errorDateTime;
 	}
 
 	@Override
@@ -43,8 +55,9 @@ final class DefaultErrorLogArgProvider extends AbstractErrorLogArgProvider<Defau
 	}
 
 	@Override
-	public Throwable cause() {
-		return cause;
+	@Nullable
+	public HttpServerInfos httpServerInfos() {
+		return httpServerInfos;
 	}
 
 	void clear() {
@@ -53,15 +66,15 @@ final class DefaultErrorLogArgProvider extends AbstractErrorLogArgProvider<Defau
 		httpServerInfos = null;
 	}
 
-	void applyThrowable(Throwable cause) {
-		this.errorDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
-		this.cause = cause;
-	}
-
 	void applyConnectionInfo(Channel channel) {
 		ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 		if (ops instanceof HttpServerInfos) {
 			this.httpServerInfos = (HttpServerInfos) ops;
 		}
+	}
+
+	void applyThrowable(Throwable cause) {
+		this.cause = cause;
+		this.errorDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
 	}
 }

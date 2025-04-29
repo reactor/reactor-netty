@@ -23,10 +23,10 @@ public class Application {
 	public static void main(String[] args) {
 		DisposableServer server =
 				HttpServer.create()
-						.errorLog(true)
-						.bindNow();
+				          .errorLog(true)
+				          .bindNow();
 
 		server.onDispose()
-				.block();
+		      .block();
 	}
 }

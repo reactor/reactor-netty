@@ -76,206 +76,118 @@ class ErrorLogTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void errorLogDefaultFormat(HttpServer httpServer, HttpClient httpClient) {
-		disposableServer = httpServer
-				.handle((req, resp) -> {
-					resp.withConnection(
-							conn -> conn.channel()
-									.pipeline()
-									.fireExceptionCaught(new RuntimeException())
-					);
-					return resp.send();
-				})
-				.errorLog(true)
-				.bindNow();
-
-		getHttpClientResponse(httpClient, "/example/test");
-
-		Mockito.verify(mockedAppender, Mockito.times(1))
-				.doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
-
-		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage())
-				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
-		assertThat(relevantLog.getFormattedMessage())
-				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+	void errorLogDefaultFormat(HttpServer server, HttpClient client) {
+		testErrorLogDefaultFormat(
+				server.handle((req, res) -> {
+					res.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
+					return res.send();
+				}),
+				client);
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void errorLogDefaultFormat_whenReactivePipelineThrowsException() {
-		disposableServer = createServer()
-				.handle((req, resp) -> Mono.error(new RuntimeException()))
-				.errorLog(true)
-				.bindNow();
-
-		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
-
-		Mockito.verify(mockedAppender, Mockito.times(1))
-				.doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
-
-		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage())
-				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
-		assertThat(relevantLog.getFormattedMessage())
-				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+	void errorLogDefaultFormatWhenReactivePipelineThrowsException(HttpServer server, HttpClient client) {
+		testErrorLogDefaultFormat(
+				server.handle((req, res) -> Mono.error(new RuntimeException())),
+				client);
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void errorLogDefaultFormat_whenUnhandledThrowsException() {
-		disposableServer = createServer()
-				.handle((req, resp) -> {
+	void errorLogDefaultFormatWhenUnhandledThrowsException(HttpServer server, HttpClient client) {
+		testErrorLogDefaultFormat(
+				server.handle((req, res) -> {
 					throw new RuntimeException();
-				})
-				.errorLog(true)
-				.bindNow();
-
-		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
-
-		Mockito.verify(mockedAppender, Mockito.times(1))
-				.doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
-
-		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage())
-				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
-		assertThat(relevantLog.getFormattedMessage())
-				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+				}),
+				client);
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void errorLogDefaultFormat_whenReactivePipelineThrowsException_inRoute() {
-		disposableServer = createServer()
-				.route(r -> r.get("/example/test", (req, res) -> Mono.error(new RuntimeException())))
-				.errorLog(true)
-				.bindNow();
-
-		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
-
-		Mockito.verify(mockedAppender, Mockito.times(1))
-				.doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
-
-		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage())
-				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
-		assertThat(relevantLog.getFormattedMessage())
-				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+	void errorLogDefaultFormatWhenReactivePipelineThrowsExceptionInRoute(HttpServer server, HttpClient client) {
+		testErrorLogDefaultFormat(
+				server.route(r -> r.get("/example/test", (req, res) -> Mono.error(new RuntimeException()))),
+				client);
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void errorLogDefaultFormat_whenUnhandledThrowsException_inRoute() {
-		disposableServer = createServer()
-				.route(r -> r.get("/example/test", (req, res) -> {
+	void errorLogDefaultFormatWhenUnhandledThrowsExceptionInRoute(HttpServer server, HttpClient client) {
+		testErrorLogDefaultFormat(
+				server.route(r -> r.get("/example/test", (req, res) -> {
 					throw new RuntimeException();
-				}))
-				.errorLog(true)
-				.bindNow();
+				})),
+				client);
+	}
 
-		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+	void testErrorLogDefaultFormat(HttpServer server, HttpClient client) {
+		disposableServer = server.errorLog(true).bindNow();
 
-		Mockito.verify(mockedAppender, Mockito.times(1))
-				.doAppend(loggingEventArgumentCaptor.capture());
+		getHttpClientResponse(client.port(disposableServer.port()), "/example/test");
+
+		Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
 		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
 
 		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage())
-				.isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
+		assertThat(relevantLog.getMessage()).isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
 		assertThat(relevantLog.getFormattedMessage())
 				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void errorLogCustomFormat(HttpServer httpServer, HttpClient httpClient) {
-		disposableServer = httpServer
-				.handle((req, resp) -> {
-					resp.withConnection(
-							conn -> conn.channel()
-									.pipeline()
-									.fireExceptionCaught(new RuntimeException())
-					);
-					return resp.send();
-				})
-				.errorLog(
-						true,
-						args -> DefaultErrorLog.create(
-								CUSTOM_FORMAT,
-								args.httpServerInfos().method(),
-								args.httpServerInfos().uri()
-						)
-				)
-				.bindNow();
+	void errorLogCustomFormat(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, resp) -> {
+				          resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
+				          return resp.send();
+				      })
+				      .errorLog(true, args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri()))
+				      .bindNow();
 
-		getHttpClientResponse(httpClient, "/example/test");
+		getHttpClientResponse(client.port(disposableServer.port()), "/example/test");
 
-		Mockito.verify(mockedAppender, Mockito.times(1))
-				.doAppend(loggingEventArgumentCaptor.capture());
+		Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
 		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
 
 		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage())
-				.isEqualTo(CUSTOM_FORMAT);
-		assertThat(relevantLog.getFormattedMessage())
-				.isEqualTo("method=GET, uri=/example/test");
+		assertThat(relevantLog.getMessage()).isEqualTo(CUSTOM_FORMAT);
+		assertThat(relevantLog.getFormattedMessage()).isEqualTo("method=GET, uri=/example/test");
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void secondCallToErrorLogOverridesPreviousOne(HttpServer httpServer, HttpClient httpClient) {
-		disposableServer = httpServer
-				.handle((req, resp) -> {
-					resp.withConnection(
-							conn -> conn.channel()
-									.pipeline()
-									.fireExceptionCaught(new RuntimeException())
-					);
-					return resp.send();
-				})
-				.errorLog(
-						true,
-						args -> DefaultErrorLog.create(
-								CUSTOM_FORMAT,
-								args.httpServerInfos().method(),
-								args.httpServerInfos().uri()
-						)
-				)
-				.errorLog(false)
-				.bindNow();
+	void secondCallToErrorLogOverridesPreviousOne(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, resp) -> {
+				          resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
+				          return resp.send();
+				      })
+				      .errorLog(true, args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri()))
+				      .errorLog(false)
+				      .bindNow();
 
-		getHttpClientResponse(httpClient, "/example/test");
+		getHttpClientResponse(client.port(disposableServer.port()), "/example/test");
 
-		Mockito.verify(mockedAppender, Mockito.times(0))
-				.doAppend(loggingEventArgumentCaptor.capture());
+		Mockito.verify(mockedAppender, Mockito.times(0)).doAppend(loggingEventArgumentCaptor.capture());
 		assertThat(loggingEventArgumentCaptor.getAllValues()).isEmpty();
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpProtocolsCompatibleCombinations")
-	void errorLogFilteringAndFormatting(HttpServer httpServer, HttpClient httpClient) {
-		disposableServer = httpServer
-				.handle((req, resp) -> {
-					resp.withConnection(
-							conn -> conn.channel()
-									.pipeline()
-									.fireExceptionCaught(new RuntimeException())
-					);
-					return resp.send();
-				})
-				.errorLog(
-						true,
-						ErrorLogFactory.createFilter(
-								p -> p.httpServerInfos().uri().startsWith("/filtered"),
-								args -> DefaultErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri())
-						)
-				)
+	void errorLogFilteringAndFormatting(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, resp) -> {
+				          resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
+				          return resp.send();
+				      })
+				      .errorLog(true, ErrorLogFactory.createFilter(
+				          p -> p.httpServerInfos().uri().startsWith("/filtered"),
+				          args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri())))
 				.bindNow();
 
+		HttpClient httpClient = client.port(disposableServer.port());
 		getHttpClientResponse(httpClient, "/example/test");
 		getHttpClientResponse(httpClient, "/filtered/test");
 
@@ -283,37 +195,35 @@ class ErrorLogTest extends BaseHttpTest {
 		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
 
 		final LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage())
-				.isEqualTo(CUSTOM_FORMAT);
-		assertThat(relevantLog.getFormattedMessage())
-				.isEqualTo("method=GET, uri=/filtered/test");
+		assertThat(relevantLog.getMessage()).isEqualTo(CUSTOM_FORMAT);
+		assertThat(relevantLog.getFormattedMessage()).isEqualTo("method=GET, uri=/filtered/test");
 	}
 
-	private void getHttpClientResponse(HttpClient httpClient, String uri) {
+	private static void getHttpClientResponse(HttpClient client, String uri) {
 		try {
-			httpClient.port(disposableServer.port())
-					.get()
-					.uri(uri)
-					.response()
-					.block(Duration.ofSeconds(30));
+			client.get()
+			      .uri(uri)
+			      .response()
+			      .block(Duration.ofSeconds(30));
 		}
 		catch (Exception e) {
 			// ignore
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	static Object[][] httpProtocolsCompatibleCombinations() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
 		Http11SslContextSpec clientCtxHttp11 =
 				Http11SslContextSpec.forClient()
-						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		Http2SslContextSpec serverCtxHttp2 = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
 		Http2SslContextSpec clientCtxHttp2 =
 				Http2SslContextSpec.forClient()
-						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
-		HttpServer _server = createServer().httpRequestDecoder(spec -> spec.h2cMaxContentLength(256));
+		HttpServer _server = createServer();
 
 		HttpServer[] servers = new HttpServer[]{
 				_server, // by default protocol is HTTP/1.1
@@ -340,24 +250,23 @@ class ErrorLogTest extends BaseHttpTest {
 		Flux<HttpClient> f2 = Flux.fromArray(clients).repeat(servers.length - 1);
 
 		return Flux.zip(f1, f2)
-				.filter(tuple2 -> {
-					HttpServerConfig serverConfig = tuple2.getT1().configuration();
-					HttpClientConfig clientConfig = tuple2.getT2().configuration();
-					List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
-					List<HttpProtocol> clientProtocols = Arrays.asList(clientConfig.protocols());
-					if (serverConfig.isSecure() != clientConfig.isSecure()) {
-						return false;
-					}
-					else if (serverProtocols.size() == 1 && serverProtocols.get(0) == HttpProtocol.H2C &&
-							clientProtocols.size() == 2) {
-						return false;
-					}
-					return serverProtocols.containsAll(clientProtocols)
-							|| clientProtocols.containsAll(serverProtocols);
-				})
-				.map(Tuple2::toArray)
-				.collectList()
-				.block(Duration.ofSeconds(30))
-				.toArray(new Object[0][2]);
+		           .filter(tuple2 -> {
+		               HttpServerConfig serverConfig = tuple2.getT1().configuration();
+		               HttpClientConfig clientConfig = tuple2.getT2().configuration();
+		               List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
+		               List<HttpProtocol> clientProtocols = Arrays.asList(clientConfig.protocols());
+		               if (serverConfig.isSecure() != clientConfig.isSecure()) {
+		                   return false;
+		               }
+		               else if (serverProtocols.size() == 1 && serverProtocols.get(0) == HttpProtocol.H2C &&
+		                       clientProtocols.size() == 2) {
+		                   return false;
+		               }
+		               return serverProtocols.containsAll(clientProtocols) || clientProtocols.containsAll(serverProtocols);
+		           })
+		           .map(Tuple2::toArray)
+		           .collectList()
+		           .block(Duration.ofSeconds(30))
+		           .toArray(new Object[0][2]);
 	}
 }

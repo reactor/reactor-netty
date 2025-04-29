@@ -504,31 +504,31 @@ The following example enables it programmatically:
 
 {examples-link}/errorLog/Application.java
 ----
-include::{examples-dir}/errorLog/Application.java[lines=21..32]
+include::{examples-dir}/errorLog/Application.java[lines=18..32]
 ----
 
 Calling this method takes precedence over the system property configuration.
 
-By default, the logging format is `[{datetime}] [error] [client {remote address}] {exception message}`, but you can
+By default, the logging format is `[+{datetime}+] [pid +{PID}+] [client {remote address}] {exception message}`, but you can
 specify a custom one as a parameter, as in the following example:
 
 {examples-link}/errorLog/CustomLogErrorFormatApplication.java
 ----
-include::{examples-dir}/errorLog/CustomLogErrorFormatApplication.java[lines=22..36]
+include::{examples-dir}/errorLog/CustomLogErrorFormatApplication.java[lines=18..33]
 ----
 
 You can also filter `HTTP` error logs by using the `ErrorLogFactory#createFilter` method, as in the following example:
 
 {examples-link}/errorLog/FilterLogErrorApplication.java
 ----
-include::{examples-dir}/errorLog/FilterLogErrorApplication.java[lines=22..36]
+include::{examples-dir}/errorLog/FilterLogErrorApplication.java[lines=18..33]
 ----
 
 Note that this method can take a custom format parameter too, as in this example:
 
 {examples-link}/errorLog/CustomFormatAndFilterErrorLogApplication.java.java
 ----
-include::{examples-dir}/errorLog/CustomFormatAndFilterErrorLogApplication.java[lines=23..40]
+include::{examples-dir}/errorLog/CustomFormatAndFilterErrorLogApplication.java[lines=18..35]
 ----
 <1> Specifies the filter predicate to use
 <2> Specifies the custom format to apply

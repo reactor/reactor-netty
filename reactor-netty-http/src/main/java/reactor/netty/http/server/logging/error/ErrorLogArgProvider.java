@@ -24,10 +24,10 @@ import java.time.ZonedDateTime;
 import java.util.function.BiFunction;
 
 /**
- * Provides information for logging errors that occur on the HTTP Server.
+ * A provider of the args required for error log.
  *
  * @author raccoonback
- * @since 1.2.5
+ * @since 1.2.6
  */
 public interface ErrorLogArgProvider {
 
@@ -39,10 +39,11 @@ public interface ErrorLogArgProvider {
 	ZonedDateTime errorDateTime();
 
 	/**
-	 * Returns the address of the remote peer in case of Unix Domain Sockets.
+	 * Returns the address of the remote peer or possibly {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the peer's address
 	 */
+	@Nullable
 	SocketAddress remoteAddress();
 
 	/**

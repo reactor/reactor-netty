@@ -17,7 +17,7 @@ package reactor.netty.examples.documentation.http.server.errorLog;
 
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.logging.error.DefaultErrorLog;
+import reactor.netty.http.server.logging.error.ErrorLog;
 import reactor.netty.http.server.logging.error.ErrorLogFactory;
 
 public class CustomFormatAndFilterErrorLogApplication {
@@ -25,16 +25,11 @@ public class CustomFormatAndFilterErrorLogApplication {
 	public static void main(String[] args) {
 		DisposableServer server =
 				HttpServer.create()
-						.errorLog(
-								true,
-								ErrorLogFactory.createFilter(
-										p -> p.cause() instanceof RuntimeException, //<1>
-										x -> DefaultErrorLog.create("method={}, uri={}", x.httpServerInfos().method(), x.httpServerInfos().uri()) //<2>
-								)
-						)
-						.bindNow();
+				          .errorLog(true, ErrorLogFactory.createFilter(p -> p.cause() instanceof RuntimeException, //<1>
+				                  x -> ErrorLog.create("method={}, uri={}", x.httpServerInfos().method(), x.httpServerInfos().uri()))) //<2>
+				          .bindNow();
 
 		server.onDispose()
-				.block();
+		      .block();
 	}
 }
