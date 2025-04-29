@@ -98,7 +98,7 @@ public final class IdleTimeoutHandler extends IdleStateHandler {
 	 * @param idleTimeout            the idle timeout duration
 	 * @param httpConnectionLiveness the HTTP connection liveness checker
 	 */
-	public static void addIdleTimeoutServerHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout,
+	public static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout,
 	                                               HttpConnectionLiveness httpConnectionLiveness) {
 		if (idleTimeout != null && pipeline.get(NettyPipeline.IdleTimeoutHandler) == null) {
 			String baseName = null;

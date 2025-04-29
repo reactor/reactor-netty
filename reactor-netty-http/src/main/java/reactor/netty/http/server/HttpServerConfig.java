@@ -658,7 +658,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			p.remove(NettyPipeline.ChannelMetricsHandler);
 		}
 
-		IdleTimeoutHandler.addIdleTimeoutServerHandler(
+		IdleTimeoutHandler.addIdleTimeoutHandler(
 				p,
 				idleTimeout,
 				new HttpConnectionImmediateClose()
@@ -724,7 +724,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		                  cookieDecoder, cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener,
 		                  mapHandle, methodTagValue, metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue)));
 
-		IdleTimeoutHandler.addIdleTimeoutServerHandler(
+		IdleTimeoutHandler.addIdleTimeoutHandler(
 				p,
 				idleTimeout,
 				new Http2ConnectionLiveness(
@@ -840,7 +840,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.ErrorLogHandler, new DefaultErrorLogHandler(errorLog));
 		}
 
-		IdleTimeoutHandler.addIdleTimeoutServerHandler(
+		IdleTimeoutHandler.addIdleTimeoutHandler(
 				p,
 				idleTimeout,
 				new HttpConnectionImmediateClose()
@@ -927,7 +927,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.ErrorLogHandler, new DefaultErrorLogHandler(errorLog));
 		}
 
-		IdleTimeoutHandler.addIdleTimeoutServerHandler(
+		IdleTimeoutHandler.addIdleTimeoutHandler(
 				p,
 				idleTimeout,
 				new HttpConnectionImmediateClose()
@@ -1082,7 +1082,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (idleTimeout != null) {
 				IdleTimeoutHandler.removeIdleTimeoutHandler(pipeline);
-				IdleTimeoutHandler.addIdleTimeoutServerHandler(
+				IdleTimeoutHandler.addIdleTimeoutHandler(
 						pipeline,
 						idleTimeout,
 						new Http2ConnectionLiveness(

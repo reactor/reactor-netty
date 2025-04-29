@@ -700,7 +700,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	private void setupIdleTimeoutHandler(ChannelPipeline pipeline) {
 		Http2FrameCodec httpCodec = pipeline.get(Http2FrameCodec.class);
 		if(httpCodec != null) {
-			IdleTimeoutHandler.addIdleTimeoutServerHandler(
+			IdleTimeoutHandler.addIdleTimeoutHandler(
 					pipeline,
 					idleTimeout,
 					new Http2ConnectionLiveness(
@@ -713,7 +713,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			return;
 		}
 
-		IdleTimeoutHandler.addIdleTimeoutServerHandler(
+		IdleTimeoutHandler.addIdleTimeoutHandler(
 				pipeline,
 				idleTimeout,
 				new HttpConnectionImmediateClose()
