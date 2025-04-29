@@ -24,7 +24,7 @@ import java.util.function.Function;
  * Handler for logging errors that occur in the HTTP Server.
  *
  * @author raccoonback
- * @since 1.2.5
+ * @since 1.2.6
  */
 public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 
@@ -35,7 +35,7 @@ public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 	}
 
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		ErrorLog log;
 
 		if (errorLogArgProvider == null) {
@@ -45,23 +45,23 @@ public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 			errorLogArgProvider.clear();
 		}
 
-		errorLogArgProvider.applyThrowable(cause);
 		errorLogArgProvider.applyConnectionInfo(ctx.channel());
-		log = errorLog.apply(errorLogArgProvider);
+		errorLogArgProvider.applyThrowable(cause);
 
+		log = errorLog.apply(errorLogArgProvider);
 		if (log != null) {
 			log.log();
 		}
 
-		super.exceptionCaught(ctx, cause);
+		ctx.fireExceptionCaught(cause);
 	}
 
 	@Override
-	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-		if (evt instanceof DefaultErrorLoggingEvent) {
-			exceptionCaught(ctx, ((DefaultErrorLoggingEvent) evt).getThrowable());
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+		if (evt instanceof DefaultErrorLogEvent) {
+			exceptionCaught(ctx, ((DefaultErrorLogEvent) evt).cause());
 		}
 
-		super.userEventTriggered(ctx, evt);
+		ctx.fireUserEventTriggered(evt);
 	}
 }

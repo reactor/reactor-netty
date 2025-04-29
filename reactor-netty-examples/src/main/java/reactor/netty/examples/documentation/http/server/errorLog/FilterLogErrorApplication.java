@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,10 @@ public class FilterLogErrorApplication {
 	public static void main(String[] args) {
 		DisposableServer server =
 				HttpServer.create()
-						.errorLog(
-								true,
-								ErrorLogFactory.createFilter(p -> p.cause() instanceof RuntimeException)
-						)
-						.bindNow();
+				          .errorLog(true, ErrorLogFactory.createFilter(p -> p.cause() instanceof RuntimeException))
+				          .bindNow();
 
 		server.onDispose()
-				.block();
+		      .block();
 	}
 }

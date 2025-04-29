@@ -25,7 +25,7 @@ import java.util.function.Predicate;
  * Can be used in {@link reactor.netty.http.server.HttpServer#errorLog(boolean, ErrorLogFactory) errorLog} method for example.
  *
  * @author raccoonback
- * @since 1.2.5
+ * @since 1.2.6
  */
 public interface ErrorLogFactory extends Function<ErrorLogArgProvider, ErrorLog> {
 
@@ -55,10 +55,9 @@ public interface ErrorLogFactory extends Function<ErrorLogArgProvider, ErrorLog>
 	 * extracted from the {@link ErrorLogArgProvider}.
 	 * <p>
 	 *
-	 * @param predicate      the filter that returns {@code true} if the exception should be logged, {@code false} otherwise
+	 * @param predicate the filter that returns {@code true} if the exception should be logged, {@code false} otherwise
 	 * @param formatFunction the {@link ErrorLogFactory} that creates {@link ErrorLog} instances, encapsulating the
-	 *                       format
-	 *                       and the extraction of relevant arguments
+	 * format and the extraction of relevant arguments
 	 * @return an {@link ErrorLogFactory} to be used in
 	 * {@link reactor.netty.http.server.HttpServer#errorLog(boolean, ErrorLogFactory)}
 	 */

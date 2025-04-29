@@ -374,6 +374,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.cookieDecoder = parent.cookieDecoder;
 		this.cookieEncoder = parent.cookieEncoder;
 		this.decoder = parent.decoder;
+		this.errorLogEnabled = parent.errorLogEnabled;
+		this.errorLog = parent.errorLog;
 		this.formDecoderProvider = parent.formDecoderProvider;
 		this.forwardedHeaderHandler = parent.forwardedHeaderHandler;
 		this.http2Settings = parent.http2Settings;
@@ -648,8 +650,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Duration idleTimeout) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
-		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog, errorLogEnabled, errorLog,
-				compressionOptions, compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
+		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog,
+				compressionOptions, compressPredicate, cookieDecoder, cookieEncoder, errorLogEnabled, errorLog, formDecoderProvider,
 				forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
 				opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 

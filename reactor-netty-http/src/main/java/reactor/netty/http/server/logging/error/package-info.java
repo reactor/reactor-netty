@@ -13,23 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server.logging.error;
 
 /**
- * Provide a default implementation of an error logging event for UserEvent delivery.
- *
- * @author raccoonback
- * @since 1.2.5
+ * Http error log.
  */
-public class DefaultErrorLoggingEvent implements ErrorLoggingEvent {
+@NonNullApi
+package reactor.netty.http.server.logging.error;
 
-	private final Throwable throwable;
-
-	public DefaultErrorLoggingEvent(Throwable throwable) {
-		this.throwable = throwable;
-	}
-
-	public Throwable getThrowable() {
-		return throwable;
-	}
-}
+import reactor.util.annotation.NonNullApi;

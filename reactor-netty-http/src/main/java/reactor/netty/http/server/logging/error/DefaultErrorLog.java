@@ -21,33 +21,25 @@ import reactor.util.Loggers;
 import java.util.Objects;
 
 /**
- * Log the http default error information into a Logger named {@code reactor.netty.http.server.DefaultErrorLog} at ERROR level.
+ * Log the http default error information into a Logger named {@code reactor.netty.http.server.ErrorLog} at {@code ERROR} level.
  * <p>
- * See {@link ErrorLogFactory} for convenience methods to create an access log factory to be passed to
+ * See {@link ErrorLogFactory} for convenience methods to create an error log factory to be passed to
  * {@link reactor.netty.http.server.HttpServer#errorLog(boolean, ErrorLogFactory)} during server configuration.
  *
  * @author raccoonback
+ * @author Violeta Georgieva
  */
-public final class DefaultErrorLog implements ErrorLog {
+final class DefaultErrorLog implements ErrorLog {
 
 	static final Logger LOGGER = Loggers.getLogger("reactor.netty.http.server.ErrorLog");
 
 	final String logFormat;
 	final Object[] args;
 
-	private DefaultErrorLog(String logFormat, Object... args) {
+	DefaultErrorLog(String logFormat, Object... args) {
 		Objects.requireNonNull(logFormat, "logFormat");
 		this.logFormat = logFormat;
 		this.args = args;
-	}
-
-	/**
-	 * Creates an ErrorLog with the given format and arguments.
-	 *
-	 * @return exception
-	 */
-	public static DefaultErrorLog create(String logFormat, Object... args) {
-		return new DefaultErrorLog(logFormat, args);
 	}
 
 	@Override

@@ -15,42 +15,29 @@
  */
 package reactor.netty.http.server.logging.error;
 
-import reactor.netty.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
-import java.time.ZonedDateTime;
 import java.util.function.Supplier;
 
 /**
- * Provides information for logging errors that occur on the HTTP Server.
+ * A provider of the args required for error log.
  *
  * @author raccoonback
+ * @author Violeta Georgieva
  */
 abstract class AbstractErrorLogArgProvider<SELF extends AbstractErrorLogArgProvider<SELF>>
 		implements ErrorLogArgProvider, Supplier<SELF> {
 
-	protected final SocketAddress remoteAddress;
-	protected HttpServerInfos httpServerInfos;
-	protected ZonedDateTime errorDateTime;
+	final SocketAddress remoteAddress;
 
 	AbstractErrorLogArgProvider(@Nullable SocketAddress remoteAddress) {
 		this.remoteAddress = remoteAddress;
 	}
 
 	@Override
-	public ZonedDateTime errorDateTime() {
-		return errorDateTime;
-	}
-
-	@Override
+	@Nullable
 	public SocketAddress remoteAddress() {
 		return remoteAddress;
-	}
-
-	@Override
-	@Nullable
-	public HttpServerInfos httpServerInfos() {
-		return httpServerInfos;
 	}
 }
