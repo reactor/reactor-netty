@@ -50,6 +50,10 @@ import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogFactory;
+import reactor.netty.http.server.logging.error.ErrorLog;
+import reactor.netty.http.server.logging.error.ErrorLogArgProvider;
+import reactor.netty.http.server.logging.error.DefaultErrorLoggingEvent;
+import reactor.netty.http.server.logging.error.ErrorLogFactory;
 import reactor.netty.internal.util.Metrics;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
@@ -267,6 +271,77 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
 		HttpServer dup = duplicate();
 		dup.configuration().accessLog = accessLogFactory;
+		return dup;
+	}
+
+	/**
+	 * Enable or disable the error log. If enabled, the default log system will be used.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .errorLog(true)
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 *
+	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ERROR_LOG_ENABLED} system property.
+	 * By default, error logs are formatted as "[{datetime}] [pid {pid}] [client {remote address}] {error message}".
+	 *
+	 * @param enable enable or disable the error log
+	 * @return a new {@link HttpServer}
+	 * @since 1.2.5
+	 */
+	public final HttpServer errorLog(boolean enable) {
+		HttpServer dup = duplicate();
+		dup.configuration().errorLog = null;
+		dup.configuration().errorLogEnabled = enable;
+		return dup;
+	}
+
+	/**
+	 * Enable or disable the error log and customize it through an {@link ErrorLogFactory}.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .errorLog(true, ErrorLogFactory.createFilter(
+	 *                              args -> args.cause() instanceof RuntimeException,
+	 *                              args -> ErrorLog.create("host-name={}", args.httpServerInfos().hostName())))
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 * The {@link ErrorLogFactory} class offers several helper methods to generate such a function,
+	 * notably if one wants to {@link ErrorLogFactory#createFilter(Predicate) filter} some exceptions out of the error log.
+	 * <p>
+	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ERROR_LOG_ENABLED} system property.
+	 *
+	 * @param enable enable or disable the error log
+	 * @param errorLogFactory the {@link ErrorLogFactory} that creates an {@link ErrorLog} given an {@link ErrorLogArgProvider}
+	 * @return a new {@link HttpServer}
+	 * @since 1.2.5
+	 */
+	public final HttpServer errorLog(boolean enable, ErrorLogFactory errorLogFactory) {
+		Objects.requireNonNull(errorLogFactory, "errorLogFactory");
+		HttpServer dup = duplicate();
+		dup.configuration().errorLog = enable ? errorLogFactory : null;
+		dup.configuration().errorLogEnabled = enable;
 		return dup;
 	}
 
@@ -1250,6 +1325,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 				}
 				catch (Throwable t) {
 					log.error(format(connection.channel(), ""), t);
+					connection.channel().pipeline()
+							.fireUserEventTriggered(new DefaultErrorLoggingEvent(t));
 					//"FutureReturnValueIgnored" this is deliberate
 					connection.channel()
 					          .close();
