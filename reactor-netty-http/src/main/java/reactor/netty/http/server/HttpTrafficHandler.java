@@ -699,7 +699,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	private void setupIdleTimeoutHandler(ChannelPipeline pipeline) {
 		Http2FrameCodec httpCodec = pipeline.get(Http2FrameCodec.class);
-		if(httpCodec != null) {
+		if (httpCodec != null) {
 			IdleTimeoutHandler.addIdleTimeoutHandler(
 					pipeline,
 					idleTimeout,
