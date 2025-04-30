@@ -86,10 +86,11 @@ public final class DeflateOption implements HttpCompressionOption {
 	}
 
 	private static final class Build implements Builder {
+		static final io.netty5.handler.codec.compression.DeflateOptions DEFAULT = StandardCompressionOptions.deflate();
 
-		private int compressionLevel = 6;
+		private int compressionLevel = DEFAULT.compressionLevel();
 		private int memoryLevel = 8;
-		private int windowBits = 12;
+		private int windowBits = 15;
 
 		@Override
 		public DeflateOption build() {

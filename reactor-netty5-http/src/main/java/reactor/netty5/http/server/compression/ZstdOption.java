@@ -91,10 +91,11 @@ public final class ZstdOption implements HttpCompressionOption {
 	}
 
 	private static final class Build implements Builder {
+		static final io.netty5.handler.codec.compression.ZstdOptions DEFAULT = StandardCompressionOptions.zstd();
 
-		private int blockSize = 1 << 16; // 64KB
-		private int compressionLevel = 3;
-		private int maxEncodeSize = 1 << (compressionLevel + 7 + 0x0F); // 32MB
+		private int blockSize = DEFAULT.blockSize();
+		private int compressionLevel = DEFAULT.compressionLevel();
+		private int maxEncodeSize = DEFAULT.maxEncodeSize();
 
 		@Override
 		public ZstdOption build() {
