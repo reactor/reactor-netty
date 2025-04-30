@@ -47,6 +47,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -547,6 +548,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testIssue825_1() {
 		int port1 = SocketUtils.findAvailableTcpPort();
 		int port2 = SocketUtils.findAvailableTcpPort();

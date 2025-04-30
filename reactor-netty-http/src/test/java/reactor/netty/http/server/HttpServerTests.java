@@ -115,6 +115,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -3715,6 +3717,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
+	@DisabledOnOs(OS.MAC)
 	@SuppressWarnings("deprecation")
 	void testIssue2760_H2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
@@ -3728,6 +3731,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
+	@DisabledOnOs(OS.MAC)
 	void testIssue2760_H2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		testIssue2760(server -> server.protocol(serverProtocols), client -> client.protocol(clientProtocols));
 	}

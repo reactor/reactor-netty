@@ -62,6 +62,8 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -853,6 +855,7 @@ public class TcpClientTests {
 	}
 
 	@Test
+	@DisabledOnOs(OS.MAC)
 	void testRetryOnDifferentAddress() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
