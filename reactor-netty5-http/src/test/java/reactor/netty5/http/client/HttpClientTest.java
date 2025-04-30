@@ -3704,6 +3704,20 @@ class HttpClientTest extends BaseHttpTest {
 		}
 	}
 
+	@Test
+	void testSelectedIpsDelayedAddressResolution() {
+		HttpClient.create()
+		          .wiretap(true)
+		          .resolvedAddressesSelector((config, resolvedAddresses) -> null)
+		          .get()
+		          .uri("https://example.com")
+		          .responseContent()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectErrorMatches(t -> t.getMessage() != null && t.getMessage().startsWith("Failed to resolve [example.com"))
+		          .verify(Duration.ofSeconds(5));
+	}
+
 	static final class TestMeterRegistrar implements ConnectionProvider.MeterRegistrar {
 
 		AtomicReference<ConnectionPoolMetrics> m = new AtomicReference<>();

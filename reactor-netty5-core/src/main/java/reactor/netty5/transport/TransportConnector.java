@@ -412,7 +412,12 @@ public final class TransportConnector {
 					monoChannelPromise.setFailure(future.cause());
 				}
 				else {
-					doConnect(selectedAddresses(config, remoteAddress, future.getNow()), bindAddress, monoChannelPromise, 0);
+					try {
+						doConnect(selectedAddresses(config, remoteAddress, future.getNow()), bindAddress, monoChannelPromise, 0);
+					}
+					catch (Throwable t) {
+						monoChannelPromise.setFailure(t);
+					}
 				}
 			});
 			return monoChannelPromise;
