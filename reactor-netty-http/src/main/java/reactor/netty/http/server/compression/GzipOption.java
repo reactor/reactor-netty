@@ -86,10 +86,11 @@ public final class GzipOption implements HttpCompressionOption {
 	}
 
 	private static final class Build implements Builder {
+		static final io.netty.handler.codec.compression.GzipOptions DEFAULT = StandardCompressionOptions.gzip();
 
-		private int compressionLevel = 6;
-		private int memoryLevel = 8;
-		private int windowBits = 12;
+		private int compressionLevel = DEFAULT.compressionLevel();
+		private int memoryLevel = DEFAULT.memLevel();
+		private int windowBits = DEFAULT.windowBits();
 
 		@Override
 		public GzipOption build() {
