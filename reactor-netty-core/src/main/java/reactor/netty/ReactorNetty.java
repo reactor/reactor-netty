@@ -195,6 +195,12 @@ public final class ReactorNetty {
 	public static final String ACCESS_LOG_ENABLED = "reactor.netty.http.server.accessLogEnabled";
 
 	/**
+	 * Specifies whether the Http Server error log will be enabled.
+	 * By default, it is disabled.
+	 */
+	public static final String ERROR_LOG_ENABLED = "reactor.netty.http.server.errorLogEnabled";
+
+	/**
 	 *  Specifies the zone id used by the access log.
 	 */
 	public static final ZoneId ZONE_ID_SYSTEM = ZoneId.systemDefault();

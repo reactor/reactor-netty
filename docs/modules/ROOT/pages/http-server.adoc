@@ -412,10 +412,13 @@ The following example uses a domain name containing a wildcard:
 include::{examples-dir}/sni/Application.java[lines=18..47]
 ----
 
-[[http-access-log]]
-== HTTP Access Log
+[[http-log]]
+== HTTP Log
 
-You can enable the `HTTP` access log either programmatically or by configuration. By default, it is disabled.
+You can enable the `HTTP` access or error log either programmatically or by configuration. By default, it is disabled.
+
+[[access-log]]
+=== Access Log
 
 You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log by configuration.
 
@@ -472,6 +475,63 @@ include::{examples-dir}/accessLog/CustomFormatAndFilterAccessLogApplication.java
 <1> Specifies the filter predicate to use
 <2> Specifies the custom format to apply
 
+[[error-log]]
+=== Error Log
+
+You can use `-Dreactor.netty.http.server.errorLogEnabled=true` to enable the `HTTP` error log by configuration.
+
+You can use the following configuration (for Logback or similar logging frameworks) to have a separate
+`HTTP` error log file:
+
+[source,xml]
+----
+<appender name="errorLog" class="ch.qos.logback.core.FileAppender">
+    <file>error_log.log</file>
+    <encoder>
+        <pattern>%msg%n</pattern>
+    </encoder>
+</appender>
+<appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="errorLog" />
+</appender>
+
+<logger name="reactor.netty.http.server.ErrorLog" level="ERROR" additivity="false">
+    <appender-ref ref="async"/>
+</logger>
+----
+
+The following example enables it programmatically:
+
+{examples-link}/errorLog/Application.java
+----
+include::{examples-dir}/errorLog/Application.java[lines=18..32]
+----
+
+Calling this method takes precedence over the system property configuration.
+
+By default, the logging format is `[+{datetime}+] [pid +{PID}+] [client {remote address}] {exception message}`, but you can
+specify a custom one as a parameter, as in the following example:
+
+{examples-link}/errorLog/CustomLogErrorFormatApplication.java
+----
+include::{examples-dir}/errorLog/CustomLogErrorFormatApplication.java[lines=18..33]
+----
+
+You can also filter `HTTP` error logs by using the `ErrorLogFactory#createFilter` method, as in the following example:
+
+{examples-link}/errorLog/FilterLogErrorApplication.java
+----
+include::{examples-dir}/errorLog/FilterLogErrorApplication.java[lines=18..33]
+----
+
+Note that this method can take a custom format parameter too, as in this example:
+
+{examples-link}/errorLog/CustomFormatAndFilterErrorLogApplication.java.java
+----
+include::{examples-dir}/errorLog/CustomFormatAndFilterErrorLogApplication.java[lines=18..35]
+----
+<1> Specifies the filter predicate to use
+<2> Specifies the custom format to apply
 
 [[HTTP2]]
 == HTTP/2

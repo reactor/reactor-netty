@@ -36,6 +36,9 @@ import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogHandlerFactory;
+import reactor.netty.http.server.logging.error.DefaultErrorLogHandler;
+import reactor.netty.http.server.logging.error.ErrorLog;
+import reactor.netty.http.server.logging.error.ErrorLogArgProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -56,6 +59,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 	final ServerCookieDecoder                                               cookieDecoder;
 	final ServerCookieEncoder                                               cookieEncoder;
+	final boolean                                                           errorLogEnabled;
+	final @Nullable Function<ErrorLogArgProvider, @Nullable ErrorLog>       errorLog;
 	final HttpServerFormDecoderProvider                                     formDecoderProvider;
 	final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final HttpMessageLogFactory                                             httpMessageLogFactory;
@@ -78,6 +83,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			boolean errorLogEnabled,
+			@Nullable Function<ErrorLogArgProvider, @Nullable ErrorLog> errorLog,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -97,6 +104,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.compressPredicate = compressPredicate;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
+		this.errorLogEnabled = errorLogEnabled;
+		this.errorLog = errorLog;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.httpMessageLogFactory = httpMessageLogFactory;
@@ -149,6 +158,10 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			}
 		}
 
+		if (errorLogEnabled) {
+			p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.ErrorLogHandler, new DefaultErrorLogHandler(errorLog));
+		}
+
 		channel.pipeline().remove(this);
 
 		if (log.isDebugEnabled()) {
@@ -163,6 +176,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			boolean errorLogEnabled,
+			@Nullable Function<ErrorLogArgProvider, @Nullable ErrorLog> errorLog,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -177,8 +192,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
-				new Http3Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
-						opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
+				new Http3Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate, decoder, encoder, errorLogEnabled, errorLog,
+						formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder,
+						minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 	}
 }
