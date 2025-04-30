@@ -412,10 +412,13 @@ The following example uses a domain name containing a wildcard:
 include::{examples-dir}/sni/Application.java[lines=18..47]
 ----
 
-[[http-access-log]]
-== HTTP Access Log
+[[http-log]]
+== HTTP Log
 
-You can enable the `HTTP` access log either programmatically or by configuration. By default, it is disabled.
+You can enable the `HTTP` access or error log either programmatically or by configuration. By default, it is disabled.
+
+[[access-log]]
+=== Access Log
 
 You can use `-Dreactor.netty5.http.server.accessLogEnabled=true` to enable the `HTTP` access log by configuration.
 
@@ -472,6 +475,63 @@ include::{examples-dir}/accessLog/CustomFormatAndFilterAccessLogApplication.java
 <1> Specifies the filter predicate to use
 <2> Specifies the custom format to apply
 
+[[error-log]]
+=== Error Log
+
+You can use `-Dreactor.netty5.http.server.errorLogEnabled=true` to enable the `HTTP` error log by configuration.
+
+You can use the following configuration (for Logback or similar logging frameworks) to have a separate
+`HTTP` error log file:
+
+[source,xml]
+----
+<appender name="errorLog" class="ch.qos.logback.core.FileAppender">
+    <file>error_log.log</file>
+    <encoder>
+        <pattern>%msg%n</pattern>
+    </encoder>
+</appender>
+<appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="errorLog" />
+</appender>
+
+<logger name="reactor.netty5.http.server.ErrorLog" level="ERROR" additivity="false">
+    <appender-ref ref="async"/>
+</logger>
+----
+
+The following example enables it programmatically:
+
+{examples-link}/errorLog/Application.java
+----
+include::{examples-dir}/errorLog/Application.java[lines=18..32]
+----
+
+Calling this method takes precedence over the system property configuration.
+
+By default, the logging format is `[+{datetime}+] [pid +{PID}+] [client {remote address}] {exception message}`, but you can
+specify a custom one as a parameter, as in the following example:
+
+{examples-link}/errorLog/CustomLogErrorFormatApplication.java
+----
+include::{examples-dir}/errorLog/CustomLogErrorFormatApplication.java[lines=18..33]
+----
+
+You can also filter `HTTP` error logs by using the `ErrorLogFactory#createFilter` method, as in the following example:
+
+{examples-link}/errorLog/FilterLogErrorApplication.java
+----
+include::{examples-dir}/errorLog/FilterLogErrorApplication.java[lines=18..33]
+----
+
+Note that this method can take a custom format parameter too, as in this example:
+
+{examples-link}/errorLog/CustomFormatAndFilterErrorLogApplication.java.java
+----
+include::{examples-dir}/errorLog/CustomFormatAndFilterErrorLogApplication.java[lines=18..35]
+----
+<1> Specifies the filter predicate to use
+<2> Specifies the custom format to apply
 
 [[HTTP2]]
 == HTTP/2
@@ -632,7 +692,7 @@ if another behaviour is needed please check https://micrometer.io/docs/contextPr
 For example, you may want to set only some of the `ThreadLocal` values.
 
 NOTE: When you enable Reactor Netty tracing within a framework, you may need to let Reactor Netty use the `ObservationRegistry` created by this framework.
-For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty.Metrics#observationRegistry`].
+For this purpose you need to invoke {javadoc}/reactor/netty5/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty5.Metrics#observationRegistry`].
 You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
 [[unix-domain-sockets]]
@@ -681,7 +741,7 @@ The following listing shows all available connection timeout configuration optio
 
 * `idleTimeout` - The maximum time (resolution: ms) that this connection stays opened and waits for HTTP request.
 Once the timeout is reached, the connection is closed. By default,
-{javadoc}/reactor/netty/http/server/HttpServer.html#idleTimeout-java.time.Duration-[`idleTimeout`] is not specified,
+{javadoc}/reactor/netty5/http/server/HttpServer.html#idleTimeout-java.time.Duration-[`idleTimeout`] is not specified,
 this indicates no timeout (i.e. infinite), which means the connection is closed only if one of the peers decides to close it explicitly.
 
 NOTE: It is always a good practice to configure an idle timeout.

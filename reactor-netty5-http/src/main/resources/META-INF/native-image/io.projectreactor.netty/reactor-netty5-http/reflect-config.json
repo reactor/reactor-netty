@@ -236,5 +236,18 @@
 		},
 		"name": "reactor.netty5.http.server.logging.BaseAccessLogHandler",
 		"queryAllPublicMethods": true
-	}
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty5.http.server.logging.error.DefaultErrorLogHandler"
+		},
+		"name": "reactor.netty5.http.server.logging.error.DefaultErrorLogHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty5.http.server.logging.error.BaseErrorLogHandler"
+		},
+		"name": "reactor.netty5.http.server.logging.error.BaseErrorLogHandler",
+		"queryAllPublicMethods": true
 ]

@@ -95,6 +95,7 @@ import reactor.netty5.http.HttpOperations;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
+import reactor.netty5.http.server.logging.error.ErrorLogEvent;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
@@ -1172,6 +1173,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	 */
 	@Override
 	protected void onOutboundError(Throwable err) {
+		channel().pipeline().fireChannelInboundEvent(ErrorLogEvent.create(err));
 
 		if (!channel().isActive()) {
 			super.onOutboundError(err);
