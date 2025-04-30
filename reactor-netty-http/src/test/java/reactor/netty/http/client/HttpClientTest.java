@@ -3787,6 +3787,20 @@ class HttpClientTest extends BaseHttpTest {
 		}
 	}
 
+	@Test
+	void testSelectedIpsDelayedAddressResolution() {
+		HttpClient.create()
+		          .wiretap(true)
+		          .resolvedAddressesSelector((config, resolvedAddresses) -> null)
+		          .get()
+		          .uri("https://example.com")
+		          .responseContent()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectErrorMatches(t -> t.getMessage() != null && t.getMessage().startsWith("Failed to resolve [example.com"))
+		          .verify(Duration.ofSeconds(5));
+	}
+
 	private static final class EchoAction implements Publisher<HttpContent>, Consumer<HttpContent> {
 		private final Publisher<HttpContent> sender;
 		private volatile FluxSink<HttpContent> emitter;

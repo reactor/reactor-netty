@@ -379,7 +379,12 @@ public final class TransportConnector {
 					monoChannelPromise.tryFailure(future.cause());
 				}
 				else {
-					doConnect(selectedAddresses(config, remoteAddress, future.getNow()), bindAddress, monoChannelPromise, 0);
+					try {
+						doConnect(selectedAddresses(config, remoteAddress, future.getNow()), bindAddress, monoChannelPromise, 0);
+					}
+					catch (Throwable t) {
+						monoChannelPromise.tryFailure(t);
+					}
 				}
 			});
 			return monoChannelPromise;
