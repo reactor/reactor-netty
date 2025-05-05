@@ -922,7 +922,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	final void withWebsocketSupport(WebsocketClientSpec websocketClientSpec, boolean compress) {
+	final void withWebsocketSupport(WebsocketClientSpec websocketClientSpec) {
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
