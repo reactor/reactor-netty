@@ -123,7 +123,7 @@ class ErrorLogTest {
 		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
 		assertThat(relevantLog.getMessage()).isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
 		assertThat(relevantLog.getFormattedMessage())
-				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.]+)(:\\d)*] java.lang.RuntimeException");
+				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:.%]+)(:\\d)*] java.lang.RuntimeException");
 	}
 
 	@Test
