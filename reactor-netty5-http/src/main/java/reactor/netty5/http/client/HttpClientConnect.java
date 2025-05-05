@@ -154,7 +154,7 @@ class HttpClientConnect extends HttpClient {
 				boolean configCopied = false;
 				HttpClientConfig _config = config;
 
-				//append secure handler if needed
+				//append a secure handler if needed
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
 						configCopied = true;
@@ -304,7 +304,7 @@ class HttpClientConnect extends HttpClient {
 					// In some cases the channel close event may be delayed and thus the connection to be
 					// returned to the pool and later the eviction functionality to remove it from the pool.
 					// In some rare cases the connection might be acquired immediately, before the channel close
-					// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
+					// event and the eviction functionality is able to remove it from the pool; this may lead to I/O
 					// errors.
 					// Mark the connection as non-persistent here so that it is never returned to the pool and leave
 					// the channel close event to invalidate it.
@@ -322,7 +322,7 @@ class HttpClientConnect extends HttpClient {
 						// In some cases the channel close event may be delayed and thus the connection to be
 						// returned to the pool and later the eviction functionality to remove it from the pool.
 						// In some rare cases the connection might be acquired immediately, before the channel close
-						// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
+						// event and the eviction functionality is able to remove it from the pool; this may lead to I/O
 						// errors.
 						// Mark the connection as non-persistent here so that it is never returned to the pool and leave
 						// the channel close event to invalidate it.
@@ -403,7 +403,6 @@ class HttpClientConnect extends HttpClient {
 		final HttpHeaders                       defaultHeaders;
 		final @Nullable BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 		                                        handler;
-		final boolean                           compress;
 		final UriEndpointFactory                uriEndpointFactory;
 		final @Nullable WebsocketClientSpec     websocketClientSpec;
 		final @Nullable BiPredicate<HttpClientRequest, HttpClientResponse>
@@ -426,7 +425,6 @@ class HttpClientConnect extends HttpClient {
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
-			this.compress = configuration.acceptGzip;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
 			this.redirectRequestBiConsumer = configuration.redirectRequestBiConsumer;
 			this.redirectRequestConsumer = configuration.redirectRequestConsumer;
