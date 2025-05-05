@@ -476,7 +476,6 @@ class HttpClientConnect extends HttpClient {
 		final HttpHeaders             defaultHeaders;
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 		                              handler;
-		final boolean                 compress;
 		final UriEndpointFactory      uriEndpointFactory;
 		final WebsocketClientSpec     websocketClientSpec;
 		final BiPredicate<HttpClientRequest, HttpClientResponse>
@@ -499,7 +498,6 @@ class HttpClientConnect extends HttpClient {
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
-			this.compress = configuration.acceptGzip;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
 			this.redirectRequestBiConsumer = configuration.redirectRequestBiConsumer;
 			this.redirectRequestConsumer = configuration.redirectRequestConsumer;
@@ -590,7 +588,7 @@ class HttpClientConnect extends HttpClient {
 				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
 				if (websocketClientSpec != null) {
 					Mono<Void> result =
-							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec, compress));
+							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec));
 					if (handler != null) {
 						result = result.thenEmpty(Mono.fromRunnable(() -> Flux.concat(handler.apply(ch, ch))));
 					}
