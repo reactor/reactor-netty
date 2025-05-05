@@ -204,6 +204,7 @@ dependencies {
 	http3TestImplementation(testFixtures(project(':reactor-netty-core'))) {
 		exclude module: "reactor-netty-core"
 	}
+	http3TestImplementation "org.mockito:mockito-core:$mockitoVersion"
 	http3TestCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 	http3TestImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 	http3TestImplementation "org.assertj:assertj-core:$assertJVersion"
