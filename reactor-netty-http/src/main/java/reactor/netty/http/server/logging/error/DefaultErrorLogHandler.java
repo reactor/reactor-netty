@@ -16,8 +16,11 @@
 package reactor.netty.http.server.logging.error;
 
 import io.netty.channel.ChannelHandlerContext;
+import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
 
+import java.net.SocketAddress;
 import java.util.function.Function;
 
 /**
@@ -39,7 +42,11 @@ public final class DefaultErrorLogHandler extends BaseErrorLogHandler {
 		ErrorLog log;
 
 		if (errorLogArgProvider == null) {
-			errorLogArgProvider = new DefaultErrorLogArgProvider(ctx.channel().remoteAddress());
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			SocketAddress remoteAddress = ops instanceof HttpServerInfos ?
+					((HttpServerInfos) ops).connectionRemoteAddress() :
+					ctx.channel().remoteAddress();
+			errorLogArgProvider = new DefaultErrorLogArgProvider(remoteAddress);
 		}
 		else {
 			errorLogArgProvider.clear();
