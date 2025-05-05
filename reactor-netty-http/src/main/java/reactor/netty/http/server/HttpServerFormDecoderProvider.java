@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -395,7 +395,7 @@ public final class HttpServerFormDecoderProvider {
 		public void destroy() {
 			super.destroy();
 			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial != null) {
+			if (partial != null && partial.refCnt() > 0) {
 				partial.release();
 			}
 		}
@@ -452,7 +452,7 @@ public final class HttpServerFormDecoderProvider {
 		public void destroy() {
 			super.destroy();
 			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial != null) {
+			if (partial != null && partial.refCnt() > 0) {
 				partial.release();
 			}
 		}

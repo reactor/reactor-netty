@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -266,6 +267,8 @@ class HttpServerPostFormTests extends BaseHttpTest {
 	private void doTestPostForm(HttpServer server, HttpClient client,
 			Consumer<HttpServerFormDecoderProvider.Builder> provider, boolean configOnServer,
 			boolean multipart, boolean streaming, @Nullable String expectedResponse) throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		Consumer<Throwable> onErrorDropped = error::set;
 		AtomicReference<List<HttpData>> originalHttpData1 = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<List<HttpData>> originalHttpData2 = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<Map<String, CompositeByteBuf>> copiedHttpData = new AtomicReference<>(new HashMap<>());
@@ -296,7 +299,8 @@ class HttpServerPostFormTests extends BaseHttpTest {
 		                                data.isCompleted() + "] ");
 		                    })
 		                    .onErrorResume(t -> Mono.just(t.getCause().getMessage()))
-		                    .log()));
+		                    .log()
+		                    .contextWrite(Context.of("reactor.onErrorDropped.local", onErrorDropped))));
 
 		disposableServer = server.bindNow();
 
@@ -350,6 +354,8 @@ class HttpServerPostFormTests extends BaseHttpTest {
 				}
 			}
 		}
+
+		assertThat(error.get()).isNull();
 	}
 
 	private void testContent(CompositeByteBuf file, byte[] expectedBytes) {
