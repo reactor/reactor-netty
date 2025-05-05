@@ -29,6 +29,7 @@ import reactor.netty5.BaseHttpTest;
 import reactor.netty5.http.Http2SslContextSpec;
 import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.client.HttpClient;
+import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -266,6 +267,8 @@ class HttpServerPostFormTests extends BaseHttpTest {
 	private void doTestPostForm(HttpServer server, HttpClient client,
 			Consumer<HttpServerFormDecoderProvider.Builder> provider, boolean configOnServer,
 			boolean multipart, boolean streaming, @Nullable String expectedResponse) throws Exception {
+		AtomicReference<@Nullable Throwable> error = new AtomicReference<>();
+		Consumer<Throwable> onErrorDropped = error::set;
 		AtomicReference<List<HttpData>> originalHttpData1 = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<List<HttpData>> originalHttpData2 = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<Map<String, CompositeBuffer>> copiedHttpData = new AtomicReference<>(new HashMap<>());
@@ -296,7 +299,8 @@ class HttpServerPostFormTests extends BaseHttpTest {
 		                                data.isCompleted() + "] ");
 		                    })
 		                    .onErrorResume(t -> Mono.just(t.getCause().getMessage()))
-		                    .log()));
+		                    .log()
+		                    .contextWrite(Context.of("reactor.onErrorDropped.local", onErrorDropped))));
 
 		disposableServer = server.bindNow();
 
@@ -350,6 +354,9 @@ class HttpServerPostFormTests extends BaseHttpTest {
 				}
 			}
 		}
+
+		Throwable throwable = error.get();
+		assertThat(throwable).isNull();
 	}
 
 	private void testContent(CompositeBuffer file, byte[] expectedBytes) {

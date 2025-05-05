@@ -393,7 +393,7 @@ public final class HttpServerFormDecoderProvider {
 		public void destroy() {
 			super.destroy();
 			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial != null) {
+			if (partial != null && partial.isAccessible()) {
 				partial.close();
 			}
 		}
@@ -450,7 +450,7 @@ public final class HttpServerFormDecoderProvider {
 		public void destroy() {
 			super.destroy();
 			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial != null) {
+			if (partial != null && partial.isAccessible()) {
 				partial.close();
 			}
 		}
