@@ -15,22 +15,15 @@
  */
 package reactor.netty.http.server.logging.error;
 
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.classic.spi.LoggingEvent;
-import ch.qos.logback.core.Appender;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+import reactor.netty.LogTracker;
 import reactor.netty.http.Http3SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
@@ -38,47 +31,33 @@ import reactor.netty.http.server.HttpServer;
 
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty.http.server.logging.error.DefaultErrorLog.LOGGER;
 
 class ErrorLogTest {
 
-	static final Logger ROOT = (Logger) LoggerFactory.getLogger(LOGGER.getName());
 	static final String CUSTOM_FORMAT = "method={}, uri={}";
 
 	static SelfSignedCertificate ssc;
 
 	DisposableServer disposableServer;
 
-	private Appender<ILoggingEvent> mockedAppender;
-	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
-
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
 
-	@BeforeEach
-	@SuppressWarnings("unchecked")
-	void setUp() {
-		mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
-		loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
-		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
-		ROOT.addAppender(mockedAppender);
-	}
-
 	@AfterEach
 	void tearDown() {
-		ROOT.detachAppender(mockedAppender);
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
 	}
 
 	@Test
-	void errorLogDefaultFormat() {
+	void errorLogDefaultFormat() throws Exception {
 		testErrorLogDefaultFormat(
 				server -> server.handle((req, res) -> {
 					res.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
@@ -87,12 +66,12 @@ class ErrorLogTest {
 	}
 
 	@Test
-	void errorLogDefaultFormatWhenReactivePipelineThrowsException() {
+	void errorLogDefaultFormatWhenReactivePipelineThrowsException() throws Exception {
 		testErrorLogDefaultFormat(server -> server.handle((req, res) -> Mono.error(new RuntimeException())));
 	}
 
 	@Test
-	void errorLogDefaultFormatWhenUnhandledThrowsException() {
+	void errorLogDefaultFormatWhenUnhandledThrowsException() throws Exception {
 		testErrorLogDefaultFormat(
 				server -> server.handle((req, res) -> {
 					throw new RuntimeException();
@@ -100,94 +79,108 @@ class ErrorLogTest {
 	}
 
 	@Test
-	void errorLogDefaultFormatWhenReactivePipelineThrowsExceptionInRoute() {
+	void errorLogDefaultFormatWhenReactivePipelineThrowsExceptionInRoute() throws Exception {
 		testErrorLogDefaultFormat(server -> server.route(r -> r.get("/example/test", (req, res) -> Mono.error(new RuntimeException()))));
 	}
 
 	@Test
-	void errorLogDefaultFormatWhenUnhandledThrowsExceptionInRoute() {
+	void errorLogDefaultFormatWhenUnhandledThrowsExceptionInRoute() throws Exception {
 		testErrorLogDefaultFormat(
 				server -> server.route(r -> r.get("/example/test", (req, res) -> {
 					throw new RuntimeException();
 				})));
 	}
 
-	void testErrorLogDefaultFormat(Function<HttpServer, HttpServer> serverCustomizer) {
-		disposableServer = serverCustomizer.apply(createServer()).errorLog(true).bindNow();
+	void testErrorLogDefaultFormat(Function<HttpServer, HttpServer> serverCustomizer) throws Exception {
+		try (LogTracker logTracker = new LogTracker("reactor.netty.http.server.ErrorLog", "java.lang.RuntimeException")) {
+			disposableServer = serverCustomizer.apply(createServer()).errorLog(true).bindNow();
 
-		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+			getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
 
-		Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 
-		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage()).isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
-		assertThat(relevantLog.getFormattedMessage())
-				.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:]+(?:%[a-zA-Z0-9]+)?|\\d+\\.\\d+\\.\\d+\\.\\d+)(?::\\d+)?] java.lang.RuntimeException");
+			assertThat(logTracker.actualMessages).hasSize(1);
+			logTracker.actualMessages.forEach(e -> {
+				assertThat(e.getMessage()).isEqualTo(BaseErrorLogHandler.DEFAULT_LOG_FORMAT);
+				assertThat(e.getFormattedMessage())
+						.matches("\\[(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2})\\+\\d{4}] \\[pid (\\d+)] \\[client ([0-9a-fA-F:]+(?:%[a-zA-Z0-9]+)?|\\d+\\.\\d+\\.\\d+\\.\\d+)(?::\\d+)?] java.lang.RuntimeException");
+			});
+		}
 	}
 
 	@Test
-	void errorLogCustomFormat() {
-		disposableServer =
-				createServer()
-				        .handle((req, resp) -> {
-				            resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
-				            return resp.send();
-				        })
-				        .errorLog(true, args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri()))
-				        .bindNow();
+	void errorLogCustomFormat() throws Exception {
+		String msg = "method=GET, uri=/example/test";
+		try (LogTracker logTracker = new LogTracker("reactor.netty.http.server.ErrorLog", msg)) {
+			disposableServer =
+					createServer()
+					        .handle((req, resp) -> {
+					            resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
+					            return resp.send();
+					        })
+					        .errorLog(true, args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri()))
+					        .bindNow();
 
-		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+			getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
 
-		Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 
-		LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage()).isEqualTo(CUSTOM_FORMAT);
-		assertThat(relevantLog.getFormattedMessage()).isEqualTo("method=GET, uri=/example/test");
+			assertThat(logTracker.actualMessages).hasSize(1);
+			logTracker.actualMessages.forEach(e -> {
+				assertThat(e.getMessage()).isEqualTo(CUSTOM_FORMAT);
+				assertThat(e.getFormattedMessage()).isEqualTo(msg);
+			});
+		}
 	}
 
 	@Test
-	void secondCallToErrorLogOverridesPreviousOne() {
-		disposableServer =
-				createServer()
-				        .handle((req, resp) -> {
-				            resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
-				            return resp.send();
-				        })
-				        .errorLog(true, args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri()))
-				        .errorLog(false)
-				        .bindNow();
+	void secondCallToErrorLogOverridesPreviousOne() throws Exception {
+		try (LogTracker logTracker = new LogTracker("reactor.netty.http.server.ErrorLog")) {
+			disposableServer =
+					createServer()
+					        .handle((req, resp) -> {
+					            resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
+					            return resp.send();
+					        })
+					        .errorLog(true, args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri()))
+					        .errorLog(false)
+					        .bindNow();
 
-		getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
+			getHttpClientResponse(createClient(disposableServer.port()), "/example/test");
 
-		Mockito.verify(mockedAppender, Mockito.times(0)).doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).isEmpty();
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(logTracker.actualMessages).hasSize(0);
+		}
 	}
 
 	@Test
-	void errorLogFilteringAndFormatting() {
-		disposableServer =
-				createServer()
-				        .handle((req, resp) -> {
-				            resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
-				            return resp.send();
-				        })
-				        .errorLog(true, ErrorLogFactory.createFilter(
-				            p -> p.httpServerInfos().uri().startsWith("/filtered"),
-				            args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri())))
-				        .bindNow();
+	void errorLogFilteringAndFormatting() throws Exception {
+		String msg = "method=GET, uri=/filtered/test";
+		try (LogTracker logTracker = new LogTracker("reactor.netty.http.server.ErrorLog", msg)) {
+			disposableServer =
+					createServer()
+					        .handle((req, resp) -> {
+					            resp.withConnection(conn -> conn.channel().pipeline().fireExceptionCaught(new RuntimeException()));
+					            return resp.send();
+					        })
+					        .errorLog(true, ErrorLogFactory.createFilter(
+					                p -> p.httpServerInfos().uri().startsWith("/filtered"),
+					                args -> ErrorLog.create(CUSTOM_FORMAT, args.httpServerInfos().method(), args.httpServerInfos().uri())))
+					        .bindNow();
 
-		HttpClient httpClient = createClient(disposableServer.port());
-		getHttpClientResponse(httpClient, "/example/test");
-		getHttpClientResponse(httpClient, "/filtered/test");
+			HttpClient httpClient = createClient(disposableServer.port());
+			getHttpClientResponse(httpClient, "/example/test");
+			getHttpClientResponse(httpClient, "/filtered/test");
 
-		Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
-		assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 
-		final LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-		assertThat(relevantLog.getMessage()).isEqualTo(CUSTOM_FORMAT);
-		assertThat(relevantLog.getFormattedMessage()).isEqualTo("method=GET, uri=/filtered/test");
+			assertThat(logTracker.actualMessages).hasSize(1);
+			logTracker.actualMessages.forEach(e -> {
+				assertThat(e.getMessage()).isEqualTo(CUSTOM_FORMAT);
+				assertThat(e.getFormattedMessage()).isEqualTo(msg);
+			});
+		}
 	}
 
 	private static void getHttpClientResponse(HttpClient client, String uri) {
