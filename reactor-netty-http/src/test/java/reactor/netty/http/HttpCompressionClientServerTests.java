@@ -756,6 +756,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 			byte[] result = new byte[encodedByteBuf.readableBytes()];
 			encodedByteBuf.getBytes(encodedByteBuf.readerIndex(), result);
+			encodedByteBuf.release();
 
 			assertThat(resp).isNotNull();
 			assertThat(resp).startsWith(result); // Ignore the original data size and crc checksum comparison
