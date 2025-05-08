@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -330,6 +330,17 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithResolver() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.resolver(DefaultAddressResolverGroup.INSTANCE);
+		checkResponsesAndChannelsStates(
+				"server1-ConnectionPoolTests",
+				"server1-ConnectionPoolTests",
+				localClient1,
+				localClient2);
+	}
+
+	@Test
+	void testClientWithResolvedAddressesSelector() {
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.resolvedAddressesSelector((config, resolvedAddresses) -> resolvedAddresses);
 		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
