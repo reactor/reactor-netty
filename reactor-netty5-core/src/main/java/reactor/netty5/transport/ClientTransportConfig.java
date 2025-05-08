@@ -58,6 +58,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		int result = super.channelHash();
 		result = 31 * result + Objects.hashCode(proxyProvider);
 		result = 31 * result + Objects.hashCode(resolver);
+		result = 31 * result + Objects.hashCode(resolvedAddressesSelector);
 		return result;
 	}
 

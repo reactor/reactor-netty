@@ -341,6 +341,17 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
+	void testClientWithResolvedAddressesSelector() {
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.resolvedAddressesSelector((config, resolvedAddresses) -> resolvedAddresses);
+		checkResponsesAndChannelsStates(
+				"server1-ConnectionPoolTests",
+				"server1-ConnectionPoolTests",
+				localClient1,
+				localClient2);
+	}
+
+	@Test
 	void testClientWithCompress() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.compress(true);
