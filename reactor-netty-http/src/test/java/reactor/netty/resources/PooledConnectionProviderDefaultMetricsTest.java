@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty.resources;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -415,7 +416,9 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 
 			AtomicInteger count = new AtomicInteger();
 			REGISTRY.forEachMeter(meter -> {
-				if (meter.getId().getName().startsWith("reactor.netty.connection")) {
+				Meter.Id meterId = meter.getId();
+				if (meterId.getName().startsWith("reactor.netty.connection") &&
+						"testConnectionProviderDisableAllBuiltInMetrics".equals(meterId.getTag("name"))) {
 					count.incrementAndGet();
 				}
 			});
