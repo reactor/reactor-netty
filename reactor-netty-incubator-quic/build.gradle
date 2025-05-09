@@ -45,6 +45,7 @@ dependencies {
 	testImplementation "org.assertj:assertj-core:$assertJVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
+	testImplementation "io.netty:netty-pkitesting:$nettyVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

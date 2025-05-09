@@ -41,7 +41,10 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
+import io.netty.channel.IoEventLoop;
 import io.netty.channel.nio.NioEventLoop;
+import io.netty.channel.nio.NioIoHandle;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleState;
@@ -449,15 +452,17 @@ public final class ReactorNetty {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	static boolean mustChunkFileTransfer(Connection c, Path file) {
 		// if channel multiplexing a parent channel as an http2 stream
 		if (c.channel().parent() != null && c.channel().parent().pipeline().get(NettyPipeline.H2MultiplexHandler) != null) {
 			return true;
 		}
 		ChannelPipeline p = c.channel().pipeline();
+		EventLoop eventLoop = c.channel().eventLoop();
 		return p.get(SslHandler.class) != null  ||
 				p.get(NettyPipeline.CompressionHandler) != null ||
-				(!(c.channel().eventLoop() instanceof NioEventLoop) &&
+				(((eventLoop instanceof IoEventLoop && !((IoEventLoop) eventLoop).isCompatible(NioIoHandle.class)) || !(eventLoop instanceof NioEventLoop)) &&
 						!"file".equals(file.toUri().getScheme()));
 	}
 

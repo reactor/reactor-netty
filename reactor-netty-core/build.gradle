@@ -33,7 +33,8 @@ ext {
 			"Export-Package" : "reactor.netty*;version=$osgiVersion;-noimport:=true",
 			"Import-Package": [
 					"!javax.annotation",
-					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.1,5)\"",
+					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.2,5)\"",
+					"io.netty.channel.uring;resolution:=optional;version=\"[4.2,5)\"",
 					"io.netty.incubator.channel.uring;resolution:=optional",
 					"io.micrometer.*;resolution:=optional",
 					"*"
@@ -53,6 +54,7 @@ sourceSets {
 }
 
 configurations {
+	java17CompileOnly.extendsFrom(compileOnly)
 	java17Implementation.extendsFrom(implementation)
 	shaded
 	contextPropagationTestImplementation.extendsFrom(implementation)
@@ -85,9 +87,10 @@ dependencies {
 		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
@@ -98,10 +101,10 @@ dependencies {
 			}
 		}
 		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-			testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+			testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion$os_suffix"
 		}
 		else if (forceTransport != "nio") {
-			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
+			throw new InvalidUserDataException("invalid -PforceTransport option " + forceTransport + ", should be native|nio|io_uring")
 		}
 	}
 	else {
@@ -109,8 +112,9 @@ dependencies {
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion"
 	}
 
 	//Metrics
@@ -140,6 +144,7 @@ dependencies {
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
+	testImplementation "io.netty:netty-pkitesting:$nettyVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -147,7 +152,7 @@ dependencies {
 
 	if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
 		// Necessary for generating SelfSignedCertificate on Java version >= 15
-		testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+		testRuntimeOnly "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
 	}
 
 	testFixturesApi("ch.qos.logback:logback-classic:$logbackVersion")

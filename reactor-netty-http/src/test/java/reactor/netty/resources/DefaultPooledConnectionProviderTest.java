@@ -33,7 +33,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -66,7 +67,6 @@ import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -93,13 +93,13 @@ import static reactor.netty.micrometer.TimerAssert.assertTimer;
 
 class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	private MeterRegistry registry;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@BeforeEach
@@ -117,8 +117,8 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testIssue903() {
-		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.key(), ssc.cert());
+	void testIssue903() throws Exception {
+		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		disposableServer =
 				createServer()
 				          .secure(s -> s.sslContext(serverCtx))
@@ -335,7 +335,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testConnectionIdleWhenNoActiveStreams() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -494,7 +494,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
 	void testIssue1982H2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -578,7 +578,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testMinConnections() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -836,8 +836,8 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings({"FutureReturnValueIgnored", "deprecation"})
-	void testHttp2PoolAndGoAway() {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testHttp2PoolAndGoAway() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 package reactor.netty.examples.tcp.discard;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.tcp.TcpSslContextSpec;
 
@@ -42,9 +43,10 @@ public final class DiscardServer {
 				         });
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+			TcpSslContextSpec tcpSslContextSpec = TcpSslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			server = server.secure(
-					spec -> spec.sslContext(TcpSslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+					spec -> spec.sslContext(tcpSslContextSpec));
 		}
 
 		server.bindNow()
