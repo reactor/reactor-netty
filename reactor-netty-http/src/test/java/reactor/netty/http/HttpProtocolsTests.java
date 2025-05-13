@@ -38,11 +38,13 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionAdapter;
 import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2SettingsAckFrame;
 import io.netty.handler.codec.http2.Http2SettingsFrame;
+import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -52,7 +54,6 @@ import io.netty.util.concurrent.DefaultPromise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -727,13 +728,22 @@ class HttpProtocolsTests extends BaseHttpTest {
 		          }
 
 		          Http2FrameCodec http2FrameCodec = conn.channel().parent().pipeline().get(Http2FrameCodec.class);
-		          Http2Connection.Listener goAwayFrameListener = Mockito.mock(Http2Connection.Listener.class);
-		          Mockito.doAnswer(invocation -> {
-		                     goAwayReceived.countDown();
-		                     return null;
-		                 })
-		                 .when(goAwayFrameListener)
-		                 .onGoAwayReceived(Mockito.anyInt(), Mockito.anyLong(), Mockito.any());
+		          Http2Connection.Listener goAwayFrameListener = new Http2ConnectionAdapter() {
+			          @Override
+			          public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+				          goAwayReceived.countDown();
+
+						  super.onGoAwayReceived(lastStreamId, errorCode, debugData);
+			          }
+
+			          @Override
+			          public void onStreamClosed(Http2Stream stream) {
+				          goAwayReceived.countDown();
+
+						  super.onStreamClosed(stream);
+			          }
+		          };
+
 		          http2FrameCodec.connection().addListener(goAwayFrameListener);
 		      })
 		      .port(disposableServer.port())
