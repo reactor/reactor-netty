@@ -555,7 +555,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void sslExchangeRelativeGet() throws SSLException {
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
@@ -1585,7 +1584,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testChannelGroupClosesAllConnections() throws Exception {
 		disposableServer =
 				createServer()
@@ -1924,7 +1922,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testDoOnRequestInvokedBeforeSendingRequest() {
 		disposableServer =
 				createServer()
@@ -1965,28 +1962,24 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testIssue719_TENoTextNoSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 	}
 
 	@Test
-	@Disabled
 	void testIssue719_CLNoTextNoSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), false);
 	}
 
 	@Test
-	@Disabled
 	void testIssue719_TEWithTextWithSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
 	}
 
 	@Test
-	@Disabled
 	void testIssue719_CLWithTextWithSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), true);
@@ -1999,7 +1992,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testIssue719_CLNoTextWithSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), true);
@@ -2146,7 +2138,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionIdleTimeFixedPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionIdleTimeFixedPool")
@@ -2181,7 +2172,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionNoIdleTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.create("testConnectionNoIdleTimeElasticPool", Integer.MAX_VALUE);
@@ -2213,7 +2203,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionLifeTimeFixedPoolHttp1() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionLifeTimeFixedPoolHttp1")
@@ -2233,7 +2222,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionLifeTimeFixedPoolHttp2_1() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2340,7 +2328,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionNoLifeTimeElasticPoolHttp1() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.create("testConnectionNoLifeTimeElasticPoolHttp1", Integer.MAX_VALUE);
@@ -2356,7 +2343,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionNoLifeTimeElasticPoolHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2403,7 +2389,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionLifeTimeFixedPoolHttp2_2() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2980,7 +2965,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testEvictInBackground() throws Exception {
 		doTestEvictInBackground(0, true);
 	}
