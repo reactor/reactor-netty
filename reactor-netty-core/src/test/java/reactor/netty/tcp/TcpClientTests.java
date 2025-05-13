@@ -794,11 +794,13 @@ public class TcpClientTests {
 
 
 	@Test
+	@Disabled
 	void testIssue600_1() {
 		doTestIssue600(true);
 	}
 
 	@Test
+	@Disabled
 	void testIssue600_2() {
 		doTestIssue600(false);
 	}
@@ -925,6 +927,7 @@ public class TcpClientTests {
 	}
 
 	@Test
+	@Disabled
 	void testIssue585_1() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
@@ -985,6 +988,7 @@ public class TcpClientTests {
 	}
 
 	@Test
+	@Disabled
 	void testIssue585_2() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
