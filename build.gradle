@@ -109,7 +109,7 @@ ext {
 	logbackVersion = '1.2.13'
 
 	// Netty
-	nettyDefaultVersion = '4.1.121.Final'
+	nettyDefaultVersion = '4.2.2.Final-SNAPSHOT'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -149,7 +149,7 @@ ext {
 					// javadoc: warning - Error fetching URL: https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/
 					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
-					"https://netty.io/4.1/api/",
+					"https://netty.io/4.2/api/",
 					"https://projectreactor.io/docs/netty/release/api/",
 					"https://javadoc.io/doc/io.netty.incubator/netty-incubator-codec-classes-quic/latest/"] as String[]
 }
