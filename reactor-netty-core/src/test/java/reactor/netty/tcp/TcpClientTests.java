@@ -60,7 +60,6 @@ import io.netty.util.NetUtil;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -798,13 +797,11 @@ public class TcpClientTests {
 
 
 	@Test
-	@Disabled
 	void testIssue600_1() {
 		doTestIssue600(true);
 	}
 
 	@Test
-	@Disabled
 	void testIssue600_2() {
 		doTestIssue600(false);
 	}
@@ -931,7 +928,6 @@ public class TcpClientTests {
 	}
 
 	@Test
-	@Disabled
 	void testIssue585_1() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
@@ -992,7 +988,6 @@ public class TcpClientTests {
 	}
 
 	@Test
-	@Disabled
 	void testIssue585_2() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
@@ -1207,7 +1202,6 @@ public class TcpClientTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	@Disabled
 	void testBootstrap() {
 		DisposableServer server =
 				TcpServer.create()

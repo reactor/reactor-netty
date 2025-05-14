@@ -67,7 +67,6 @@ import io.netty.util.concurrent.EventExecutor;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -797,7 +796,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	void testChannelGroupClosesAllConnections() throws Exception {
 		ChannelGroup group = new DefaultChannelGroup(executor);
 
@@ -833,7 +831,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	void testIssue688() throws Exception {
 		CountDownLatch connected = new CountDownLatch(1);
 		CountDownLatch configured = new CountDownLatch(1);
@@ -878,7 +875,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	@SuppressWarnings("FutureReturnValueIgnored")
 	void testHalfClosedConnection() throws Exception {
 		DisposableServer server =
@@ -927,7 +923,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	void testGracefulShutdown() throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
@@ -1135,7 +1130,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	@SuppressWarnings("deprecation")
 	void testSniSupport() throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
@@ -1249,7 +1243,6 @@ class TcpServerTests {
 	}
 
 	@ParameterizedTest
-	@Disabled
 	@ValueSource(booleans = {true, false})
 	void testIssue3406(boolean singleInvocation) {
 		DisposableServer server = null;
