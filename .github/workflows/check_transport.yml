@@ -75,3 +75,9 @@ jobs:
       - name: Build and test UDS with NIO on Java 17
         if: ${{ ! startsWith(matrix.os, 'windows') }}
         run: ./gradlew reactor-netty-http:test --tests reactor.netty.http.server.HttpServerTests.testHttpServerWithDomainSockets_HTTP11Post -PtestToolchain=17 --no-daemon -x spotlessCheck -PforceTransport=nio
+      - name: Archive tests output
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+            name: tests_output_${{ matrix.os }}_${{ matrix.transport }}
+            path: reactor-netty-http/build/test-results/test/binary/output.bin
