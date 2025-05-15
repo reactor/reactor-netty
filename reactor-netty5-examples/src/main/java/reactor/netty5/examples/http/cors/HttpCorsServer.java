@@ -19,9 +19,9 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.cors.CorsConfig;
 import io.netty5.handler.codec.http.cors.CorsConfigBuilder;
 import io.netty5.handler.codec.http.cors.CorsHandler;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import java.security.cert.CertificateException;
 
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import reactor.netty5.Connection;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
@@ -45,7 +45,7 @@ public class HttpCorsServer {
 	static final boolean COMPRESS = System.getProperty("compress") != null;
 	static final boolean HTTP2 = System.getProperty("http2") != null;
 
-	public static void main(String... args) throws CertificateException {
+	public static void main(String... args) throws Exception {
 		HttpServer server =
 				HttpServer.create()
 				          .port(PORT)
@@ -55,12 +55,16 @@ public class HttpCorsServer {
 				          .route(routes -> routes.route(r -> true, HttpCorsServer::okResponse));
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
+			X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 			if (HTTP2) {
-				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http2SslContextSpec http2SslContextSpec =
+						Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http2SslContextSpec));
 			}
 			else {
-				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http11SslContextSpec http11SslContextSpec =
+						Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http11SslContextSpec));
 			}
 		}
 

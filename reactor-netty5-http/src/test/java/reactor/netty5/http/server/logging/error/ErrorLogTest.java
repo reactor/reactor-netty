@@ -16,7 +16,8 @@
 package reactor.netty5.http.server.logging.error;
 
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
@@ -201,12 +202,12 @@ class ErrorLogTest extends BaseHttpTest {
 
 	@SuppressWarnings("deprecation")
 	static Object[][] httpProtocolsCompatibleCombinations() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		X509Bundle cert = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 		Http11SslContextSpec clientCtxHttp11 =
 				Http11SslContextSpec.forClient()
 				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-		Http2SslContextSpec serverCtxHttp2 = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		Http2SslContextSpec serverCtxHttp2 = Http2SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtxHttp2 =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

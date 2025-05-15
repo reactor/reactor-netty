@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +31,6 @@ import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import javax.net.ssl.SSLException;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
@@ -45,9 +43,10 @@ import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.stream.ChunkedNioFile;
 import io.netty5.handler.stream.ChunkedWriteHandler;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -59,11 +58,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class NettyOutboundTest {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@Test
@@ -146,8 +145,8 @@ class NettyOutboundTest {
 	}
 
 	@Test
-	void sendFileWithTlsUsesChunkedFile() throws URISyntaxException, SSLException {
-		SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+	void sendFileWithTlsUsesChunkedFile() throws Exception {
+		SslContext sslCtx = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 		final SslHandler sslHandler = sslCtx.newHandler(preferredAllocator());
 
 		List<Class<?>> messageWritten = new ArrayList<>(2);

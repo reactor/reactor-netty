@@ -29,7 +29,8 @@ import io.netty5.handler.ssl.OpenSslSessionContext;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
@@ -57,9 +58,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Violeta Georgieva
  */
 class SslProviderTests extends BaseHttpTest {
-	static SelfSignedCertificate cert;
-	static SelfSignedCertificate localhostCert;
-	static SelfSignedCertificate anotherCert;
+	static X509Bundle cert;
+	static X509Bundle localhostCert;
+	static X509Bundle anotherCert;
 
 	private List<String> protocols;
 	private @Nullable SslContext sslContext;
@@ -72,22 +73,22 @@ class SslProviderTests extends BaseHttpTest {
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
-		cert = new SelfSignedCertificate("default");
-		localhostCert = new SelfSignedCertificate("localhost");
-		anotherCert = new SelfSignedCertificate("another");
+		cert = new CertificateBuilder().subject("CN=default").setIsCertificateAuthority(true).buildSelfSigned();
+		localhostCert = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		anotherCert = new CertificateBuilder().subject("CN=another").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@BeforeEach
 	void setUp() throws Exception {
-		serverSslContextBuilder = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
-		serverSslContextBuilderH2 = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		serverSslContextBuilder = Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
+		serverSslContextBuilderH2 = Http2SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 
 		localhostSslContext =
-				Http11SslContextSpec.forServer(localhostCert.certificate(), localhostCert.privateKey())
+				Http11SslContextSpec.forServer(localhostCert.toTempCertChainPem(), localhostCert.toTempPrivateKeyPem())
 				                    .sslContext();
 
 		anotherSslContext =
-				Http11SslContextSpec.forServer(anotherCert.certificate(), anotherCert.privateKey())
+				Http11SslContextSpec.forServer(anotherCert.toTempCertChainPem(), anotherCert.toTempPrivateKeyPem())
 				                    .sslContext();
 
 		clientSslContextBuilder =

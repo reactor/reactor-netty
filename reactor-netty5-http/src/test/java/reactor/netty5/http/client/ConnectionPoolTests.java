@@ -21,7 +21,8 @@ import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.resolver.DefaultAddressResolverGroup;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
@@ -47,7 +48,6 @@ import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.util.function.Tuple2;
 
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -76,7 +76,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 
 	@BeforeAll
 	@SuppressWarnings("deprecation")
-	static void prepare() throws CertificateException {
+	static void prepare() throws Exception {
 		HttpServer server = createServer();
 
 		server1 = server.handle((req, res) -> res.sendString(Mono.just("server1-ConnectionPoolTests")))
@@ -85,9 +85,9 @@ class ConnectionPoolTests extends BaseHttpTest {
 		server2 = server.handle((req, res) -> res.sendString(Mono.just("server2-ConnectionPoolTests")))
 		                .bindNow();
 
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		Http11SslContextSpec http11SslContextSpec = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
-		Http2SslContextSpec http2SslContextSpec = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		X509Bundle cert = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		Http11SslContextSpec http11SslContextSpec = Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
+		Http2SslContextSpec http2SslContextSpec = Http2SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 
 		server3 = server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
 		                .secure(spec -> spec.sslContext(http2SslContextSpec))

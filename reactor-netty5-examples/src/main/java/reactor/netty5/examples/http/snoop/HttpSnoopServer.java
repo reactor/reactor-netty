@@ -19,7 +19,8 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.QueryStringDecoder;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import reactor.core.publisher.Mono;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.http.Http11SslContextSpec;
@@ -53,12 +54,16 @@ public class HttpSnoopServer {
 		                              .compress(COMPRESS);
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 			if (HTTP2) {
-				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http2SslContextSpec http2SslContextSpec =
+						Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http2SslContextSpec));
 			}
 			else {
-				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http11SslContextSpec http11SslContextSpec =
+						Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http11SslContextSpec));
 			}
 		}
 

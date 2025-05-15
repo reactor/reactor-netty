@@ -16,7 +16,6 @@
 package reactor.netty5.http.client;
 
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,23 +28,21 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.reactivestreams.Publisher;
@@ -55,18 +52,14 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.Connection;
-import reactor.netty5.ConnectionObserver;
 import reactor.netty5.channel.AbortedException;
 import reactor.netty5.http.Http11SslContextSpec;
 import reactor.netty5.http.Http2SslContextSpec;
-import reactor.netty5.http.HttpProtocol;
-import reactor.netty5.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.http.server.WebsocketServerSpec;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 import reactor.netty5.resources.ConnectionProvider;
-import reactor.netty5.tcp.SslProvider;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -87,17 +80,17 @@ class WebsocketTest extends BaseHttpTest {
 
 	static final Logger log = Loggers.getLogger(WebsocketTest.class);
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 	static Http11SslContextSpec serverCtx11;
 	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec clientCtx11;
 	static Http2SslContextSpec clientCtx2;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
-		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
-		serverCtx2 = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		serverCtx11 = Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		serverCtx2 = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		clientCtx11 = Http11SslContextSpec.forClient()
 		                                  .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		clientCtx2 = Http2SslContextSpec.forClient()

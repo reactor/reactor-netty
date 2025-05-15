@@ -94,8 +94,9 @@ import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.dns.DnsAddressResolverGroup;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
@@ -163,12 +164,12 @@ class HttpClientTest extends BaseHttpTest {
 
 	static final Logger log = Loggers.getLogger(HttpClientTest.class);
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 	static final EventExecutor executor = new SingleThreadEventExecutor();
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@AfterAll
@@ -594,8 +595,8 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void sslExchangeRelativeGet() throws SSLException {
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+	void sslExchangeRelativeGet() throws Exception {
+		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem())
 		                                        .build();
 		SslContext sslClient = SslContextBuilder.forClient()
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -630,7 +631,7 @@ class HttpClientTest extends BaseHttpTest {
 		String loggerName = "reactor.netty5.resources.PooledConnectionProvider";
 		int count = withMaxConnectionPools ? 1 : 0;
 		try (LogTracker logTracker = new LogTracker(loggerName, count, msg)) {
-			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+			SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 
 			disposableServer =
 					createServer().secure(ssl -> ssl.sslContext(sslServer))
@@ -676,8 +677,8 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void sslExchangeAbsoluteGet() throws SSLException {
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+	void sslExchangeAbsoluteGet() throws Exception {
+		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 		SslContext sslClient = SslContextBuilder.forClient()
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
@@ -698,9 +699,9 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void secureSendFile() throws SSLException, URISyntaxException {
+	void secureSendFile() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 		SslContext sslClient = SslContextBuilder.forClient()
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		AtomicReference<String> uploaded = new AtomicReference<>();
@@ -1068,9 +1069,9 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testIssue473() {
+	void testIssue473() throws Exception {
 		Http11SslContextSpec serverSslContextBuilder =
-				Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+				Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -1088,11 +1089,12 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testIssue407_1() {
+	void testIssue407_1() throws Exception {
+		Http11SslContextSpec serverCtx =
+				Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		disposableServer =
 				createServer()
-				          .secure(spec -> spec.sslContext(
-				              Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
+				          .secure(spec -> spec.sslContext(serverCtx))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .bindNow(Duration.ofSeconds(30));
 
@@ -1150,11 +1152,12 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testIssue407_2() {
+	void testIssue407_2() throws Exception {
+		Http11SslContextSpec serverCtx =
+				Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		disposableServer =
 				createServer()
-				          .secure(spec -> spec.sslContext(
-				              Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
+				          .secure(spec -> spec.sslContext(serverCtx))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .bindNow(Duration.ofSeconds(30));
 
@@ -1452,7 +1455,7 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testExplicitEmptyBodyOnGetWorks() throws Exception {
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem())
 		                                        .build();
 
 		SslContext sslClient = SslContextBuilder.forClient()
@@ -2033,56 +2036,56 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue719_TEWithTextNoSSL() {
+	void testIssue719_TEWithTextNoSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 	}
 
 	@Test
-	void testIssue719_CLWithTextNoSSL() {
+	void testIssue719_CLWithTextNoSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), false);
 	}
 
 	@Test
-	void testIssue719_TENoTextNoSSL() {
+	void testIssue719_TENoTextNoSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 	}
 
 	@Test
-	void testIssue719_CLNoTextNoSSL() {
+	void testIssue719_CLNoTextNoSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), false);
 	}
 
 	@Test
-	void testIssue719_TEWithTextWithSSL() {
+	void testIssue719_TEWithTextWithSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
 	}
 
 	@Test
-	void testIssue719_CLWithTextWithSSL() {
+	void testIssue719_CLWithTextWithSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), true);
 	}
 
 	@Test
-	void testIssue719_TENoTextWithSSL() {
+	void testIssue719_TENoTextWithSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
 	}
 
 	@Test
-	void testIssue719_CLNoTextWithSSL() {
+	void testIssue719_CLNoTextWithSSL() throws Exception {
 		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), true);
 	}
 
 	@SuppressWarnings("deprecation")
 	private void doTestIssue719(Publisher<Buffer> clientSend,
-			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) {
+			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) throws Exception {
 		HttpServer server =
 				createServer()
 				          .handle((req, res) -> req.receive()
@@ -2090,8 +2093,9 @@ class HttpClientTest extends BaseHttpTest {
 				                                            .then()));
 
 		if (ssl) {
-			server = server.secure(spec -> spec.sslContext(
-					Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+			Http11SslContextSpec serverCtx =
+					Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+			server = server.secure(spec -> spec.sslContext(serverCtx));
 		}
 
 		disposableServer = server.bindNow();
@@ -2308,7 +2312,7 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testConnectionLifeTimeFixedPoolHttp2_1() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -2351,7 +2355,7 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testConnectionLifeTimeElasticPoolHttp2() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -2393,7 +2397,7 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testConnectionNoLifeTimeFixedPoolHttp2() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -2432,7 +2436,7 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testConnectionNoLifeTimeElasticPoolHttp2() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -2478,8 +2482,8 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testConnectionLifeTimeFixedPoolHttp2_2() {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testConnectionLifeTimeFixedPoolHttp2_2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

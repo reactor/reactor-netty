@@ -26,6 +26,7 @@ dependencies {
 	api "io.zipkin.reporter2:zipkin-sender-urlconnection:$zipkinSenderVersion"
 
 	api "io.netty:netty5-transport-native-epoll:$nettyVersion:linux-x86_64"
+	api "io.netty:netty5-pkitesting:$nettyVersion"
 
 	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"

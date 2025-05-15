@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 package reactor.netty5.examples.tcp.echo;
 
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import reactor.netty5.tcp.TcpServer;
 import reactor.netty5.tcp.TcpSslContextSpec;
 
@@ -38,9 +39,10 @@ public final class EchoServer {
 				         .handle((in, out) -> out.send(in.receive().transferOwnership()));
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+			TcpSslContextSpec tcpSslContextSpec = TcpSslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			server = server.secure(
-					spec -> spec.sslContext(TcpSslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+					spec -> spec.sslContext(tcpSslContextSpec));
 		}
 
 		server.bindNow()

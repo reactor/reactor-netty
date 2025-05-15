@@ -42,7 +42,6 @@ import io.netty5.handler.codec.http2.Http2SettingsAckFrame;
 import io.netty5.handler.codec.http2.Http2SettingsFrame;
 import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.concurrent.DefaultPromise;
 import io.netty5.util.concurrent.Future;
@@ -194,12 +193,12 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	@SuppressWarnings("deprecation")
 	static Object[][] data(boolean onlyCompatible, boolean disablePool, boolean useCustomPool) throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		X509Bundle cert = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 		Http11SslContextSpec clientCtxHttp11 =
 				Http11SslContextSpec.forClient()
 				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-		Http2SslContextSpec serverCtxHttp2 = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		Http2SslContextSpec serverCtxHttp2 = Http2SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtxHttp2 =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

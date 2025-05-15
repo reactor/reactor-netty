@@ -144,6 +144,7 @@ dependencies {
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 	testImplementation "org.slf4j:slf4j-api:$slf4jVersion"
+	testImplementation "io.netty:netty5-pkitesting:$nettyVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -188,6 +189,7 @@ dependencies {
 	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	contextPropagationTestImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
+	contextPropagationTestImplementation "io.netty:netty5-pkitesting:$nettyVersion"
 	contextPropagationTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }

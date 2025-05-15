@@ -137,6 +137,7 @@ dependencies {
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
+	testImplementation "io.netty:netty5-pkitesting:$nettyVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

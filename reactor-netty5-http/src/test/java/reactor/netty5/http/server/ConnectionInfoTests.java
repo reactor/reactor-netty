@@ -17,7 +17,6 @@ package reactor.netty5.http.server;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -25,8 +24,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import javax.net.ssl.SSLException;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -36,7 +33,8 @@ import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.assertj.core.api.Assertions;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
@@ -70,7 +68,7 @@ import static reactor.netty5.http.server.ConnectionInfo.getDefaultHostPort;
  */
 class ConnectionInfoTests extends BaseHttpTest {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		return httpClient;
@@ -81,8 +79,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	static Stream<Arguments> forwardedProtoOnlyParams() {
@@ -514,10 +512,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
-	void xForwardedForAndPortOnly(boolean useCustomForwardedHandler) throws SSLException {
+	void xForwardedForAndPortOnly(boolean useCustomForwardedHandler) throws Exception {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext serverSslContext = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 
 		testClientRequest(
 				clientRequestHeaders -> {
@@ -714,10 +712,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
-	void https() throws SSLException {
+	void https() throws Exception {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext serverSslContext = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 
 		testClientRequest(
 				clientRequestHeaders -> {},
@@ -729,10 +727,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 
 	// Users may add SslHandler themselves, not by using `httpServer.secure`
 	@Test
-	void httpsUserAddedSslHandler() throws SSLException {
+	void httpsUserAddedSslHandler() throws Exception {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext serverSslContext = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 
 		testClientRequest(
 				clientRequestHeaders -> {},

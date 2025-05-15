@@ -19,7 +19,8 @@ import io.netty.contrib.handler.codec.http.multipart.HttpData;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -69,8 +70,8 @@ class HttpServerPostFormTests extends BaseHttpTest {
 
 	@SuppressWarnings("deprecation")
 	static Object[][] data() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		X509Bundle cert = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -74,11 +75,11 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleCombinations")
 	@SuppressWarnings("deprecation")
 	void noContentStatusCodes(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 
 		HttpServer server = createServer().protocol(serverProtocols);
 		if (Arrays.asList(serverProtocols).contains(HttpProtocol.H2)) {
-			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			server = server.secure(spec -> spec.sslContext(serverCtx));
 		}
 

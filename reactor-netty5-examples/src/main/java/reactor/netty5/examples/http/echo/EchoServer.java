@@ -15,7 +15,8 @@
  */
 package reactor.netty5.examples.http.echo;
 
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import reactor.netty5.http.Http11SslContextSpec;
 import reactor.netty5.http.Http2SslContextSpec;
 import reactor.netty5.http.HttpProtocol;
@@ -48,12 +49,16 @@ public final class EchoServer {
 				                                   .send(req.receive().transferOwnership())));
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 			if (HTTP2) {
-				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http2SslContextSpec http2SslContextSpec =
+						Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http2SslContextSpec));
 			}
 			else {
-				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http11SslContextSpec http11SslContextSpec =
+						Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http11SslContextSpec));
 			}
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,13 @@ package reactor.netty5.examples.tcp.telnet;
 
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty5.handler.codec.Delimiters;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import reactor.core.publisher.Flux;
 import reactor.netty5.tcp.TcpServer;
 import reactor.netty5.tcp.TcpSslContextSpec;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.security.cert.CertificateException;
 import java.util.Date;
 
 public class TelnetServer {
@@ -33,7 +32,7 @@ public class TelnetServer {
 	static final int PORT = Integer.parseInt(System.getProperty("port", SECURE ? "8992" : "8993"));
 	static final boolean WIRETAP = System.getProperty("wiretap") != null;
 
-	public static void main(String[] args) throws CertificateException, UnknownHostException {
+	public static void main(String[] args) throws Exception {
 		String hostName = InetAddress.getLocalHost().getHostName();
 
 		TcpServer server =
@@ -69,9 +68,10 @@ public class TelnetServer {
 				         });
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+			TcpSslContextSpec tcpSslContextSpec = TcpSslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			server = server.secure(
-					spec -> spec.sslContext(TcpSslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+					spec -> spec.sslContext(tcpSslContextSpec));
 		}
 
 		server.bindNow()

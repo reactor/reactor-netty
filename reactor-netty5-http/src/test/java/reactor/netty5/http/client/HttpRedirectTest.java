@@ -18,7 +18,6 @@ package reactor.netty5.http.client;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.http.HttpResponseStatus;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +36,8 @@ import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
@@ -62,11 +62,11 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 
 class HttpRedirectTest extends BaseHttpTest {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@Test
@@ -422,24 +422,26 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testIssue843() {
+	void testIssue843() throws Exception {
 		final int server2Port = SocketUtils.findAvailableTcpPort();
 
 		DisposableServer server1 = null;
 		DisposableServer server2 = null;
 		try {
+			Http11SslContextSpec server1Ctx =
+					Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			server1 =
 					createServer()
-					          .secure(spec ->
-					              spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
+					          .secure(spec -> spec.sslContext(server1Ctx))
 					          .handle((req, res) -> res.sendRedirect("https://localhost:" + server2Port))
 					          .bindNow();
 
+			Http11SslContextSpec server2Ctx =
+					Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			server2 =
 					createServer(server2Port)
 					          .host("localhost")
-					          .secure(spec ->
-					              spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
+					          .secure(spec -> spec.sslContext(server2Ctx))
 					          .handle((req, res) -> res.sendString(Mono.just("test")))
 					          .bindNow();
 
@@ -475,8 +477,8 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testHttpRequestIfRedirectHttpToHttpsEnabled() {
-		Http11SslContextSpec sslContext = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testHttpRequestIfRedirectHttpToHttpsEnabled() throws Exception {
+		Http11SslContextSpec sslContext = Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		disposableServer =
 				createServer()
 						.host("localhost")
@@ -506,13 +508,14 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testHttpsRequestIfRedirectHttpToHttpsEnabled() {
+	void testHttpsRequestIfRedirectHttpToHttpsEnabled() throws Exception {
 		String message = "The client should receive the message";
+		Http11SslContextSpec serverCtx =
+				Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		disposableServer =
 				createServer()
 						.host("localhost")
-						.secure(spec ->
-								spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())), true)
+						.secure(spec -> spec.sslContext(serverCtx), true)
 						.handle((request, response) -> response.sendString(Mono.just(message)))
 						.bindNow();
 		Http11SslContextSpec http11SslContextSpec =
@@ -568,13 +571,13 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testLastLocationSetToResourceUrlOnRedirect() {
+	void testLastLocationSetToResourceUrlOnRedirect() throws Exception {
 		final String redirectPath = "/redirect";
 		final String destinationPath = "/destination";
 		final String responseContent = "Success";
 
 		Http11SslContextSpec serverSslContextSpec =
-				Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+				Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		DisposableServer redirectServer = null;
 		DisposableServer initialServer = null;
 		try {
@@ -681,8 +684,8 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testHttpServerWithDomainSockets_HTTP2() {
-		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testHttpServerWithDomainSockets_HTTP2() throws Exception {
+		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http11SslContextSpec clientCtx =
 				Http11SslContextSpec.forClient()
 				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -716,8 +719,8 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testHttp2Redirect() {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testHttp2Redirect() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

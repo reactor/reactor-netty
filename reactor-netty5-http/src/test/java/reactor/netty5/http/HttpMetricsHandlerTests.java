@@ -33,8 +33,9 @@ import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.timeout.ReadTimeoutException;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
@@ -71,7 +72,6 @@ import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -131,7 +131,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	final Flux<Buffer> body = BufferFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 	static Http11SslContextSpec serverCtx11;
 	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec clientCtx11;
@@ -147,12 +147,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
+	static void createSelfSignedCertificate() throws Exception {
 		Assertions.setMaxStackTraceElementsDisplayed(100);
-		ssc = new SelfSignedCertificate();
-		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+		serverCtx11 = Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem())
 		                                  .configure(builder -> builder.sslProvider(SslProvider.JDK));
-		serverCtx2 = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
+		serverCtx2 = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem())
 		                                .configure(builder -> builder.sslProvider(SslProvider.JDK));
 		clientCtx11 = Http11SslContextSpec.forClient()
 		                                  .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE)

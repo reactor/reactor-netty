@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,32 +15,32 @@
  */
 package reactor.netty5.http.server;
 
-import java.security.cert.CertificateException;
 import javax.net.ssl.SSLException;
 
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.netty5.http.client.HttpClient;
 
 class HttpsSendFileTests extends HttpSendFileTests {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@Override
 	protected HttpServer customizeServerOptions(HttpServer server) {
 		try {
-			SslContext ctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+			SslContext ctx = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 			return server.secure(ssl -> ssl.sslContext(ctx));
 		}
-		catch (SSLException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
