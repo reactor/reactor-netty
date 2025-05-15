@@ -15,7 +15,8 @@
  */
 package reactor.netty.examples.http.helloworld;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
@@ -53,15 +54,21 @@ public final class HelloWorldServer {
 				                                   .sendString(Mono.just("Hello World!"))));
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			X509Bundle ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 			if (HTTP2) {
-				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http2SslContextSpec http2SslContextSpec =
+						Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http2SslContextSpec));
 			}
 			else if (HTTP3) {
-				server = server.secure(spec -> spec.sslContext(Http3SslContextSpec.forServer(ssc.key(), null, ssc.cert())));
+				Http3SslContextSpec http3SslContextSpec =
+						Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
+				server = server.secure(spec -> spec.sslContext(http3SslContextSpec));
 			}
 			else {
-				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+				Http11SslContextSpec http11SslContextSpec =
+						Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+				server = server.secure(spec -> spec.sslContext(http11SslContextSpec));
 			}
 		}
 

@@ -150,6 +150,7 @@ dependencies {
 		exclude module: "context-propagation"
 	}
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
+	testImplementation "io.netty:netty-pkitesting:$nettyVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -194,6 +195,7 @@ dependencies {
 	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	contextPropagationTestImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
+	contextPropagationTestImplementation "io.netty:netty-pkitesting:$nettyVersion"
 	contextPropagationTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 
@@ -205,6 +207,7 @@ dependencies {
 	http3TestImplementation "org.assertj:assertj-core:$assertJVersion"
 	http3TestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	http3TestImplementation "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
+	http3TestImplementation "io.netty:netty-pkitesting:$nettyVersion"
 	http3TestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	http3TestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	http3TestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"

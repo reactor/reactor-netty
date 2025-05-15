@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.core.publisher.Mono;
 
 import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
-import java.security.cert.CertificateException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -47,22 +47,22 @@ import static reactor.netty.micrometer.TimerAssert.assertTimer;
  */
 class TcpSecureMetricsTests extends TcpMetricsTests {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@Override
 	protected TcpServer customizeServerOptions(TcpServer tcpServer) {
 		try {
-			SslContext ctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+			SslContext ctx = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem())
 			                                  .sslProvider(SslProvider.JDK)
 			                                  .build();
 			return tcpServer.secure(ssl -> ssl.sslContext(ctx)).wiretap(true);
 		}
-		catch (SSLException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}

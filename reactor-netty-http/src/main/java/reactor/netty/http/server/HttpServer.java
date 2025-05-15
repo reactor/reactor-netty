@@ -34,7 +34,6 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -1072,13 +1071,15 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *     <li>{@code 3} seconds close_notify flush timeout</li>
 	 *     <li>{@code 0} second close_notify read timeout</li>
 	 * </ul>
-	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
-	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * If self-signed certificate needs to be used, the sample below can be
+	 * used (the functionality is provided by io.netty:netty-pkitesting).
+	 * Note that self-signed certificate should not be used in production.
 	 * <pre>
 	 * {@code
-	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     X509Bundle cert =
+	 *             new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	 *     Http11SslContextSpec http11SslContextSpec =
-	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *             Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec));
 	 * }
 	 * </pre>
@@ -1100,13 +1101,15 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *     <li>{@code 0} second close_notify read timeout</li>
 	 * </ul>
 	 * <p>
-	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
-	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * If self-signed certificate needs to be used, the sample below can be
+	 * used (the functionality is provided by io.netty:netty-pkitesting).
+	 * Note that self-signed certificate should not be used in production.
 	 * <pre>
 	 * {@code
-	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     X509Bundle cert =
+	 *             new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	 *     Http11SslContextSpec http11SslContextSpec =
-	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *             Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec), true);
 	 * }
 	 * </pre>
@@ -1131,13 +1134,15 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Applies an SSL configuration via the passed {@link SslProvider}.
 	 *
-	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
-	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * If self-signed certificate needs to be used, the sample below can be
+	 * used (the functionality is provided by io.netty:netty-pkitesting).
+	 * Note that self-signed certificate should not be used in production.
 	 * <pre>
 	 * {@code
-	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     X509Bundle cert =
+	 *             new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	 *     Http11SslContextSpec http11SslContextSpec =
-	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *             Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec));
 	 * }
 	 * </pre>
@@ -1153,13 +1158,15 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Applies an SSL configuration via the passed {@link SslProvider}.
 	 * <p>
-	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
-	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * If self-signed certificate needs to be used, the sample below can be
+	 * used (the functionality is provided by io.netty:netty-pkitesting).
+	 * Note that self-signed certificate should not be used in production.
 	 * <pre>
 	 * {@code
-	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     X509Bundle cert =
+	 *             new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	 *     Http11SslContextSpec http11SslContextSpec =
-	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *             Http11SslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec), true);
 	 * }
 	 * </pre>

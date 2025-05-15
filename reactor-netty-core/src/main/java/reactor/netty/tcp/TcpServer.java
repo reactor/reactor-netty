@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -183,13 +182,15 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 *     <li>{@code 0} second close_notify read timeout</li>
 	 * </ul>
 	 *
-	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
-	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * If self-signed certificate needs to be used, the sample below can be
+	 * used (the functionality is provided by io.netty:netty-pkitesting).
+	 * Note that self-signed certificate should not be used in production.
 	 * <pre>
 	 * {@code
-	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     X509Bundle cert =
+	 *             new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	 *     TcpSslContextSpec tcpSslContextSpec =
-	 *             TcpSslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *             TcpSslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(tcpSslContextSpec));
 	 * }
 	 * </pre>
@@ -209,13 +210,15 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	/**
 	 * Applies an SSL configuration via the passed {@link SslProvider}.
 	 *
-	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
-	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * If self-signed certificate needs to be used, the sample below can be
+	 * used (the functionality is provided by io.netty:netty-pkitesting).
+	 * Note that self-signed certificate should not be used in production.
 	 * <pre>
 	 * {@code
-	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     X509Bundle cert =
+	 *             new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	 *     TcpSslContextSpec tcpSslContextSpec =
-	 *             TcpSslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *             TcpSslContextSpec.forServer(cert.toTempCertChainPem(), cert.toTempPrivateKeyPem());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(tcpSslContextSpec));
 	 * }
 	 * </pre>
