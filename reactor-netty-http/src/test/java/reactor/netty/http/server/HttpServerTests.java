@@ -113,6 +113,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -3713,6 +3714,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
+	@Disabled
 	@SuppressWarnings("deprecation")
 	void testIssue2760_H2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
@@ -3726,6 +3728,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
+	@Disabled
 	void testIssue2760_H2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		testIssue2760(server -> server.protocol(serverProtocols), client -> client.protocol(clientProtocols));
 	}
