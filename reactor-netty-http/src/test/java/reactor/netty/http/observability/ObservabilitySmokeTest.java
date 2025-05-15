@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package reactor.netty.http.observability;
 
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Deque;
 import java.util.List;
@@ -39,7 +38,8 @@ import io.micrometer.tracing.test.simple.SpansAssert;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.core.publisher.Flux;
@@ -60,7 +60,7 @@ import static reactor.netty.ReactorNetty.getChannelContext;
 class ObservabilitySmokeTest extends SampleTestRunner {
 	static byte[] content;
 	static DisposableServer disposableServer;
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	static MeterRegistry registry;
 
@@ -69,8 +69,8 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	}
 
 	@BeforeAll
-	static void setUp() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void setUp() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 		content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
@@ -111,7 +111,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	@SuppressWarnings("deprecation")
 	public SampleTestRunnerConsumer yourCode() {
 		return (bb, meterRegistry) -> {
-			Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+			Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			disposableServer =
 					HttpServer.create()
 					          .metrics(true, s -> s.replace("1", "{id}"))

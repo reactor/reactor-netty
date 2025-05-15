@@ -23,7 +23,8 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,6 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -77,13 +77,13 @@ import static reactor.netty.resources.ConnectionProviderMeters.PENDING_CONNECTIO
  */
 class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	private MeterRegistry registry;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@BeforeEach
@@ -118,7 +118,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabledHttp2() throws Exception {
 		// by default, when the max number of pending acquire is not specified, it will bet set to 2 * max-connection
 		// (see PoolFactory from PoolConnectionProvider.java)
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -155,7 +155,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabledHttp2() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -246,7 +246,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	@ValueSource(longs = {0, 50, 500})
 	@SuppressWarnings("deprecation")
 	void testConnectionPoolPendingAcquireSize(long disposeTimeoutMillis) throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

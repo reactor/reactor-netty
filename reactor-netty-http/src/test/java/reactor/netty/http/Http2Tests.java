@@ -19,7 +19,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,6 @@ import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -76,11 +76,11 @@ class Http2Tests extends BaseHttpTest {
 			"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
 			"via HttpClient#noSSL()";
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@Test
@@ -95,8 +95,8 @@ class Http2Tests extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testHttpSslH2CFails() {
-		Http2SslContextSpec serverOptions = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testHttpSslH2CFails() throws Exception {
+		Http2SslContextSpec serverOptions = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 
 		createServer()
 		          .protocol(HttpProtocol.H2C)
@@ -224,7 +224,7 @@ class Http2Tests extends BaseHttpTest {
 
 	@SuppressWarnings("deprecation")
 	void doTestMaxActiveStreams(HttpClient baseClient, int maxActiveStreams, int concurrency, int prefetch, int expectedOnNext, int expectedOnError) throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -287,8 +287,8 @@ class Http2Tests extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testHttp2ForMemoryLeaks() {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testHttp2ForMemoryLeaks() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -497,7 +497,7 @@ class Http2Tests extends BaseHttpTest {
 	 * https://github.com/reactor/reactor-netty/issues/1813
 	 */
 	@Test
-	void testTooManyPermitsReturned_DefaultPool() {
+	void testTooManyPermitsReturned_DefaultPool() throws Exception {
 		testTooManyPermitsReturned(createClient(() -> disposableServer.address()));
 	}
 
@@ -505,7 +505,7 @@ class Http2Tests extends BaseHttpTest {
 	 * https://github.com/reactor/reactor-netty/issues/1813
 	 */
 	@Test
-	void testTooManyPermitsReturned_CustomPool() {
+	void testTooManyPermitsReturned_CustomPool() throws Exception {
 		ConnectionProvider provider = ConnectionProvider.create("testTooManyPermitsReturned_CustomPool", 2);
 		try {
 			testTooManyPermitsReturned(createClient(provider, () -> disposableServer.address()));
@@ -517,8 +517,8 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@SuppressWarnings("deprecation")
-	private void testTooManyPermitsReturned(HttpClient client) {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	private void testTooManyPermitsReturned(HttpClient client) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -613,8 +613,8 @@ class Http2Tests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
 	@SuppressWarnings("deprecation")
-	void testMaxStreamsH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testMaxStreamsH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -671,8 +671,8 @@ class Http2Tests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
 	@SuppressWarnings("deprecation")
-	void testEmptyDataFrameH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testEmptyDataFrameH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -715,8 +715,8 @@ class Http2Tests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
 	@SuppressWarnings("deprecation")
-	void h2ClientSendsError(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void h2ClientSendsError(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));

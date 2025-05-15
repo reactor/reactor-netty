@@ -36,6 +36,8 @@ import io.netty.incubator.codec.http3.Http3DataFrame;
 import io.netty.incubator.codec.http3.Http3HeadersFrame;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,7 +71,6 @@ import javax.net.ssl.SNIHostName;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,13 +108,13 @@ class Http3Tests {
 	static final String HTTP3_WITHOUT_TLS_SERVER = "Configured HTTP/3 protocol without TLS. " +
 			"Configure TLS via HttpServer#secure";
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@Nullable DisposableServer disposableServer;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@AfterEach
@@ -299,7 +300,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testConcurrentRequestsDefaultPool() {
+	void testConcurrentRequestsDefaultPool() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("testConcurrentRequestsDefaultPool")))
@@ -309,7 +310,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testConcurrentRequestsOneConnection() {
+	void testConcurrentRequestsOneConnection() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("testConcurrentRequestsOneConnection")))
@@ -326,7 +327,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testConcurrentRequestsCustomPool() {
+	void testConcurrentRequestsCustomPool() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("testConcurrentRequestsCustomPool")))
@@ -363,7 +364,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testGetRequest() {
+	void testGetRequest() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("Hello")))
@@ -382,7 +383,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testHttp3ForMemoryLeaks() {
+	void testHttp3ForMemoryLeaks() throws Exception {
 		disposableServer =
 				createServer()
 				        .wiretap(false)
@@ -417,7 +418,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testHttpClientNoSecurityHttp3Fails() {
+	void testHttpClientNoSecurityHttp3Fails() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("Hello")))
@@ -435,7 +436,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testHttpServerNoSecurityHttp3Fails() {
+	void testHttpServerNoSecurityHttp3Fails() throws Exception {
 		createServer()
 		        .noSSL()
 		        .handle((req, res) -> res.sendString(Mono.just("Hello")))
@@ -445,31 +446,31 @@ class Http3Tests {
 	}
 
 	@Test
-	void testIssue3524Flux() {
+	void testIssue3524Flux() throws Exception {
 		// sends the message and then last http content
 		testRequestBody(sender -> sender.send((req, out) -> out.sendString(Flux.just("te", "st"))), 3);
 	}
 
 	@Test
-	void testIssue3524Mono() {
+	void testIssue3524Mono() throws Exception {
 		// sends "full" request
 		testRequestBody(sender -> sender.send((req, out) -> out.sendString(Mono.just("test"))), 1);
 	}
 
 	@Test
-	void testIssue3524MonoEmpty() {
+	void testIssue3524MonoEmpty() throws Exception {
 		// sends "full" request
 		testRequestBody(sender -> sender.send((req, out) -> Mono.empty()), 0);
 	}
 
 	@Test
-	void testIssue3524NoBody() {
+	void testIssue3524NoBody() throws Exception {
 		// sends "full" request
 		testRequestBody(sender -> sender.send((req, out) -> out), 0);
 	}
 
 	@Test
-	void testIssue3524Object() {
+	void testIssue3524Object() throws Exception {
 		// sends "full" request
 		testRequestBody(sender -> sender.send((req, out) -> out.sendObject(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset())))), 1);
 	}
@@ -651,25 +652,26 @@ class Http3Tests {
 	}
 
 	@Test
-	void testMonoRequestBodySentAsFullRequest_Flux() {
+	void testMonoRequestBodySentAsFullRequest_Flux() throws Exception {
 		// sends the message and then last http content
 		testRequestBody(sender -> sender.send(ByteBufFlux.fromString(Mono.just("test"))), 2);
 	}
 
 	@Test
-	void testMonoRequestBodySentAsFullRequest_Mono() {
+	void testMonoRequestBodySentAsFullRequest_Mono() throws Exception {
 		// sends "full" request
 		testRequestBody(sender -> sender.send(ByteBufMono.fromString(Mono.just("test"))), 1);
 	}
 
 	@Test
-	void testMonoRequestBodySentAsFullRequest_MonoEmpty() {
+	void testMonoRequestBodySentAsFullRequest_MonoEmpty() throws Exception {
 		// sends "full" request
 		testRequestBody(sender -> sender.send(Mono.empty()), 0);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	private void testRequestBody(Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg) {
+	private void testRequestBody(Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg)
+			throws Exception {
 		disposableServer =
 				createServer().handle((req, res) -> req.receive()
 				                                       .then(res.send()))
@@ -722,16 +724,16 @@ class Http3Tests {
 	}
 
 	@Test
-	void testPostRequest() {
+	void testPostRequest() throws Exception {
 		doTestPostRequest(false);
 	}
 
 	@Test
-	void testPostRequestExternalThread() {
+	void testPostRequestExternalThread() throws Exception {
 		doTestPostRequest(true);
 	}
 
-	void doTestPostRequest(boolean externalThread) {
+	void doTestPostRequest(boolean externalThread) throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> {
@@ -757,7 +759,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testProtocolVersion() {
+	void testProtocolVersion() throws Exception {
 		disposableServer =
 				createServer().handle((req, res) -> res.sendString(Mono.just(req.protocol())))
 				              .bindNow();
@@ -818,7 +820,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testTrailerHeadersChunkedResponse() {
+	void testTrailerHeadersChunkedResponse() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) ->
@@ -830,7 +832,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testTrailerHeadersDisallowedNotSent() {
+	void testTrailerHeadersDisallowedNotSent() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) ->
@@ -844,7 +846,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testTrailerHeadersFailedChunkedResponse() {
+	void testTrailerHeadersFailedChunkedResponse() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) ->
@@ -861,7 +863,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testTrailerHeadersFullResponse() {
+	void testTrailerHeadersFullResponse() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) ->
@@ -874,7 +876,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testTrailerHeadersNotSpecifiedUpfront() {
+	void testTrailerHeadersNotSpecifiedUpfront() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) ->
@@ -899,7 +901,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void clientSendsError() {
+	void clientSendsError() throws Exception {
 		TestHttpMeterRegistrarAdapter metricsRegistrar = new TestHttpMeterRegistrarAdapter();
 
 		ConnectionProvider provider =
@@ -968,8 +970,8 @@ class Http3Tests {
 		                                        .maxStreamDataBidirectionalLocal(1000000));
 	}
 
-	static HttpServer createServer() {
-		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.key(), null, ssc.cert());
+	static HttpServer createServer() throws Exception {
+		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
 		return HttpServer.create()
 		                 .port(0)
 		                 .wiretap(true)

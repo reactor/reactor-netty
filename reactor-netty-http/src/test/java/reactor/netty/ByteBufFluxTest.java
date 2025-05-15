@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@ package reactor.netty;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.netty.http.client.HttpClient;
@@ -39,11 +39,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ByteBufFluxTest extends BaseHttpTest {
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@Test
@@ -60,7 +60,7 @@ class ByteBufFluxTest extends BaseHttpTest {
 		HttpServer server = createServer();
 		HttpClient client = createClient(() -> disposableServer.address());
 		if (withSecurity) {
-			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+			SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
 			SslContext sslClient = SslContextBuilder.forClient()
 			                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 			server = server.secure(ssl -> ssl.sslContext(sslServer));

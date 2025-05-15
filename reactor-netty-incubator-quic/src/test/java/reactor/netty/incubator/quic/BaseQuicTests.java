@@ -16,10 +16,11 @@
 package reactor.netty.incubator.quic;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import reactor.netty.Connection;
@@ -42,26 +43,26 @@ class BaseQuicTests {
 
 	static final QuicSslContext clientCtx;
 	static final QuicSslContext serverCtx;
-	static final SelfSignedCertificate ssc;
+	static final X509Bundle ssc;
 	static {
-		SelfSignedCertificate cert;
+		X509Bundle cert;
 		try {
-			cert = new SelfSignedCertificate();
+			cert = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
+			ssc = cert;
+
+			clientCtx =
+					QuicSslContextBuilder.forClient()
+					                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
+					                     .applicationProtocols(PROTOCOL)
+					                     .build();
+			serverCtx =
+					QuicSslContextBuilder.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem())
+					                     .applicationProtocols(PROTOCOL)
+					                     .build();
 		}
 		catch (Exception e) {
 			throw new ExceptionInInitializerError(e);
 		}
-		ssc = cert;
-
-		clientCtx =
-				QuicSslContextBuilder.forClient()
-				                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
-				                     .applicationProtocols(PROTOCOL)
-				                     .build();
-		serverCtx =
-				QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
-				                     .applicationProtocols(PROTOCOL)
-				                     .build();
 	}
 
 	protected @Nullable QuicConnection client;
