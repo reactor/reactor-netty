@@ -2449,7 +2449,7 @@ class HttpServerTests extends BaseHttpTest {
 		Sinks.One<Throwable> error = Sinks.one();
 		disposableServer =
 				createServer()
-				        .childOption(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(64))
+				        .childOption(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(64))
 				        .secure(spec -> spec.sslContext(defaultSslContextBuilder)
 				                            .handshakeTimeout(Duration.ofMillis(1))
 				                            .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(defaultSslContextBuilder)))
