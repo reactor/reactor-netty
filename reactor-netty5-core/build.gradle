@@ -145,7 +145,7 @@ dependencies {
 	// https://github.com/netty/netty/pull/11487
 	// https://github.com/netty/netty/issues/10317
 	// Necessary for generating SelfSignedCertificate on Java version >= 15
-	testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+	testRuntimeOnly "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
 
 	testFixturesApi("ch.qos.logback:logback-classic:$logbackVersion")
 	testFixturesApi("io.micrometer:micrometer-core:$micrometerVersion")

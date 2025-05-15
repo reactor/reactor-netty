@@ -171,9 +171,9 @@ dependencies {
 	// https://github.com/netty/netty/pull/11487
 	// https://github.com/netty/netty/issues/10317
 	// Necessary for generating SelfSignedCertificate on Java version >= 15
-	testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
-	noMicrometerTestRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
-	contextPropagationTestImplementation "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+	testRuntimeOnly "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
+	noMicrometerTestRuntimeOnly "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
+	contextPropagationTestImplementation "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
 
 	// noMicrometerTest sourceSet (must not include Micrometer)
 	noMicrometerTestImplementation "org.assertj:assertj-core:$assertJVersion"
