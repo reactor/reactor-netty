@@ -177,7 +177,7 @@ dependencies {
 	if (project.hasProperty("testToolchain")) {
 		if (testToolchain == "17") {
 			// Necessary for generating SelfSignedCertificate on Java version >= 15
-			testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+			testRuntimeOnly "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
 		}
 	}
 
