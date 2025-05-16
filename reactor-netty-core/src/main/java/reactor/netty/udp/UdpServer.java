@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.AttributeKey;
 import org.jspecify.annotations.Nullable;
@@ -250,6 +251,7 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 		Objects.requireNonNull(loopResources, "loopResources");
 		UdpServer dup = super.runOn(loopResources, preferNative);
 		dup.configuration().family = null;
+		dup.configuration().socketFamily = null;
 		return dup;
 	}
 
@@ -259,12 +261,33 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 	 * @param loopResources a new loop resources
 	 * @param family a specific {@link InternetProtocolFamily} to run with
 	 * @return a new {@link UdpServer} reference
+	 * @deprecated as of 1.3.0. Prefer {@link #runOn(LoopResources, SocketProtocolFamily)}.
+	 * This method will be removed in version 1.4.0.
 	 */
+	@Deprecated
 	public final UdpServer runOn(LoopResources loopResources, InternetProtocolFamily family) {
 		Objects.requireNonNull(loopResources, "loopResources");
 		Objects.requireNonNull(family, "family");
 		UdpServer dup = super.runOn(loopResources, false);
 		dup.configuration().family = family;
+		dup.configuration().socketFamily = family.toSocketProtocolFamily();
+		return dup;
+	}
+
+	/**
+	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
+	 *
+	 * @param loopResources a new loop resources
+	 * @param family a specific {@link SocketProtocolFamily} to run with
+	 * @return a new {@link UdpServer} reference
+	 * @since 1.3.0
+	 */
+	public final UdpServer runOn(LoopResources loopResources, SocketProtocolFamily family) {
+		Objects.requireNonNull(loopResources, "loopResources");
+		Objects.requireNonNull(family, "family");
+		UdpServer dup = super.runOn(loopResources, false);
+		dup.configuration().family = null;
+		dup.configuration().socketFamily = family;
 		return dup;
 	}
 
