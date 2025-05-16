@@ -17,7 +17,7 @@ rootProject.name = 'reactor-netty'
 include 'reactor-netty-core'
 include 'reactor-netty-http'
 include 'reactor-netty-http-brave'
-include 'reactor-netty-incubator-quic'
+include 'reactor-netty-quic'
 include 'reactor-netty-examples'
 include 'reactor-netty-graalvm-smoke-tests'
 
