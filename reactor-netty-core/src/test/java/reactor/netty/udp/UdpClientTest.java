@@ -191,6 +191,8 @@ class UdpClientTest {
 	@Test
 	void testUdpClientWithDomainSocketsConnectionRefused() {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		//IO_Uring does not support UDS
+		assumeThat(System.getProperty("forceTransport")).isNotEqualTo("io_uring");
 		UdpClient.create()
 		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
 		         .connect()
@@ -202,6 +204,8 @@ class UdpClientTest {
 	@Test
 	void domainSocketsSmokeTest() throws Exception {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		//IO_Uring does not support UDS
+		assumeThat(System.getProperty("forceTransport")).isNotEqualTo("io_uring");
 		LoopResources resources = LoopResources.create("domainSocketsSmokeTest");
 		CountDownLatch latch = new CountDownLatch(4);
 		Connection server = null;

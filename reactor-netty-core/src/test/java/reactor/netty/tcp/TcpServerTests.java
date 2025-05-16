@@ -1020,6 +1020,8 @@ class TcpServerTests {
 	@Test
 	void testTcpServerWithDomainSockets() throws Exception {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		//IO_Uring does not support UDS
+		assumeThat(System.getProperty("forceTransport")).isNotEqualTo("io_uring");
 		DisposableServer disposableServer =
 				TcpServer.create()
 				         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
