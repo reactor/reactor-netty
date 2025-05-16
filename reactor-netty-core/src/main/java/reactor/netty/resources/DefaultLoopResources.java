@@ -23,7 +23,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
@@ -196,8 +197,8 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 		EventLoopGroup eventLoopGroup = serverSelectLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = new NioEventLoopGroup(selectCount,
-					threadFactory(this, "select-nio"));
+			EventLoopGroup newEventLoopGroup = new MultiThreadIoEventLoopGroup(selectCount,
+					threadFactory(this, "select-nio"), NioIoHandler.newFactory());
 			if (!serverSelectLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
@@ -211,8 +212,8 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNioServerLoops() {
 		EventLoopGroup eventLoopGroup = serverLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = new NioEventLoopGroup(workerCount,
-					threadFactory(this, "nio"));
+			EventLoopGroup newEventLoopGroup = new MultiThreadIoEventLoopGroup(workerCount,
+					threadFactory(this, "nio"), NioIoHandler.newFactory());
 			if (!serverLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
