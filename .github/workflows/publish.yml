@@ -69,9 +69,9 @@ jobs:
       - name: run reactor-netty-http-brave checks
         id: reactor-netty-http-brave-checks
         run: ./gradlew reactor-netty-http-brave:check
-  reactor-netty-incubator-quic:
-    # Notes on reactor-netty-incubator-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-    name: reactor-netty-incubator-quic
+  reactor-netty-quic:
+    # Notes on reactor-netty-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    name: reactor-netty-quic
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -80,9 +80,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '8'
-      - name: run reactor-netty-incubator-quic checks
-        id: reactor-netty-incubator-quic-checks
-        run: ./gradlew reactor-netty-incubator-quic:check
+      - name: run reactor-netty-quic checks
+        id: reactor-netty-quic-checks
+        run: ./gradlew reactor-netty-quic:check
 
   # build antora doc for the current branch, and upload docs/build results to workflow run.
   # Each deploy job can then download it, in order to let the docs-zip be built properly
@@ -119,7 +119,7 @@ jobs:
   deploySnapshot:
     name: deploySnapshot
     runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
     steps:
@@ -150,7 +150,7 @@ jobs:
   deployMilestone:
     name: deployMilestone
     runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
     environment: releases
     steps:
@@ -185,7 +185,7 @@ jobs:
   deployRelease:
     name: deployRelease
     runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
     environment: releases
     steps:
