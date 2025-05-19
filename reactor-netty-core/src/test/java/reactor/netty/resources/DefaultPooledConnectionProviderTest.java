@@ -15,30 +15,6 @@
  */
 package reactor.netty.resources;
 
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.time.Clock;
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.LockSupport;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -80,6 +56,30 @@ import reactor.pool.PooledRefMetadata;
 import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
 import reactor.test.scheduler.VirtualTimeScheduler;
+
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -602,27 +602,24 @@ class DefaultPooledConnectionProviderTest {
 			Long startExecutingRequests = System.nanoTime();
 			new Thread(() -> {
 				pool.acquire(config, observer, remoteAddress, config.resolverInternal())
-						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests))
+						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests, "id1"))
 						.doOnNext(connection -> connection.disposeNow())
-						.doOnSubscribe(subscription -> System.out.println("Subscription started on: " + Thread.currentThread().getName()))
 						.subscribe();
 			}).start();
 
 			// simulate second request
 			new Thread(() -> {
 				pool.acquire(config, observer, remoteAddress, config.resolverInternal())
-						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests))
+						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests, "id2"))
 						.doOnNext(connection -> connection.disposeNow())
-						.doOnSubscribe(subscription -> System.out.println("Subscription started on: " + Thread.currentThread().getName()))
 						.subscribe();
 			}).start();
 
 			// simulate third request
 			new Thread(() -> {
 				pool.acquire(config, observer, remoteAddress, config.resolverInternal())
-						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests))
+						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests, "id3"))
 						.doOnNext(connection -> connection.disposeNow())
-						.doOnSubscribe(subscription -> System.out.println("Subscription started on: " + Thread.currentThread().getName()))
 						.subscribe();
 			}).start();
 
@@ -636,7 +633,7 @@ class DefaultPooledConnectionProviderTest {
 		}
 	}
 
-	public void executeBlockingOperation(Long start) {
+	public void executeBlockingOperation(Long start, String operationId) {
 		try {
 			// some cpu bound operation, maybe simple deserializing and then serializing response etc
 			// in order to allow Thread.sleep(), blockhound was disabled
@@ -646,7 +643,7 @@ class DefaultPooledConnectionProviderTest {
 			throw new RuntimeException(e);
 		} finally {
 			Duration took =  Duration.ofNanos(System.nanoTime() - start);
-			System.out.println("WAITING TEST ### Blocking operation took" + took);
+			System.out.println("WAITING TEST ### Blocking operation with id: " + operationId + " took: " + took);
 		}
 	}
 
