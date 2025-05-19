@@ -238,6 +238,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public void run() {
+			// we will send request to some external service, when there are connections available! <3
+			// thread is not blocked when executing this!
 			Duration took =  Duration.ofNanos(System.nanoTime() - startDisposableAcquire);
 			System.out.println("WAITING TEST ### DisposableAcquire started after: " + took);
 

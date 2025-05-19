@@ -83,7 +83,7 @@ public class WaitingTest {
 	@Test
 	void waitingForThreadTestButThereIsPublishOn() throws Exception {
 
-		Scheduler cpuBoundPool = Schedulers.newParallel("cpuBoundPool", 4);
+		Scheduler cpuBoundPool = Schedulers.newBoundedElastic(4, 100, "cpuBound");
 
 		final ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
 		int echoServerPort = SocketUtils.findAvailableTcpPort();
