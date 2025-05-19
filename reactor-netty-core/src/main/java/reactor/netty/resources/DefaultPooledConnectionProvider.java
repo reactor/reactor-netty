@@ -122,6 +122,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final InstrumentedPool<PooledConnection> pool;
 		final boolean retried;
 		final MonoSink<Connection> sink;
+		final Long startDisposableAcquire;
 
 		@SuppressWarnings("NullAway")
 		// Deliberately suppress "NullAway"
@@ -148,6 +149,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this.pool = pool;
 			this.retried = false;
 			this.sink = sink;
+			this.startDisposableAcquire = System.nanoTime();
 		}
 
 		DisposableAcquire(DisposableAcquire parent) {
@@ -159,6 +161,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this.pool = parent.pool;
 			this.retried = true;
 			this.sink = parent.sink;
+			this.startDisposableAcquire = parent.startDisposableAcquire;
 		}
 
 		@Override
@@ -235,6 +238,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public void run() {
+			Duration took =  Duration.ofNanos(System.nanoTime() - startDisposableAcquire);
+			System.out.println("WAITING TEST ### DisposableAcquire started after: " + took);
+
 			PooledConnection pooledConnection = pooledRef.poolable();
 			Channel c = pooledConnection.channel;
 

@@ -137,7 +137,8 @@ dependencies {
 	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	testImplementation "org.mockito:mockito-core:$mockitoVersion"
 	testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
-	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
+	// commented to allow run test with Thread.sleep()
+	//	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 	testImplementation "io.netty:netty-pkitesting:$nettyVersion"

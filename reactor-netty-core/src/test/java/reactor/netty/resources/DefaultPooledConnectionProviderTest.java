@@ -577,6 +577,79 @@ class DefaultPooledConnectionProviderTest {
 		}
 	}
 
+	@Test
+	void waitingForThreadTest() throws Exception {
+		final ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
+		int echoServerPort = SocketUtils.findAvailableTcpPort();
+		TcpClientTests.EchoServer echoServer = new TcpClientTests.EchoServer(echoServerPort);
+		EventLoopGroup group = new MultiThreadIoEventLoopGroup(1 , NioIoHandler.newFactory());
+
+		try (AddressResolverGroup<?> resolver =
+				     NameResolverProvider.builder().build().newNameResolverGroup(TcpResources.get(), true)) {
+			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
+			ConnectionProvider pool = ConnectionProvider.create("fixedPoolTwoAcquire", 2);
+
+			Supplier<? extends SocketAddress> remoteAddress = () -> address;
+			ConnectionObserver observer = ConnectionObserver.emptyListener();
+			ClientTransportConfigImpl config =
+					new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress, resolver);
+
+			//start the echo server
+			service.submit(echoServer);
+			Thread.sleep(100);
+
+			// simulate first request
+			Long startExecutingRequests = System.nanoTime();
+			new Thread(() -> {
+				pool.acquire(config, observer, remoteAddress, config.resolverInternal())
+						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests))
+						.doOnNext(connection -> connection.disposeNow())
+						.doOnSubscribe(subscription -> System.out.println("Subscription started on: " + Thread.currentThread().getName()))
+						.subscribe();
+			}).start();
+
+			// simulate second request
+			new Thread(() -> {
+				pool.acquire(config, observer, remoteAddress, config.resolverInternal())
+						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests))
+						.doOnNext(connection -> connection.disposeNow())
+						.doOnSubscribe(subscription -> System.out.println("Subscription started on: " + Thread.currentThread().getName()))
+						.subscribe();
+			}).start();
+
+			// simulate third request
+			new Thread(() -> {
+				pool.acquire(config, observer, remoteAddress, config.resolverInternal())
+						.doOnNext(connection -> executeBlockingOperation(startExecutingRequests))
+						.doOnNext(connection -> connection.disposeNow())
+						.doOnSubscribe(subscription -> System.out.println("Subscription started on: " + Thread.currentThread().getName()))
+						.subscribe();
+			}).start();
+
+			Thread.sleep(10000);
+		}
+		finally {
+			service.shutdownNow();
+			echoServer.close();
+			group.shutdownGracefully()
+					.get(10, TimeUnit.SECONDS);
+		}
+	}
+
+	public void executeBlockingOperation(Long start) {
+		try {
+			// some cpu bound operation, maybe simple deserializing and then serializing response etc
+			// in order to allow thread.sleep, blockhound was disabled
+			Thread.sleep(3000);
+		}
+		catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		} finally {
+			Duration took =  Duration.ofNanos(System.nanoTime() - start);
+			System.out.println("WAITING TEST ### " + took);
+		}
+	}
+
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {
 
 		@Override
