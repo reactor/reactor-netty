@@ -639,14 +639,14 @@ class DefaultPooledConnectionProviderTest {
 	public void executeBlockingOperation(Long start) {
 		try {
 			// some cpu bound operation, maybe simple deserializing and then serializing response etc
-			// in order to allow thread.sleep, blockhound was disabled
+			// in order to allow Thread.sleep(), blockhound was disabled
 			Thread.sleep(3000);
 		}
 		catch (InterruptedException e) {
 			throw new RuntimeException(e);
 		} finally {
 			Duration took =  Duration.ofNanos(System.nanoTime() - start);
-			System.out.println("WAITING TEST ### " + took);
+			System.out.println("WAITING TEST ### Blocking operation took" + took);
 		}
 	}
 
