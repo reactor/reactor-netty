@@ -1,0 +1,161 @@
+:sourcedir: {quic}/src/main/java
+:examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/quic/server
+:examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/quic/server
+:wirelogger: reactor.netty.quic.QuicServer
+
+[[quic-server]]
+= QUIC Server
+
+Reactor Netty provides the easy-to-use and easy-to-configure
+{javadoc}/reactor/netty/quic/QuicServer.html[`QuicServer`].
+It hides most of the Netty functionality that is required to create a `QUIC` server
+and add Reactive Streams backpressure.
+
+[[server-starting-and-stopping]]
+== Starting and Stopping
+
+To start a `QUIC` server, you must create and configure a
+{javadoc}/reactor/netty/quic/QuicServer.html[QuicServer] instance.
+By default, the `host` is configured for any local address, and the system picks up an ephemeral port
+when the `bind` operation is invoked.
+The following example shows how to create and start a `QUIC` server:
+
+{examples-link}/create/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/create/Application.java[lines=18..33]
+----
+<1> Creates a {javadoc}/reactor/netty/quic/QuicServer.html[`QuicServer`]
+instance that is ready for configuring.
+<2> Starts the server in a blocking fashion and waits for it to finish initializing.
+
+The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
+offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow(java.time.Duration)[`disposeNow()`],
+which shuts the server down in a blocking fashion.
+
+[[server-host-and-port]]
+=== Host and Port
+
+To bind to a specific `host` and `port`, you can apply the following configuration to the `QUIC` server:
+
+{examples-link}/address/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/address/Application.java[lines=18..33]
+----
+<1> Configures the `host` to which this server should bind
+<2> Configures the `port` to which this server should bind
+
+[[server-secure]]
+== Secure Connection
+
+To configure the `QUIC` server with SSL, you must apply the following configuration:
+
+{examples-link}/security/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/security/Application.java[lines=18..46]
+----
+<1> Configures the SSL context to use for the secure connection
+
+[[server-initial-settings]]
+== Initial Settings
+
+`QUIC` allows configuring various settings for the connection. You can apply the following configuration:
+
+{examples-link}/settings/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/settings/Application.java[lines=18..38]
+----
+<1> Configures the initial settings for the QUIC connection
+<2> Sets the maximum amount of data that can be sent on the connection
+<3> Sets the maximum amount of data that can be sent on a bidirectional stream initiated by the local endpoint
+<4> Sets the maximum amount of data that can be sent on a bidirectional stream initiated by the remote endpoint
+<5> Sets the maximum amount of data that can be sent on a unidirectional stream
+<6> Sets the maximum number of concurrent bidirectional streams
+<7> Sets the maximum number of concurrent unidirectional streams
+
+[[server-handling-streams]]
+== Handling Streams
+
+To handle incoming streams, you can use the following approach:
+
+{examples-link}/stream/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/stream/Application.java[lines=18..56]
+----
+<1> Invoked when a new `QUIC` stream is opened
+<2> Sets up a handler for incoming streams
+
+[[server-lifecycle-callbacks]]
+== Lifecycle Callbacks
+
+The following lifecycle callbacks are provided to let you extend the `QuicServer`:
+
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doOnBind` | Invoked when the server is about to bind.
+| `doOnBound` | Invoked when the server has been bound.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnection` | Invoked when a new `QUIC` connection has been established.
+| `doOnUnbound` | Invoked when the server has been unbound.
+|=======
+
+The following example uses the `doOnBound` and `doOnConnection` callbacks:
+
+{examples-link}/lifecycle/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/lifecycle/Application.java[lines=18..33]
+----
+<1> Invoked when the server has been bound
+<2> Invoked when a new `QUIC` connection has been established
+
+[[server-connection-configuration]]
+== Connection Configuration
+
+This section describes three kinds of configuration that you can use at the QUIC server level:
+
+* xref:quic-server.adoc#server-quic-connection-configurations-channel-options[Channel Options]
+* xref:quic-server.adoc#server-quic-connection-configurations-wire-logger[Wire Logger]
+* xref:quic-server.adoc#server-quic-connection-configurations-event-loop-group[Event Loop Group]
+
+[[server-quic-connection-configurations-channel-options]]
+=== Channel Options
+
+If you need additional options or need to change the current options, you can apply the following configuration:
+
+{examples-link}/channeloptions/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/channeloptions/Application.java[lines=18..37]
+----
+<1> Configures the backlog size
+<2> Enables `QLOG` for the `QUIC` connection
+
+You can find more about Netty channel options at the following links:
+
+* {nettyjavadoc}/io/netty/channel/ChannelOption.html[Common ChannelOption]
+* {nettyjavadoc}/io/netty/handler/codec/quic/QuicChannelOption.html[Quic ChannelOption]
+
+[[server-quic-connection-configurations-wire-logger]]
+include::partial$wire-logger.adoc[]
+
+[[server-quic-connection-configurations-event-loop-group]]
+include::partial$eventloop.adoc[]
+
+[[server-metrics]]
+== Metrics
+
+When `QUIC` server metrics are needed for an integration with a system as `Micrometer`,
+you can provide your own metrics recorder, as follows:
+
+{examples-link}/metrics/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/metrics/Application.java[lines=18..36]
+----
+<1> Enables `QUIC` server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.

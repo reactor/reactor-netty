@@ -24,9 +24,10 @@ Here is a very simple `QUIC` server and the corresponding `QUIC` client example
 public class ServerApplication {
 
 	public static void main(String[] args) throws Exception {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		X509Bundle cert =
+				new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 		QuicSslContext serverCtx =
-				QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
+				QuicSslContextBuilder.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem())
 				                     .applicationProtocols("http/1.1")
 				                     .build();
 

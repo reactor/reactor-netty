@@ -20,9 +20,11 @@ asciidoc:
     examples: 'example$reactor-netty-examples'
     http: 'example$reactor-netty-http'
     core: 'example$reactor-netty-core'
+    quic: 'example$reactor-netty-quic'
     reactor-netty-github-repo: 'https://github.com/reactor/reactor-netty/tree/main'
     core-source-link: '{reactor-netty-github-repo}/reactor-netty-core/src/main/java'
     http-source-link: '{reactor-netty-github-repo}/reactor-netty-http/src/main/java'
+    quic-source-link: '{reactor-netty-github-repo}/reactor-netty-quic/src/main/java'
     javadoc: 'https://projectreactor.io/docs/netty/{project-version}/api'
     nettyjavadoc: 'https://netty.io/4.2/api'
     author:
