@@ -15,6 +15,7 @@
  */
 dependencies {
 	api project(':reactor-netty-http')
+	api project(':reactor-netty-quic')
 
 	api "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 
