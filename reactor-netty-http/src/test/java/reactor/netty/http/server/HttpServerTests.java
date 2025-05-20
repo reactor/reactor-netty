@@ -2060,6 +2060,8 @@ class HttpServerTests extends BaseHttpTest {
 			String expectedScheme, HttpVersion expectedVersion) {
 		boolean isJava17 = System.getProperty("java.version").startsWith("17");
 		assumeThat(LoopResources.hasNativeSupport() || isJava17).isTrue();
+		//IO_Uring does not support UDS
+		assumeThat(System.getProperty("forceTransport")).isNotEqualTo("io_uring");
 		disposableServer =
 				server.bindAddress(() -> createDomainSocketAddress(isJava17))
 				      .wiretap(true)
