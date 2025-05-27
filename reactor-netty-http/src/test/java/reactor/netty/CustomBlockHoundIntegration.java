@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 package reactor.netty;
+// commented to allow run test with Thread.sleep()
 
-import reactor.blockhound.BlockHound;
-import reactor.blockhound.integration.BlockHoundIntegration;
-
-public class CustomBlockHoundIntegration implements BlockHoundIntegration {
-
-	@Override
-	public void applyTo(BlockHound.Builder builder) {
-		// Calls blocking SecureRandom.next
-		builder.allowBlockingCallsInside("java.nio.file.TempFileHelper", "createTempFile");
-
-		builder.allowBlockingCallsInside("reactor.core.scheduler.BoundedElasticScheduler$BoundedServices", "pick");
-		builder.allowBlockingCallsInside("io.netty.handler.ssl.BouncyCastle", "isInUse");
-	}
-}
+//
+//import reactor.blockhound.BlockHound;
+//import reactor.blockhound.integration.BlockHoundIntegration;
+//
+//public class CustomBlockHoundIntegration implements BlockHoundIntegration {
+//
+//	@Override
+//	public void applyTo(BlockHound.Builder builder) {
+//		// Calls blocking SecureRandom.next
+//		builder.allowBlockingCallsInside("java.nio.file.TempFileHelper", "createTempFile");
+//
+//		builder.allowBlockingCallsInside("reactor.core.scheduler.BoundedElasticScheduler$BoundedServices", "pick");
+//		builder.allowBlockingCallsInside("io.netty.handler.ssl.BouncyCastle", "isInUse");
+//	}
+//}
