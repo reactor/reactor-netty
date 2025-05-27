@@ -6,4 +6,6 @@
 * xref:http-client.adoc[]
 * xref:udp-server.adoc[]
 * xref:udp-client.adoc[]
+* xref:quic-server.adoc[]
+* xref:quic-client.adoc[]
 * xref:appendices.adoc[]

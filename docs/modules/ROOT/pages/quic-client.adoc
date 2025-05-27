@@ -1,0 +1,163 @@
+:sourcedir: {quic}/src/main/java
+:examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/quic/client
+:examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/quic/client
+:wirelogger: reactor.netty.quic.QuicClient
+
+[[quic-client]]
+= QUIC Client
+
+Reactor Netty provides the easy-to-use and easy-to-configure
+{javadoc}/reactor/netty/quic/QuicClient.html[`QuicClient`].
+It hides most of the Netty functionality that is required to create a `QUIC` client
+and add Reactive Streams backpressure.
+
+[[client-connecting-and-disconnecting]]
+== Connecting and Disconnecting
+
+To connect the `QUIC` client to a given endpoint, you must create and configure a
+{javadoc}/reactor/netty/quic/QuicClient.html[QuicClient] instance.
+By default, the host is configured for `localhost` and the port is `12012`.
+The following example shows how to create and connect a `QUIC` client:
+
+{examples-link}/create/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/create/Application.java[lines=18..33]
+----
+<1> Creates a {javadoc}/reactor/netty/quic/QuicClient.html[`QuicClient`]
+instance that is ready for configuring.
+<2> Connects the client in a blocking fashion and waits for it to finish initializing.
+
+The returned {javadoc}/reactor/netty/quic/QuicConnection.html[`QuicConnection`]
+offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow(java.time.Duration)[`disposeNow()`],
+which shuts the client down in a blocking fashion.
+
+[[client-host-and-port]]
+=== Host and Port
+
+To connect to a specific `host` and `port`, you can apply the following configuration to the `QUIC` client:
+
+{examples-link}/address/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/address/Application.java[lines=18..34]
+----
+<1> Configures the `host` and `port` to which this client should connect
+
+NOTE: The port can be specified also with *QUIC_PORT* environment variable.
+
+[[client-secure]]
+== Secure Connection
+
+To configure the `QUIC` client with SSL, you must apply the following configuration:
+
+{examples-link}/security/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/security/Application.java[lines=18..39]
+----
+<1> Configures the SSL context to use for the secure connection
+
+[[client-initial-settings]]
+== Initial Settings
+
+`QUIC` allows configuring various settings for the connection. You can apply the following configuration:
+
+{examples-link}/settings/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/settings/Application.java[lines=18..38]
+----
+<1> Configures the initial settings for the `QUIC` connection
+<2> Sets the maximum amount of data that can be sent on the connection
+<3> Sets the maximum amount of data that can be sent on a bidirectional stream initiated by the local endpoint
+<4> Sets the maximum amount of data that can be sent on a bidirectional stream initiated by the remote endpoint
+<5> Sets the maximum amount of data that can be sent on a unidirectional stream
+<6> Sets the maximum number of concurrent bidirectional streams
+<7> Sets the maximum number of concurrent unidirectional streams
+
+[[client-opening-streams]]
+== Opening Streams
+
+To open a stream to the remote peer, you can use the following approach:
+
+{examples-link}/stream/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/stream/Application.java[lines=18..64]
+----
+<1> Creates a new bidirectional stream
+<2> Sends data to the remote peer
+<3> Receives data from the remote peer
+
+[[client-lifecycle-callbacks]]
+== Lifecycle Callbacks
+
+The following lifecycle callbacks are provided to let you extend the `QuicClient`:
+
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doOnBind` | Invoked when the client is about to bind.
+| `doOnBound` | Invoked when the client has been bound.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnect` | Invoked when the client is about to connect to the remote address.
+| `doOnConnected` | Invoked after the client has been connected.
+| `doOnDisconnected` | Invoked after the client has been disconnected.
+| `doOnUnbound` | Invoked when the client has been unbound.
+|=======
+
+The following example uses the `doOnConnected` callback:
+
+{examples-link}/lifecycle/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/lifecycle/Application.java[lines=18..32]
+----
+<1> Invoked after the client has been connected
+
+[[client-connection-configuration]]
+== Connection Configuration
+
+This section describes three kinds of configuration that you can use at the `QUIC` client level:
+
+* xref:quic-client.adoc#client-quic-connection-configurations-channel-options[Channel Options]
+* xref:quic-client.adoc#client-quic-connection-configurations-wire-logger[Wire Logger]
+* xref:quic-client.adoc#client-quic-connection-configurations-event-loop-group[Event Loop Group]
+
+[[client-quic-connection-configurations-channel-options]]
+=== Channel Options
+
+If you need additional options or need to change the current options, you can apply the following configuration:
+
+{examples-link}/channeloptions/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/channeloptions/Application.java[lines=18..37]
+----
+<1> Configures the connect timeout
+<2> Enables `QLOG` for the `QUIC` connection
+
+You can find more about Netty channel options at the following links:
+
+* {nettyjavadoc}/io/netty/channel/ChannelOption.html[Common ChannelOption]
+* {nettyjavadoc}/io/netty/handler/codec/quic/QuicChannelOption.html[Quic ChannelOption]
+
+[[client-quic-connection-configurations-wire-logger]]
+include::partial$wire-logger.adoc[]
+
+[[client-quic-connection-configurations-event-loop-group]]
+include::partial$eventloop.adoc[]
+
+[[client-metrics]]
+== Metrics
+
+When `QUIC` client metrics are needed for an integration with a system as `Micrometer`,
+you can provide your own metrics recorder, as follows:
+
+{examples-link}/metrics/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/metrics/Application.java[lines=18..36]
+----
+<1> Enables `QUIC` client metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
