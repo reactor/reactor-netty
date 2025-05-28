@@ -97,6 +97,9 @@ include::{examples-dir}/routing/Application.java[lines=18..41]
 
 NOTE: The server routes are unique and only the first matching in order of declaration is invoked.
 
+NOTE: If websocket over HTTP/2 is configured, ensure that the HTTP/2 initial setting is enabled
+{javadoc}/reactor/netty/http/Http2SettingsSpec.Builder.html#connectProtocolEnabled-boolean-.
+
 [[sse]]
 === SSE
 
