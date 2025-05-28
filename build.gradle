@@ -318,6 +318,7 @@ subprojects {
 			//	println 'GitHub Action detected, avoiding use of mavenLocal()'
 			//}
 			maven { url 'https://repo.spring.io/snapshot' }
+			maven { url 'https://central.sonatype.com/repository/maven-snapshots' }
 			maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 		}
 	}
