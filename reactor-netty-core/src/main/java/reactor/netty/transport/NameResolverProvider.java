@@ -256,7 +256,7 @@ public final class NameResolverProvider {
 		/**
 		 * Performs the communication with the DNS servers on a supplied {@link EventLoopGroup}
 		 * from the {@link LoopResources} container.
-		 * Will prefer native (epoll/kqueue) implementation if available
+		 * Will prefer native (epoll/io_uring/kqueue) implementation if available
 		 * unless the environment property {@code reactor.netty.native} is set to {@code false}.
 		 *
 		 * @param loopResources the {@link LoopResources}
@@ -269,7 +269,7 @@ public final class NameResolverProvider {
 		 * from the {@link LoopResources} container.
 		 *
 		 * @param loopResources the {@link LoopResources}
-		 * @param preferNative should prefer running on epoll or kqueue instead of java NIO
+		 * @param preferNative should prefer running on epoll, io_uring or kqueue instead of java NIO
 		 * @return {@code this}
 		 */
 		NameResolverSpec runOn(LoopResources loopResources, boolean preferNative);
@@ -401,9 +401,9 @@ public final class NameResolverProvider {
 	}
 
 	/**
-	 * Returns {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue).
+	 * Returns {@code true} if prefer native event loop and channel factory (e.g. epoll, io_uring or kqueue).
 	 *
-	 * @return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue)
+	 * @return {@code true} if prefer native event loop and channel factory (e.g. epoll, io_uring or kqueue)
 	 */
 	public boolean isPreferNative() {
 		return preferNative;
