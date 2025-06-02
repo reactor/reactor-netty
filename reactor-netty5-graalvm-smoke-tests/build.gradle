@@ -54,6 +54,22 @@ dependencies {
 	testImplementation "org.assertj:assertj-core:$assertJVersion"
 }
 
+def initializeAtBuildTime = "org.junit.jupiter.api.DisplayNameGenerator\$IndicativeSentences," +
+		"org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor\$ClassInfo," +
+		"org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor\$LifecycleMethods," +
+		"org.junit.jupiter.engine.descriptor.ClassTemplateInvocationTestDescriptor," +
+		"org.junit.jupiter.engine.descriptor.ClassTemplateTestDescriptor," +
+		"org.junit.jupiter.engine.descriptor.DynamicDescendantFilter\$Mode," +
+		"org.junit.jupiter.engine.descriptor.ExclusiveResourceCollector\$1," +
+		"org.junit.jupiter.engine.descriptor.MethodBasedTestDescriptor\$MethodInfo," +
+		"org.junit.jupiter.engine.discovery.ClassSelectorResolver\$DummyClassTemplateInvocationContext," +
+		"org.junit.platform.engine.support.store.NamespacedHierarchicalStore\$EvaluatedValue," +
+		"org.junit.platform.launcher.core.DiscoveryIssueNotifier," +
+		"org.junit.platform.launcher.core.HierarchicalOutputDirectoryProvider," +
+		"org.junit.platform.launcher.core.LauncherDiscoveryResult\$EngineResultInfo," +
+		"org.junit.platform.suite.engine.SuiteTestDescriptor\$LifecycleMethods," +
+		"org.junit.platform.launcher.core.LauncherPhase"
+
 graalvmNative {
 	binaries {
 		test {
@@ -61,6 +77,7 @@ graalvmNative {
 				runtimeArgs.add("-DforceTransport=$forceTransport")
 			}
 			buildArgs.add('--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl')
+			buildArgs.add("--initialize-at-build-time=${initializeAtBuildTime}")
 		}
 	}
 	metadataRepository {
