@@ -11,11 +11,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, macos-13, windows-2022]
-        transport: [native, nio]
+        transport: [native, nio, io_uring]
         exclude:
           # excludes native on Windows (there's none)
           - os: windows-2022
             transport: native
+          - os: windows-2022
+            transport: io_uring
+          - os: macos-13
+            transport: io_uring
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -29,5 +33,9 @@ jobs:
         with:
             distribution: 'graalvm'
             java-version: '17.0.12'
-      - name: Build with Gradle
+      - name: Build and test with Gradle
+        if: ${{ ! startsWith(matrix.transport, 'io_uring') }}
         run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }}
+      - name: Build and test IO_Uring on Java 17
+        if: ${{ startsWith(matrix.transport, 'io_uring') }}
+        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest -PtestToolchain=17 --no-daemon -PforceTransport=${{ matrix.transport }}

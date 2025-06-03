@@ -50,7 +50,7 @@ public interface LoopResources extends Disposable {
 			"" + -1));
 
 	/**
-	 * Default value whether the native transport (epoll, kqueue) will be preferred,
+	 * Default value whether the native transport (epoll, io_uring, kqueue) will be preferred,
 	 * fallback it will be preferred when available.
 	 */
 	boolean DEFAULT_NATIVE = Boolean.parseBoolean(System.getProperty(

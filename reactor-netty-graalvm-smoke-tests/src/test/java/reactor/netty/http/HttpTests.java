@@ -17,6 +17,7 @@ package reactor.netty.http;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.uring.IoUring;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -52,9 +53,13 @@ class HttpTests {
 				assertThat(KQueue.isAvailable()).isTrue();
 			}
 		}
+		else if ("io_uring".equals(transport) && "Linux".equals(osName)) {
+			assertThat(IoUring.isAvailable()).isTrue();
+		}
 		else {
 			assertThat(Epoll.isAvailable()).isFalse();
 			assertThat(KQueue.isAvailable()).isFalse();
+			assertThat(IoUring.isAvailable()).isFalse();
 		}
 
 		disposableServer =
