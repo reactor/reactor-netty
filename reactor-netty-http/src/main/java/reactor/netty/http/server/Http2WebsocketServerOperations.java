@@ -82,6 +82,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http.HttpMethod.CONNECT;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
 import static reactor.netty.NettyPipeline.LEFT;
 import static reactor.netty.ReactorNetty.format;
@@ -133,11 +134,11 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 				PerMessageDeflateServerExtensionHandshaker perMessageDeflateServerExtensionHandshaker =
 						new PerMessageDeflateServerExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 								MAX_WINDOW_SIZE, websocketServerSpec.compressionAllowServerNoContext(),
-								websocketServerSpec.compressionPreferredClientNoContext());
+								websocketServerSpec.compressionPreferredClientNoContext(), 0);
 				WebsocketServerExtensionHandler wsServerExtensionHandler =
 						new WebsocketServerExtensionHandler(Arrays.asList(
 								perMessageDeflateServerExtensionHandshaker,
-								new DeflateFrameServerExtensionHandshaker()));
+								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, 0)));
 				try {
 					ChannelPipeline pipeline = channel.pipeline();
 					wsServerExtensionHandler.channelRead(pipeline.context(NettyPipeline.ReactiveBridge), request);

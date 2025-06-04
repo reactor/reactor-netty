@@ -476,7 +476,7 @@ class HttpClientTest extends BaseHttpTest {
 				        .headers(h -> h.add("Accept-Encoding", "gzip")
 				                       .add("Accept-Encoding", "deflate"))
 				        .doOnRequest((req, conn) ->
-				                conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor()))
+				                conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor(false, 0)))
 				        .get()
 				        .response((r, buf) -> buf.aggregate()
 				                                 .asString()
