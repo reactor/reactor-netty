@@ -1162,7 +1162,7 @@ class HttpServerTests extends BaseHttpTest {
 	void testIssue525() {
 		disposableServer =
 				createServer()
-				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor()))
+				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor(false, 0)))
 				          .handle((req, res) -> res.send(req.receive()
 				                                            .retain()))
 				          .bindNow(Duration.ofSeconds(30));

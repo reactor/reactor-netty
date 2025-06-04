@@ -87,7 +87,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		        .addLast(NettyPipeline.HttpTrafficHandler, HTTP_3_STREAM_BRIDGE_CLIENT_HANDLER);
 
 		if (acceptGzip) {
-			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
 		}
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, obs);

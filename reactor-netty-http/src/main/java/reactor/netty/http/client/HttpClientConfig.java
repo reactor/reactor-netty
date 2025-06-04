@@ -604,7 +604,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				.addLast(NettyPipeline.HttpTrafficHandler, HTTP_2_STREAM_BRIDGE_CLIENT_HANDLER);
 
 		if (acceptGzip) {
-			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
 		}
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, obs);

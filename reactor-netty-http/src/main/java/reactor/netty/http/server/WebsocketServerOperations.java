@@ -56,6 +56,7 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
 import static reactor.netty.ReactorNetty.format;
 
@@ -121,11 +122,11 @@ class WebsocketServerOperations extends HttpServerOperations
 				PerMessageDeflateServerExtensionHandshaker perMessageDeflateServerExtensionHandshaker =
 						new PerMessageDeflateServerExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 								MAX_WINDOW_SIZE, websocketServerSpec.compressionAllowServerNoContext(),
-								websocketServerSpec.compressionPreferredClientNoContext());
+								websocketServerSpec.compressionPreferredClientNoContext(), 0);
 				WebSocketServerExtensionHandler wsServerExtensionHandler =
 						new WebSocketServerExtensionHandler(
 								perMessageDeflateServerExtensionHandshaker,
-								new DeflateFrameServerExtensionHandshaker());
+								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, 0));
 				try {
 					ChannelPipeline pipeline = channel.pipeline();
 					wsServerExtensionHandler.channelRead(pipeline.context(NettyPipeline.ReactiveBridge), request);
