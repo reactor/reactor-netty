@@ -464,7 +464,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		if (http2Settings != null) {
 			Boolean connectProtocolEnabled = http2Settings.connectProtocolEnabled();
 			if (connectProtocolEnabled != null) {
-				settings.put(SETTINGS_ENABLE_CONNECT_PROTOCOL, connectProtocolEnabled ? TRUE : FALSE);
+				settings.connectProtocolEnabled(connectProtocolEnabled);
 			}
 
 			Long headerTableSize = http2Settings.headerTableSize();
@@ -933,11 +933,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * fallback to SSL debugging disabled.
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_SERVER_DEBUG, "false"));
-
-	// https://datatracker.ietf.org/doc/html/rfc8441#section-9.1
-	static final char SETTINGS_ENABLE_CONNECT_PROTOCOL = 8;
-	static final Long FALSE = 0L;
-	static final Long TRUE = 1L;
 
 	static final class H2ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
