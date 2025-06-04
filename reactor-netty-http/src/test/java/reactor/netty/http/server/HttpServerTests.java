@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1153,7 +1153,7 @@ class HttpServerTests extends BaseHttpTest {
 	void testIssue525() {
 		disposableServer =
 				createServer()
-				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor()))
+				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor(false, 0)))
 				          .handle((req, res) -> res.send(req.receive()
 				                                            .retain()))
 				          .bindNow(Duration.ofSeconds(30));
