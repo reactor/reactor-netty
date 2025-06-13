@@ -389,6 +389,8 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	/* https://github.com/reactor/reactor-netty/issues/3519 */
 	@Test
 	public void testConnectionProviderDisableAllBuiltInMetrics() throws Exception {
+		REGISTRY.clear();
+
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("testConnectionProviderDisableAllBuiltInMetrics")))
