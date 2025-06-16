@@ -30,6 +30,9 @@ import static io.netty5.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent
 import static io.netty5.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static io.netty5.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL;
 import static reactor.netty5.ReactorNetty.format;
+import static reactor.netty5.http.client.Http2ConnectionProvider.OWNER;
+import static reactor.netty5.http.client.Http2ConnectionProvider.http2PooledRef;
+import static reactor.netty5.http.client.Http2ConnectionProvider.invalidate;
 import static reactor.netty5.http.client.HttpClientConnect.ENABLE_CONNECT_PROTOCOL;
 
 /**
@@ -87,6 +90,16 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
+		ConnectionObserver owner = ctx.channel().attr(OWNER).get();
+		if (owner instanceof Http2ConnectionProvider.DisposableAcquire) {
+			Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(((Http2ConnectionProvider.DisposableAcquire) owner).pooledRef);
+			if (http2PooledRef.slot.h2cUpgradeHandlerCtx() != null &&
+					http2PooledRef.slot.http2MultiplexHandlerCtx() == null) {
+				// Connection close happened before H2C upgrade
+				invalidate(owner);
+			}
+		}
+
 		ctx.fireChannelExceptionCaught(new PrematureCloseException("Connection prematurely closed BEFORE response"));
 	}
 
