@@ -15,6 +15,8 @@
  */
 package reactor.netty5.http.client;
 
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BaseHttpTest;
+import reactor.netty5.NettyPipeline;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.http.HttpProtocol;
 
@@ -155,7 +158,7 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue3804() {
+	void testIssue3804() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.send().delaySubscription(Duration.ofSeconds(1)))
@@ -171,15 +174,26 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 				                  .build();
 
 		try {
+			CountDownLatch latch = new CountDownLatch(1);
 			assertThatExceptionOfType(RuntimeException.class)
 					.isThrownBy(() ->
 							createClient(provider, disposableServer.port())
+							        .doOnChannelInit((obs, ch, addr) ->
+							            ch.pipeline().addAfter(NettyPipeline.HttpTrafficHandler, "testIssue3804",
+							                new ChannelHandler() {
+							                    @Override
+							                    public void handlerRemoved(ChannelHandlerContext ctx) {
+							                        latch.countDown();
+							                    }
+							                }))
 							        .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
 							        .get()
 							        .uri("/")
 							        .response()
 							        .block(Duration.ofMillis(200)))
 					.withCauseInstanceOf(TimeoutException.class);
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			assertThat(metrics.get()).isNotNull();
 			assertThat(metrics.get().activeStreamSize()).isEqualTo(0);
