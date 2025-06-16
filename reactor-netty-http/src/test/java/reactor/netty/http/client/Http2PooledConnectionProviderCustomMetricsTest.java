@@ -25,17 +25,20 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.resources.ConnectionProvider;
 
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static reactor.netty.http.HttpProtocol.H2;
 
 class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
@@ -148,6 +151,42 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 			pool.disposeLater().block(Duration.ofSeconds(5));
 
 			assertThat(isDeregistered.get()).isTrue();
+		}
+	}
+
+	@Test
+	void testIssue3804() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.send().delaySubscription(Duration.ofSeconds(1)))
+				        .bindNow();
+
+		AtomicBoolean isRegistered = new AtomicBoolean();
+		AtomicBoolean isDeregistered = new AtomicBoolean();
+		AtomicReference<HttpConnectionPoolMetrics> metrics = new AtomicReference<>();
+		CustomHttp2MeterRegistrar registrar = new CustomHttp2MeterRegistrar(isRegistered, isDeregistered, metrics);
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testIssue3804")
+				                  .metrics(true, () -> registrar)
+				                  .build();
+
+		try {
+			assertThatExceptionOfType(RuntimeException.class)
+					.isThrownBy(() ->
+							createClient(provider, disposableServer.port())
+							        .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
+							        .get()
+							        .uri("/")
+							        .response()
+							        .block(Duration.ofMillis(200)))
+					.withCauseInstanceOf(TimeoutException.class);
+
+			assertThat(metrics.get()).isNotNull();
+			assertThat(metrics.get().activeStreamSize()).isEqualTo(0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
 		}
 	}
 
