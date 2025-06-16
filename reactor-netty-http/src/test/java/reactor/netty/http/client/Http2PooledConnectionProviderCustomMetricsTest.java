@@ -15,6 +15,8 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.resources.ConnectionProvider;
 
@@ -151,7 +154,7 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue3804() {
+	void testIssue3804() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.send().delaySubscription(Duration.ofSeconds(1)))
@@ -167,15 +170,27 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 				                  .build();
 
 		try {
+			CountDownLatch latch = new CountDownLatch(1);
 			assertThatExceptionOfType(RuntimeException.class)
 					.isThrownBy(() ->
 							createClient(provider, disposableServer.port())
+							        .doOnChannelInit((obs, ch, addr) ->
+							            ch.pipeline().addAfter(NettyPipeline.HttpTrafficHandler, "testIssue3804",
+							                new ChannelInboundHandlerAdapter() {
+							                    @Override
+							                    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+							                        latch.countDown();
+							                        super.handlerRemoved(ctx);
+							                    }
+							                }))
 							        .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
 							        .get()
 							        .uri("/")
 							        .response()
 							        .block(Duration.ofMillis(200)))
 					.withCauseInstanceOf(TimeoutException.class);
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			assertThat(metrics.get()).isNotNull();
 			assertThat(metrics.get().activeStreamSize()).isEqualTo(0);
