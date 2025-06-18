@@ -71,6 +71,7 @@ import io.netty.contrib.handler.codec.http.multipart.HttpData;
 import io.netty.contrib.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.AsciiString;
 import io.netty5.util.Resource;
@@ -986,6 +987,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		f.addListener(channel(), this);
 	}
 
+	@SuppressWarnings("ReferenceEquality")
 	private @Nullable HttpHeaders prepareTrailerHeaders() {
 		HttpHeaders trailerHeaders = null;
 		// https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
@@ -995,7 +997,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		// message integrity check, digital signature, or post-processing
 		// status.
 		// There is no requirement for chunked message when HTTP/2 and HTTP/3
-		if (trailerHeadersConsumer != null && (version() != HttpVersion.HTTP_1_1 || isTransferEncodingChunked(nettyResponse))) {
+		boolean isNotHttp11 = version() != HttpVersion.HTTP_1_1;
+		if (trailerHeadersConsumer != null && (isNotHttp11 || isTransferEncodingChunked(nettyResponse))) {
 			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.4
 			// When a message includes a message body encoded with the chunked
 			// transfer coding and the sender desires to send metadata in the form
@@ -1004,7 +1007,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			// which fields will be present in the trailers.
 			CharSequence declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
 			if (declaredHeaderNames != null) {
-				trailerHeaders = new TrailerHeaders(declaredHeaderNames.toString());
+				trailerHeaders = new TrailerHeaders(declaredHeaderNames.toString(), isNotHttp11);
 				try {
 					trailerHeadersConsumer.accept(trailerHeaders);
 				}
@@ -1425,10 +1428,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}.
 		 */
 		final Set<String> declaredHeaderNames;
+		final boolean isNotHttp11;
 
-		TrailerHeaders(String declaredHeaderNames) {
+		TrailerHeaders(String declaredHeaderNames, boolean isNotHttp11) {
 			super(16, true, true, true);
 			this.declaredHeaderNames = filterHeaderNames(declaredHeaderNames);
+			this.isNotHttp11 = isNotHttp11;
 		}
 
 		@Override
@@ -1436,6 +1441,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (name == null || !declaredHeaderNames.contains(name.toString())) {
 				throw new IllegalArgumentException("Trailer header name [" + name +
 						"] not declared with [Trailer] header, or it is not a valid trailer header name");
+			}
+			else if (isNotHttp11 && Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
+				throw new IllegalArgumentException("Pseudo header name [" + name +
+						"] found in trailer headers, trailer headers cannot have pseudo headers");
 			}
 			return super.validateKey(name, forAdd);
 		}
