@@ -971,7 +971,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testTrailerHeadersPseudoHeaderNotAllowed() {
+	void testTrailerHeadersPseudoHeaderNotAllowed() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) ->
