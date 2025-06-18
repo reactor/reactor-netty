@@ -970,6 +970,20 @@ class Http3Tests {
 		doTestTrailerHeaders(createClient(disposableServer.port()), "empty", "testTrailerHeadersNotSpecifiedUpfront");
 	}
 
+	@Test
+	void testTrailerHeadersPseudoHeaderNotAllowed() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.header(HttpHeaderNames.TRAILER, ":protocol")
+				               .trailerHeaders(h -> h.set(":protocol", "test"))
+				               .sendString(Flux.just("testTrailerHeaders", "PseudoHeaderNotAllowed")))
+				        .bindNow();
+
+		// Trailers MUST NOT include pseudo-header fields
+		doTestTrailerHeaders(createClient(disposableServer.port()), "empty", "testTrailerHeadersPseudoHeaderNotAllowed");
+	}
+
 	private static void doTestTrailerHeaders(HttpClient client, String expectedHeaderValue, String expectedResponse) {
 		client.get()
 		      .uri("/")

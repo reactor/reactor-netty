@@ -16,6 +16,7 @@
 package reactor.netty.http;
 
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -729,6 +730,46 @@ class Http2Tests extends BaseHttpTest {
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(5));
 		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
+	void testTrailerHeadersPseudoHeaderNotAllowedH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		testTrailerHeadersPseudoHeaderNotAllowed(
+				createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testTrailerHeadersPseudoHeaderNotAllowedH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		testTrailerHeadersPseudoHeaderNotAllowed(
+				createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols));
+	}
+
+	private void testTrailerHeadersPseudoHeaderNotAllowed(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, ":protocol")
+				             .trailerHeaders(h -> h.set(":protocol", "test"))
+				             .sendString(Flux.just("testTrailerHeaders", "PseudoHeaderNotAllowed")))
+				      .bindNow();
+
+		// Trailers MUST NOT include pseudo-header fields
+		client.get()
+		      .uri("/")
+		      .responseSingle((res, bytes) -> bytes.asString().defaultIfEmpty("empty").zipWith(res.trailerHeaders()))
+		      .as(StepVerifier::create)
+		      .expectNextMatches(t -> "testTrailerHeadersPseudoHeaderNotAllowed".equals(t.getT1()) &&
+		              "empty".equals(t.getT2().get(":protocol", "empty")))
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 	}
 
 	private void http2ClientSendsError(HttpServer server, HttpClient client) {
