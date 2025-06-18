@@ -29,6 +29,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -863,7 +864,61 @@ class Http3Tests {
 	}
 
 	@Test
-	void testTrailerHeadersFullResponse() throws Exception {
+	void testTrailerHeadersFullResponseSend() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.header(HttpHeaderNames.TRAILER, "foo")
+				               .trailerHeaders(h -> h.set("foo", "bar"))
+				               .send())
+				        .bindNow();
+
+		doTestTrailerHeaders(createClient(disposableServer.port()), "bar", "empty");
+	}
+
+	@Test
+	void testTrailerHeadersFullResponseSendFluxContentAlwaysEmpty() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.header(HttpHeaderNames.TRAILER, "foo")
+				               .trailerHeaders(h -> h.set("foo", "bar"))
+				               .status(HttpResponseStatus.NO_CONTENT)
+				               .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				        .bindNow();
+
+		doTestTrailerHeaders(createClient(disposableServer.port()), "bar", "empty");
+	}
+
+	@Test
+	void testTrailerHeadersFullResponseSendFluxContentLengthZero() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.header(HttpHeaderNames.TRAILER, "foo")
+				               .header(HttpHeaderNames.CONTENT_LENGTH, "0")
+				               .trailerHeaders(h -> h.set("foo", "bar"))
+				               .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				        .bindNow();
+
+		doTestTrailerHeaders(createClient(disposableServer.port()), "bar", "empty");
+	}
+
+	@Test
+	void testTrailerHeadersFullResponseSendHeaders() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.header(HttpHeaderNames.TRAILER, "foo")
+				               .trailerHeaders(h -> h.set("foo", "bar"))
+				               .sendHeaders())
+				        .bindNow();
+
+		doTestTrailerHeaders(createClient(disposableServer.port()), "bar", "empty");
+	}
+
+	@Test
+	void testTrailerHeadersFullResponseSendMono() throws Exception {
 		disposableServer =
 				createServer()
 				        .handle((req, res) ->
@@ -872,7 +927,34 @@ class Http3Tests {
 				               .sendString(Mono.just("testTrailerHeadersFullResponse")))
 				        .bindNow();
 
-		doTestTrailerHeaders(createClient(disposableServer.port()), "empty", "testTrailerHeadersFullResponse");
+		doTestTrailerHeaders(createClient(disposableServer.port()), "bar", "testTrailerHeadersFullResponse");
+	}
+
+	@Test
+	void testTrailerHeadersFullResponseSendMonoEmpty() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> {
+				            res.header(HttpHeaderNames.TRAILER, "foo")
+				               .trailerHeaders(h -> h.set("foo", "bar"));
+				            return Mono.empty();
+				        })
+				        .bindNow();
+
+		doTestTrailerHeaders(createClient(disposableServer.port()), "bar", "empty");
+	}
+
+	@Test
+	void testTrailerHeadersFullResponseSendObject() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.header(HttpHeaderNames.TRAILER, "foo")
+				               .trailerHeaders(h -> h.set("foo", "bar"))
+				               .sendObject(Unpooled.wrappedBuffer("testTrailerHeadersFullResponse".getBytes(Charset.defaultCharset()))))
+				        .bindNow();
+
+		doTestTrailerHeaders(createClient(disposableServer.port()), "bar", "testTrailerHeadersFullResponse");
 	}
 
 	@Test
@@ -892,7 +974,7 @@ class Http3Tests {
 	private static void doTestTrailerHeaders(HttpClient client, String expectedHeaderValue, String expectedResponse) {
 		client.get()
 		      .uri("/")
-		      .responseSingle((res, bytes) -> bytes.asString().zipWith(res.trailerHeaders()))
+		      .responseSingle((res, bytes) -> bytes.asString().defaultIfEmpty("empty").zipWith(res.trailerHeaders()))
 		      .as(StepVerifier::create)
 		      .expectNextMatches(t -> expectedResponse.equals(t.getT1()) &&
 		              expectedHeaderValue.equals(t.getT2().get("foo", "empty")))
