@@ -16,8 +16,9 @@
 package reactor.netty.http.server.logging.error;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,7 +31,6 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -41,13 +41,13 @@ class ErrorLogTest {
 
 	static final String CUSTOM_FORMAT = "method={}, uri={}";
 
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@Nullable DisposableServer disposableServer;
 
 	@BeforeAll
-	static void createSelfSignedCertificate() throws CertificateException {
-		ssc = new SelfSignedCertificate();
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 	}
 
 	@AfterEach
@@ -196,8 +196,8 @@ class ErrorLogTest {
 		}
 	}
 
-	static HttpServer createServer() {
-		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.key(), null, ssc.cert());
+	static HttpServer createServer() throws Exception{
+		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
 		return HttpServer.create()
 		                 .port(0)
 		                 .wiretap(true)

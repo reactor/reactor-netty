@@ -32,7 +32,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.http3.Http3DataFrame;
 import io.netty.incubator.codec.http3.Http3HeadersFrame;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
@@ -777,13 +776,13 @@ class Http3Tests {
 
 	@Test
 	void testSniSupport() throws Exception {
-		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
-		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
+		X509Bundle defaultCert = new CertificateBuilder().subject("CN=default").setIsCertificateAuthority(true).buildSelfSigned();
+		X509Bundle testCert = new CertificateBuilder().subject("CN=test.com").setIsCertificateAuthority(true).buildSelfSigned();
 
 		AtomicReference<String> hostname = new AtomicReference<>();
 
-		Http3SslContextSpec defaultSslContextBuilder = Http3SslContextSpec.forServer(defaultCert.key(), null, defaultCert.cert());
-		Http3SslContextSpec testSslContextBuilder = Http3SslContextSpec.forServer(testCert.key(), null, testCert.cert());
+		Http3SslContextSpec defaultSslContextBuilder = Http3SslContextSpec.forServer(defaultCert.toTempPrivateKeyPem(), null, defaultCert.toTempCertChainPem());
+		Http3SslContextSpec testSslContextBuilder = Http3SslContextSpec.forServer(testCert.toTempPrivateKeyPem(), null, testCert.toTempCertChainPem());
 
 		disposableServer =
 				createServer().port(8080)
