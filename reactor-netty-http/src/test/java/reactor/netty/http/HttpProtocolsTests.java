@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Connection;
@@ -621,7 +622,69 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	void testTrailerHeadersFullResponse(HttpServer server, HttpClient client) {
+	void testTrailerHeadersFullResponseSend(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .send())
+				      .bindNow();
+
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFullResponseSendFluxContentAlwaysEmpty(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .status(HttpResponseStatus.NO_CONTENT)
+				             .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				      .bindNow();
+
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFullResponseSendFluxContentLengthZero(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .header(HttpHeaderNames.CONTENT_LENGTH, "0")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				      .bindNow();
+
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFullResponseSendHeaders(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .sendHeaders())
+				      .bindNow();
+
+		doTestTrailerHeaders(client.port(disposableServer.port()), "bar", "empty");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFullResponseSendMono(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.handle((req, res) ->
 				          res.header(HttpHeaderNames.TRAILER, "foo")
@@ -629,13 +692,50 @@ class HttpProtocolsTests extends BaseHttpTest {
 				             .sendString(Mono.just("testTrailerHeadersFullResponse")))
 				      .bindNow();
 
-		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersFullResponse");
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "testTrailerHeadersFullResponse");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFullResponseSendMonoEmpty(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) -> {
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"));
+				          return Mono.empty();
+				      })
+				      .bindNow();
+
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFullResponseSendObject(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .sendObject(Unpooled.wrappedBuffer("testTrailerHeadersFullResponse".getBytes(Charset.defaultCharset()))))
+				      .bindNow();
+
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "testTrailerHeadersFullResponse");
 	}
 
 	private static void doTestTrailerHeaders(HttpClient client, String expectedHeaderValue, String expectedResponse) {
 		client.get()
 		      .uri("/")
-		      .responseSingle((res, bytes) -> bytes.asString().zipWith(res.trailerHeaders()))
+		      .responseSingle((res, bytes) -> bytes.asString().defaultIfEmpty("empty").zipWith(res.trailerHeaders()))
 		      .as(StepVerifier::create)
 		      .expectNextMatches(t -> expectedResponse.equals(t.getT1()) &&
 		              expectedHeaderValue.equals(t.getT2().get("foo", "empty")))
