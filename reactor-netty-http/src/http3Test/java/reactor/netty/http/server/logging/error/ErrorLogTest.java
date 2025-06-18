@@ -196,7 +196,7 @@ class ErrorLogTest {
 		}
 	}
 
-	static HttpServer createServer() throws Exception{
+	static HttpServer createServer() throws Exception {
 		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
 		return HttpServer.create()
 		                 .port(0)
