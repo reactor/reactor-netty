@@ -777,3 +777,73 @@ To customize the default settings, you can configure `HttpClient` as follows:
 include::{examples-dir}/resolver/Application.java[lines=18..39]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
+
+[[http-client-spnego]]
+=== SPNEGO (Kerberos) Authentication
+Reactor Netty HttpClient supports SPNEGO (Kerberos) authentication, which is widely used in enterprise environments.
+SPNEGO (Simple and Protected GSSAPI Negotiation Mechanism) provides secure authentication over HTTP using Kerberos.
+
+==== How It Works
+SPNEGO authentication follows this HTTP authentication flow:
+1. The client sends an HTTP request to a protected resource.
+2. The server responds with `401 Unauthorized` and a `WWW-Authenticate: Negotiate` header.
+3. The client generates a SPNEGO token based on its Kerberos ticket, and resends the request with an `Authorization: Negotiate <base64-encoded-token>` header.
+4. The server validates the token and, if authentication is successful, returns 200 OK.
+
+If further negotiation is required, the server may return another 401 with additional data in the WWW-Authenticate header.
+
+{examples-link}/spnego/Application.java
+----
+include::{examples-dir}/spnego/Application.java[lines=18..39]
+----
+<1> Configures the `jaas.conf`. A JAAS configuration file in Java for integrating with authentication backends such as Kerberos.
+<2> Configures the `krb5.conf`. krb5.conf is a Kerberos client configuration file used to define how the client locates and communicates with the Kerberos Key Distribution Center (KDC) for authentication.
+<3> Configures the SPNEGO jaas.conf. A JVM system property that enables detailed debug logging for Kerberos operations in Java.
+<4> `JaasAuthenticator` performs Kerberos authentication using a JAAS configuration (jaas.conf).
+<5> `SpnegoAuthProvider` generates a SPNEGO token from the Kerberos ticket and automatically adds the `Authorization: Negotiate ...` header to HTTP requests.
+
+==== Environment Configuration
+===== Example JAAS Configuration
+Specify the path to your JAAS configuration file using the `java.security.auth.login.config` system property.
+
+.`jaas.conf`
+[jaas,conf]
+----
+KerberosLogin {
+    com.sun.security.auth.module.Krb5LoginModule required
+    client=true
+    useKeyTab=true
+    keyTab="/path/to/test.keytab"
+    principal="test@EXAMPLE.COM"
+    doNotPrompt=true
+    debug=true;
+};
+----
+
+===== Example Kerberos Configuration
+Specify Kerberos realm and KDC information using the `java.security.krb5.conf` system property.
+
+.`krb5.conf`
+[krb5,conf]
+----
+[libdefaults]
+    default_realm = EXAMPLE.COM
+[realms]
+    EXAMPLE.COM = {
+        kdc = kdc.example.com
+    }
+[domain_realms]
+    .example.com = EXAMPLE.COM
+    example.com = EXAMPLE.COM
+----
+
+===== Configuration Example
+[jvm option]
+----
+-Djava.security.auth.login.config=/path/to/login.conf
+-Djava.security.krb5.conf=/path/to/krb5.conf
+----
+
+==== Notes
+- SPNEGO authentication is fully supported on Java 1.6 and above.
+- If authentication fails, check the server logs and client exception messages, and verify your Kerberos environment settings (realm, KDC, ticket, etc.).

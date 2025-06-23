@@ -499,6 +499,8 @@ class HttpClientConnect extends HttpClient {
 		volatile boolean                        shouldRetry;
 		volatile @Nullable HttpHeaders          previousRequestHeaders;
 
+		SpnegoAuthProvider spnegoAuthProvider;
+
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
@@ -536,6 +538,7 @@ class HttpClientConnect extends HttpClient {
 				this.fromURI = this.toURI = uriEndpointFactory.createUriEndpoint(configuration.uri, configuration.websocketClientSpec != null);
 			}
 			this.resourceUrl = toURI.toExternalForm();
+			this.spnegoAuthProvider = configuration.spnegoAuthProvider;
 		}
 
 		@Override
@@ -550,6 +553,19 @@ class HttpClientConnect extends HttpClient {
 
 		@SuppressWarnings("ReferenceEquality")
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
+			if (spnegoAuthProvider != null) {
+				return spnegoAuthProvider.apply(ch, ch.address())
+					.then(
+							Mono.defer(
+									() -> Mono.from(requestWithBodyInternal(ch))
+							)
+					);
+			}
+
+			return requestWithBodyInternal(ch);
+		}
+
+		private Publisher<Void> requestWithBodyInternal(HttpClientOperations ch) {
 			try {
 				ch.resourceUrl = this.resourceUrl;
 				ch.responseTimeout = responseTimeout;

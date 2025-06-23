@@ -367,6 +367,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Nullable String uriStr;
 	@Nullable Function<String, String> uriTagValue;
 	@Nullable WebsocketClientSpec websocketClientSpec;
+	@Nullable SpnegoAuthProvider spnegoAuthProvider;
 
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -419,6 +420,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.uriStr = parent.uriStr;
 		this.uriTagValue = parent.uriTagValue;
 		this.websocketClientSpec = parent.websocketClientSpec;
+		this.spnegoAuthProvider = parent.spnegoAuthProvider;
 	}
 
 	@Override
