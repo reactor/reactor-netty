@@ -1696,6 +1696,20 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return super.wiretap(enable);
 	}
 
+	/**
+	 * Configure SPNEGO authentication for the HTTP client.
+	 *
+	 * @param spnegoAuthProvider the SPNEGO authentication provider
+	 * @return a new {@link HttpClient}
+	 * @since 1.3.0
+	 */
+	public final HttpClient spnego(SpnegoAuthProvider spnegoAuthProvider) {
+		Objects.requireNonNull(spnegoAuthProvider, "spnegoAuthProvider");
+		HttpClient dup = duplicate();
+		dup.configuration().spnegoAuthProvider = spnegoAuthProvider;
+		return dup;
+	}
+
 	static boolean isCompressing(HttpHeaders h) {
 		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true)
 				|| h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.BR, true);
