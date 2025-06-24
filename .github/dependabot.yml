@@ -97,32 +97,6 @@ updates:
   - dependency-name: io.micrometer:micrometer-tracing-bridge-brave
     versions:
     - "> 1.5.0"
-  # Don't update Context Propagation
-  - dependency-name: io.micrometer:context-propagation
-    versions:
-    - "> 1.1.0"
-  # Versions > 6.13 require JDK11+
-  - dependency-name: com.diffplug.spotless
-    versions:
-    - "[6.14.a, 8]"
-  # Versions > 6 require JDK17+
-  - dependency-name: biz.aQute.bnd.builder
-    versions:
-    - "[7.a, 8]"
-  # Versions > 4 require JDK11+
-  - dependency-name: org.mockito:mockito-core
-    versions:
-    - "[5.a, 6]"
-  - dependency-name: ch.qos.logback:logback-classic
-    versions:
-    - "[1.3.a, 1.6]"
-  - dependency-name: org.slf4j:*
-    versions:
-    - "[2.a, 3]"
-  # Versions > 0.9.25 require JDK11+
-  - dependency-name: org.graalvm.buildtools.native
-    versions:
-    - "> 0.9.25"
   # Dependencies updated by forward merging 1.2.x branch
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
   - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
@@ -141,6 +115,13 @@ updates:
   - dependency-name: io.netty.incubator:netty-incubator-codec-http3
   - dependency-name: com.diffplug.spotless
   - dependency-name: com.github.luben:zstd-jni
+  - dependency-name: io.micrometer:context-propagation
+  - dependency-name: biz.aQute.bnd.builder
+  - dependency-name: org.mockito:mockito-core
+  - dependency-name: ch.qos.logback:logback-classic
+  - dependency-name: org.slf4j:*
+  - dependency-name: org.graalvm.buildtools.native
+  - dependency-name: com.gradleup.shadow
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
