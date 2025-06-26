@@ -2,7 +2,7 @@ name: Check Matrix
 
 on:
   pull_request: {}
-permissions: read-all
+permissions: {}
 jobs:
   preliminary:
     name: preliminary sanity checks

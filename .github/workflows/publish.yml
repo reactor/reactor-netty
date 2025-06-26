@@ -4,7 +4,7 @@ on:
     branches: # For branches, better to list them explicitly than regexp include
       - main
       - 1.2.x
-permissions: read-all
+permissions: {}
 
 env:
   DOCS_BUILD_ARTIFACT: docs-build

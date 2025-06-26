@@ -2,7 +2,7 @@ name: GraalVM smoke tests
 
 on:
   pull_request: {}
-permissions: read-all
+permissions: {}
 jobs:
   build:
 
