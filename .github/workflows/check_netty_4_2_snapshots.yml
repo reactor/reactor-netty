@@ -3,7 +3,7 @@ name: Check Reactor Netty 1.3.x with Netty 4.2 SNAPSHOTS
 on:
   schedule:
     - cron: "0 14 * * *"
-permissions: read-all
+permissions: {}
 jobs:
   build:
 
