@@ -29,7 +29,7 @@ public class Application {
 
 		SpnegoAuthenticator authenticator = new JaasAuthenticator("KerberosLogin"); // <4>
 		HttpClient client = HttpClient.create()
-				.spnego(SpnegoAuthProvider.create(authenticator)); // <5>
+				.spnego(SpnegoAuthProvider.create(authenticator, 401)); // <5>
 
 		client.get()
 				.uri("http://protected.example.com/")
