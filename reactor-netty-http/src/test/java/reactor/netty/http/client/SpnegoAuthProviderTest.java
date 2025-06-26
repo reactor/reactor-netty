@@ -91,7 +91,8 @@ class SpnegoAuthProviderTest {
 									principals.add(new KerberosPrincipal("test@LOCALHOST"));
 									return new Subject(true, principals, new HashSet<>(), new HashSet<>());
 								},
-								gssManager
+								gssManager,
+								401
 						)
 				)
 				.wiretap(true)
