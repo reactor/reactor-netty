@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 import static reactor.core.scheduler.Schedulers.boundedElastic;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Base64;
@@ -49,8 +50,14 @@ import reactor.core.publisher.Mono;
  */
 public final class SpnegoAuthProvider {
 
+	private static final String SPNEGO_HEADER = "Negotiate";
+	private static final String STR_OID = "1.3.6.1.5.5.2";
+
 	private final SpnegoAuthenticator authenticator;
 	private final GSSManager gssManager;
+	private final int unauthorizedStatusCode;
+
+	private volatile String verifiedAuthHeader;
 
 	/**
 	 * Constructs a new SpnegoAuthProvider with the given authenticator and GSSManager.
@@ -58,19 +65,21 @@ public final class SpnegoAuthProvider {
 	 * @param authenticator the authenticator to use for JAAS login
 	 * @param gssManager the GSSManager to use for SPNEGO token generation
 	 */
-	private SpnegoAuthProvider(SpnegoAuthenticator authenticator, GSSManager gssManager) {
+	private SpnegoAuthProvider(SpnegoAuthenticator authenticator, GSSManager gssManager, int unauthorizedStatusCode) {
 		this.authenticator = authenticator;
 		this.gssManager = gssManager;
+		this.unauthorizedStatusCode = unauthorizedStatusCode;
 	}
 
 	/**
 	 * Creates a new SPNEGO authentication provider using the default GSSManager instance.
 	 *
 	 * @param authenticator the authenticator to use for JAAS login
+	 * @param unauthorizedStatusCode the HTTP status code that indicates authentication failure
 	 * @return a new SPNEGO authentication provider
 	 */
-	public static SpnegoAuthProvider create(SpnegoAuthenticator authenticator) {
-		return create(authenticator, GSSManager.getInstance());
+	public static SpnegoAuthProvider create(SpnegoAuthenticator authenticator, int unauthorizedStatusCode) {
+		return create(authenticator, GSSManager.getInstance(), unauthorizedStatusCode);
 	}
 
 	/**
@@ -81,10 +90,11 @@ public final class SpnegoAuthProvider {
 	 *
 	 * @param authenticator the authenticator to use for JAAS login
 	 * @param gssManager the GSSManager to use for SPNEGO token generation
+	 * @param unauthorizedStatusCode the HTTP status code that indicates authentication failure
 	 * @return a new SPNEGO authentication provider
 	 */
-	public static SpnegoAuthProvider create(SpnegoAuthenticator authenticator, GSSManager gssManager) {
-		return new SpnegoAuthProvider(authenticator, gssManager);
+	public static SpnegoAuthProvider create(SpnegoAuthenticator authenticator, GSSManager gssManager, int unauthorizedStatusCode) {
+		return new SpnegoAuthProvider(authenticator, gssManager, unauthorizedStatusCode);
 	}
 
 	/**
@@ -100,6 +110,11 @@ public final class SpnegoAuthProvider {
 	 * @throws RuntimeException if login or token generation fails
 	 */
 	public Mono<Void> apply(HttpClientRequest request, InetSocketAddress address) {
+		if (verifiedAuthHeader != null) {
+			request.header(HttpHeaderNames.AUTHORIZATION, verifiedAuthHeader);
+			return Mono.empty();
+		}
+
 		return Mono.fromCallable(() -> {
 				try {
 					return Subject.doAs(
@@ -107,17 +122,19 @@ public final class SpnegoAuthProvider {
 						(PrivilegedAction<byte[]>) () -> {
 							try {
 								byte[] token = generateSpnegoToken(address.getHostName());
-								String authHeader = "Negotiate " + Base64.getEncoder().encodeToString(token);
+								String authHeader = SPNEGO_HEADER + " " + Base64.getEncoder().encodeToString(token);
+
+								verifiedAuthHeader = authHeader;
 								request.header(HttpHeaderNames.AUTHORIZATION, authHeader);
 								return token;
 							}
-              catch (GSSException e) {
+							catch (GSSException e) {
 								throw new RuntimeException("Failed to generate SPNEGO token", e);
 							}
 						}
 					);
 				}
-        catch (LoginException e) {
+				catch (LoginException e) {
 					throw new RuntimeException("Failed to login with SPNEGO", e);
 				}
 			})
@@ -138,9 +155,41 @@ public final class SpnegoAuthProvider {
 	 */
 	private byte[] generateSpnegoToken(String hostName) throws GSSException {
 		GSSName serverName = gssManager.createName("HTTP/" + hostName, GSSName.NT_HOSTBASED_SERVICE);
-		Oid spnegoOid = new Oid("1.3.6.1.5.5.2"); // SPNEGO OID
+		Oid spnegoOid = new Oid(STR_OID); // SPNEGO OID
 
 		GSSContext context = gssManager.createContext(serverName, spnegoOid, null, GSSContext.DEFAULT_LIFETIME);
 		return context.initSecContext(new byte[0], 0, 0);
+	}
+
+	/**
+	 * Invalidates the cached authentication token.
+	 * <p>
+	 * This method should be called when a response indicates that the current token
+	 * is no longer valid (typically after receiving an unauthorized status code).
+	 * The next request will generate a new authentication token.
+	 * </p>
+	 */
+	public void invalidateCache() {
+		this.verifiedAuthHeader = null;
+	}
+
+	/**
+	 * Checks if the response indicates an authentication failure that requires a new token.
+	 * <p>
+	 * This method checks both the status code and the WWW-Authenticate header to determine
+	 * if a new SPNEGO token needs to be generated.
+	 * </p>
+	 *
+	 * @param status the HTTP status code
+	 * @param headers the HTTP response headers
+	 * @return true if the response indicates an authentication failure
+	 */
+	public boolean isUnauthorized(int status, HttpHeaders headers) {
+		if (status != unauthorizedStatusCode) {
+			return false;
+		}
+
+		String header = headers.get(HttpHeaderNames.WWW_AUTHENTICATE);
+		return header != null && header.startsWith(SPNEGO_HEADER);
 	}
 }

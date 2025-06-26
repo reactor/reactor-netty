@@ -456,6 +456,15 @@ class HttpClientConnect extends HttpClient {
 		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == HttpClientState.RESPONSE_RECEIVED) {
+				HttpClientOperations operations = connection.as(HttpClientOperations.class);
+				if (operations != null && handler.spnegoAuthProvider != null) {
+					int statusCode = operations.status().code();
+					HttpHeaders headers = operations.responseHeaders();
+					if (handler.spnegoAuthProvider.isUnauthorized(statusCode, headers)) {
+						handler.spnegoAuthProvider.invalidateCache();
+					}
+				}
+
 				sink.success(connection);
 				return;
 			}
