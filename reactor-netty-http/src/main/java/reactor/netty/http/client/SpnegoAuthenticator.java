@@ -21,7 +21,7 @@ import javax.security.auth.login.LoginException;
 /**
  * An abstraction for authentication logic used by SPNEGO providers.
  * <p>
- * Implementations are responsible for performing a JAAS login and returning a logged-in Subject.
+ * Implementations are responsible for performing a login and returning a logged-in Subject.
  * </p>
  *
  * @author raccoonback
@@ -30,9 +30,9 @@ import javax.security.auth.login.LoginException;
 public interface SpnegoAuthenticator {
 
 	/**
-	 * Performs a JAAS login and returns the authenticated Subject.
+	 * Performs a login and returns the authenticated Subject.
 	 *
-	 * @return the authenticated JAAS Subject
+	 * @return the authenticated Subject
 	 * @throws LoginException if login fails
 	 */
 	Subject login() throws LoginException;
