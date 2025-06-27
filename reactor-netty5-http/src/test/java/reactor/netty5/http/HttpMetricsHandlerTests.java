@@ -1055,8 +1055,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testIssue3060ConnectTimeoutException(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+	void testIssue3060ConnectTimeoutException(@SuppressWarnings("unused") HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@SuppressWarnings("unused") @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		customizeClientOptions(httpClient, clientCtx, clientProtocols)
 		        .remoteAddress(() -> new InetSocketAddress("1.1.1.1", 11111))
@@ -1264,7 +1264,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	private void checkExpectationsNonExisting(String serverAddress, int connIndex, int index, boolean checkTls,
-			int numWrites, @SuppressWarnings("unused")int numReads, double expectedSentAmount,
+			int numWrites, @SuppressWarnings("unused") int numReads, double expectedSentAmount,
 			@SuppressWarnings("unused") double expectedReceivedAmount) {
 		String uri = "/3";
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "404"};
