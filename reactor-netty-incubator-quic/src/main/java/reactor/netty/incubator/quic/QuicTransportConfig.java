@@ -533,7 +533,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 		final Consumer<? super Connection> doOnUnbound;
 
 		QuicTransportDoOn(
-				@Nullable ChannelGroup channelGroup,
+				@SuppressWarnings("unused") @Nullable ChannelGroup channelGroup,
 				@Nullable Consumer<? super Connection> doOnBound,
 				@Nullable Consumer<? super Connection> doOnUnbound) {
 			this.doOnBound = doOnBound;
