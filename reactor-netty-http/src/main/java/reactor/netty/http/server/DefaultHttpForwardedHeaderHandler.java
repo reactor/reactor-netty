@@ -46,6 +46,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final Pattern FORWARDED_HOST_PATTERN   = Pattern.compile("host=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([a-zA-Z][a-zA-Z0-9+.-]*)\"?");
 	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
+	static final Pattern X_FORWARDED_PROTO_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9+.-]*$");
 
 	private static final String[] EMPTY_STRING_ARRAY = {};
 
@@ -104,7 +105,10 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		}
 		String protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
 		if (protoHeader != null) {
-			connectionInfo = connectionInfo.withScheme(protoHeader.split(",", 2)[0].trim());
+			String protoStr = protoHeader.split(",", 2)[0].trim();
+			if (X_FORWARDED_PROTO_PATTERN.matcher(protoStr).matches()) {
+				connectionInfo = connectionInfo.withScheme(protoStr);
+			}
 		}
 		String hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
 		if (hostHeader != null) {
