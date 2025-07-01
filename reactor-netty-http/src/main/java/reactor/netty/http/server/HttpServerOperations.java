@@ -1005,23 +1005,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		// There is no requirement for chunked message when HTTP/2 and HTTP/3
 		boolean isNotHttp11 = version() != HttpVersion.HTTP_1_1;
 		if (trailerHeadersConsumer != null && (isNotHttp11 || isTransferEncodingChunked(nettyResponse))) {
-			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.4
-			// When a message includes a message body encoded with the chunked
-			// transfer coding and the sender desires to send metadata in the form
-			// of trailer fields at the end of the message, the sender SHOULD
-			// generate a Trailer header field before the message body to indicate
-			// which fields will be present in the trailers.
-			String declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
-			if (declaredHeaderNames != null) {
-				trailerHeaders = new TrailerHeaders(declaredHeaderNames, isNotHttp11);
-				try {
-					trailerHeadersConsumer.accept(trailerHeaders);
-				}
-				catch (IllegalArgumentException e) {
-					// A sender MUST NOT generate a trailer when header names are
-					// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES
-					log.error(format(channel(), "Cannot apply trailer headers [{}]"), declaredHeaderNames, e);
-				}
+			trailerHeaders = new TrailerHeaders(isNotHttp11);
+			try {
+				trailerHeadersConsumer.accept(trailerHeaders);
+			}
+			catch (IllegalArgumentException e) {
+				// A sender MUST NOT generate a trailer when header names are
+				// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES
+				log.error(format(channel(), "Cannot apply trailer headers"), e);
 			}
 		}
 		return trailerHeaders;
@@ -1432,49 +1423,28 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			DISALLOWED_TRAILER_HEADER_NAMES.add("warning");
 		}
 
-		TrailerHeaders(String declaredHeaderNames, boolean isNotHttp11) {
-			super(true, new TrailerNameValidator(filterHeaderNames(declaredHeaderNames), isNotHttp11));
-		}
-
-		static Set<String> filterHeaderNames(String declaredHeaderNames) {
-			Objects.requireNonNull(declaredHeaderNames, "declaredHeaderNames");
-			Set<String> result = new HashSet<>();
-			String[] names = declaredHeaderNames.split(",", -1);
-			for (String name : names) {
-				String trimmedStr = name.trim();
-				if (trimmedStr.isEmpty() ||
-						DISALLOWED_TRAILER_HEADER_NAMES.contains(trimmedStr.toLowerCase(Locale.ENGLISH))) {
-					continue;
-				}
-				result.add(trimmedStr);
-			}
-			return result;
+		TrailerHeaders(boolean isNotHttp11) {
+			super(true, new TrailerNameValidator(isNotHttp11));
 		}
 
 		static final class TrailerNameValidator implements DefaultHeaders.NameValidator<CharSequence> {
 
-			/**
-			 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}.
-			 */
-			final Set<String> declaredHeaderNames;
 			final boolean isNotHttp11;
 
-			TrailerNameValidator(Set<String> declaredHeaderNames, boolean isNotHttp11) {
-				this.declaredHeaderNames = declaredHeaderNames;
+			TrailerNameValidator(boolean isNotHttp11) {
 				this.isNotHttp11 = isNotHttp11;
 			}
 
 			@Override
 			public void validateName(CharSequence name) {
-				if (!declaredHeaderNames.contains(name.toString())) {
-					throw new IllegalArgumentException("Trailer header name [" + name +
-							"] not declared with [Trailer] header, or it is not a valid trailer header name");
+				String trimmedStr = name.toString().trim();
+				if (trimmedStr.isEmpty() || DISALLOWED_TRAILER_HEADER_NAMES.contains(trimmedStr.toLowerCase(Locale.ENGLISH))) {
+					throw new IllegalArgumentException("Header [" + name + "] is not allowed as a trailer header");
 				}
 				// https://www.rfc-editor.org/rfc/rfc9113.html#name-http-message-framing
 				// Trailers MUST NOT include pseudo-header fields
-				else if (isNotHttp11 && Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
-					throw new IllegalArgumentException("Pseudo header name [" + name +
-							"] found in trailer headers, trailer headers cannot have pseudo headers");
+				else if (isNotHttp11 && Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(trimmedStr)) {
+					throw new IllegalArgumentException("Pseudo header [" + name + "] is not allowed as a trailer header");
 				}
 			}
 		}
