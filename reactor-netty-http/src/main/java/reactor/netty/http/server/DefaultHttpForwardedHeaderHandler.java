@@ -44,7 +44,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final String  X_FORWARDED_PREFIX_HEADER = "X-Forwarded-Prefix";
 
 	static final Pattern FORWARDED_HOST_PATTERN   = Pattern.compile("host=\"?([^;,\"]+)\"?");
-	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([^;,\"]+)\"?");
+	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([a-zA-Z][a-zA-Z0-9+.-]*)\"?");
 	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
 
 	private static final String[] EMPTY_STRING_ARRAY = {};
