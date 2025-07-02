@@ -27,6 +27,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ServerChannel;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.util.AttributeKey;
 import reactor.netty5.ChannelPipelineConfigurer;
@@ -245,7 +246,13 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if (channelGroup != null && newState == State.CONNECTED) {
-				channelGroup.add(connection.channel());
+				Channel channel = connection.channel();
+				channelGroup.add(channel);
+				Channel parent = channel.parent();
+				if (!(parent instanceof ServerChannel)) {
+					// HTTP/2 - add both the stream and the connection
+					channelGroup.add(parent);
+				}
 				return;
 			}
 			if (doOnConnection != null && newState == State.CONFIGURED) {
