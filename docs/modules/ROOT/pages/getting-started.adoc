@@ -183,4 +183,5 @@ repositories {
 
 [[support]]
 == Support and policies
+
 Support information can be found on the https://projectreactor.io/support[Reactor Support] page.
