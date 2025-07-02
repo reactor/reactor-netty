@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
@@ -245,7 +246,13 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
 			if (channelGroup != null && newState == State.CONNECTED) {
-				channelGroup.add(connection.channel());
+				Channel channel = connection.channel();
+				channelGroup.add(channel);
+				Channel parent = channel.parent();
+				if (!(parent instanceof ServerChannel)) {
+					// HTTP/2 - add both the stream and the connection
+					channelGroup.add(parent);
+				}
 				return;
 			}
 			if (doOnConnection != null && newState == State.CONFIGURED) {
