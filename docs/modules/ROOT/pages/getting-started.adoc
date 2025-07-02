@@ -183,4 +183,4 @@ repositories {
 
 [[support]]
 == Support and policies
-For a summary of support dates for each individual project and BOM support, please refer to the https://projectreactor.io/support[Reactor Support] page.
+Support information can be found on the https://projectreactor.io/support[Reactor Support] page.
