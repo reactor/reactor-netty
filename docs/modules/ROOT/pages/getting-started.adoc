@@ -183,7 +183,4 @@ repositories {
 
 [[support]]
 == Support and policies
-
-The entries below are mirroring https://github.com/reactor/.github/blob/main/SUPPORT.adoc
-
-include::partial$SUPPORT.adoc[leveloffset=2,lines=11..230]
+For a summary of support dates for each individual project and BOM support, please refer to the https://projectreactor.io/support[Reactor Support] page.
