@@ -173,11 +173,11 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 		testSpanHandler.takeRemoteSpanWithErrorMessage(CLIENT, "not ready");
 	}
 
-	void execute(HttpClient client, HttpMethod method, String pathIncludingQuery) {
+	static void execute(HttpClient client, HttpMethod method, String pathIncludingQuery) {
 		execute(client, method, pathIncludingQuery, null);
 	}
 
-	void execute(HttpClient client, HttpMethod method, String pathIncludingQuery, @Nullable String body) {
+	static void execute(HttpClient client, HttpMethod method, String pathIncludingQuery, @Nullable String body) {
 		client.request(method)
 		      .uri(pathIncludingQuery.isEmpty() ? "/" : pathIncludingQuery)
 		      .send((req, out) -> {

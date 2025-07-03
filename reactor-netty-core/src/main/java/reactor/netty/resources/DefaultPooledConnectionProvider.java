@@ -326,7 +326,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			}
 		}
 
-		void registerClose(PooledRef<PooledConnection> pooledRef, InstrumentedPool<PooledConnection> pool) {
+		static void registerClose(PooledRef<PooledConnection> pooledRef, InstrumentedPool<PooledConnection> pool) {
 			Channel channel = pooledRef.poolable().channel;
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "Registering pool release on close event for channel"));

@@ -450,7 +450,7 @@ class HttpTests extends BaseHttpTest {
 		                               .protocol(HttpProtocol.HTTP11));
 	}
 
-	private void doTestHttpClientDefaultSslProvider(HttpClient client) {
+	private static void doTestHttpClientDefaultSslProvider(HttpClient client) {
 		AtomicBoolean channel = new AtomicBoolean();
 		StepVerifier.create(client.doOnRequest((req, conn) -> channel.set(conn.channel().parent() == null))
 		                          .get()

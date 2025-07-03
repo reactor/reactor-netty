@@ -291,7 +291,7 @@ final class TracingHttpServerDecorator {
 			this.throwable = t;
 		}
 
-		void cleanup(Channel channel) {
+		static void cleanup(Channel channel) {
 			EventLoop eventLoop = channel.eventLoop();
 			if (eventLoop.inEventLoop()) {
 				channel.attr(REQUEST_ATTR_KEY).set(null);

@@ -94,7 +94,7 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(5));
 	}
 
-	private Mono<String> login(int port) {
+	private static Mono<String> login(int port) {
 		return createClient(port)
 		                 .post()
 		                 .uri("/login")

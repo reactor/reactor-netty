@@ -223,7 +223,7 @@ class UdpServerTests {
 	}
 
 	@SuppressWarnings("JdkObsolete")
-	private boolean isMulticastEnabledIPv4Interface(NetworkInterface iface) {
+	private static boolean isMulticastEnabledIPv4Interface(NetworkInterface iface) {
 		try {
 			if (!iface.supportsMulticast() || !iface.isUp()) {
 				return false;
@@ -245,7 +245,7 @@ class UdpServerTests {
 	}
 
 	@SuppressWarnings("JdkObsolete")
-	private NetworkInterface findMulticastEnabledIPv4Interface() throws SocketException {
+	private static NetworkInterface findMulticastEnabledIPv4Interface() throws SocketException {
 		if (isMulticastEnabledIPv4Interface(NetUtil.LOOPBACK_IF)) {
 			return NetUtil.LOOPBACK_IF;
 		}

@@ -1187,7 +1187,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 	}
 
-	private void checkServerConnectionsRecorder(HttpServerRequest request) {
+	private static void checkServerConnectionsRecorder(HttpServerRequest request) {
 		try {
 			String address = formatSocketAddress(request.hostAddress());
 			boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
@@ -1372,12 +1372,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	@SuppressWarnings("deprecation")
-	HttpServer customizeServerOptions(HttpServer httpServer, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
+	static HttpServer customizeServerOptions(HttpServer httpServer, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
 		return ctx == null ? httpServer.protocol(protocols) : httpServer.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
 	@SuppressWarnings("deprecation")
-	HttpClient customizeClientOptions(HttpClient httpClient, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
+	static HttpClient customizeClientOptions(HttpClient httpClient, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
 		return ctx == null ? httpClient.protocol(protocols) : httpClient.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 

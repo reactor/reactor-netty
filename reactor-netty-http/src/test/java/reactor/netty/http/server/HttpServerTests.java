@@ -748,7 +748,7 @@ class HttpServerTests extends BaseHttpTest {
 		doTestContentLengthHeadRequest("/", address, HttpMethod.HEAD, sentHeaders, false, false);
 	}
 
-	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
+	private static void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
 			HttpMethod method, AtomicReference<HttpHeaders> sentHeaders, boolean chunk, boolean close) {
 		Mono<Tuple2<HttpHeaders, String>> response =
 				createClient(() -> address)
@@ -824,7 +824,7 @@ class HttpServerTests extends BaseHttpTest {
 		}
 	}
 
-	private void doTestIssue186(HttpClient client) {
+	private static void doTestIssue186(HttpClient client) {
 		Mono<String> content = client.post()
 				                     .uri("/")
 				                     .send(ByteBufFlux.fromString(Mono.just("bodysample")))
@@ -1026,7 +1026,7 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(allowPartialChunks).as("allow partial chunks").isFalse();
 	}
 
-	private Object getValueReflection(Object obj, String fieldName, int superLevel) {
+	private static Object getValueReflection(Object obj, String fieldName, int superLevel) {
 		try {
 			Field field;
 			if (superLevel == 1) {
@@ -1672,7 +1672,7 @@ class HttpServerTests extends BaseHttpTest {
 		doTest(port, "GET http://" + address + " HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 	}
 
-	private void doTest(int port, String message) throws Exception {
+	private static void doTest(int port, String message) throws Exception {
 		TcpClient tcpClient =
 				TcpClient.create()
 				         .port(port)
@@ -1729,7 +1729,7 @@ class HttpServerTests extends BaseHttpTest {
 		doTestIssue940(client, "2", "3");
 	}
 
-	private void doTestIssue940(HttpClient client, String... expectations) {
+	private static void doTestIssue940(HttpClient client, String... expectations) {
 		StepVerifier.create(
 		        client.get()
 		              .responseContent()
@@ -2164,7 +2164,7 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(response).isEqualTo("testTcpConfiguration");
 	}
 
-	private TcpServer configureTcpServer(TcpServer tcp, LoopResources loop, ChannelGroup group, CountDownLatch latch) {
+	private static TcpServer configureTcpServer(TcpServer tcp, LoopResources loop, ChannelGroup group, CountDownLatch latch) {
 		return tcp.wiretap(true)
 		          .host("localhost")
 		          .runOn(loop)
@@ -2236,7 +2236,7 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	private void doTestStatus(HttpResponseStatus status) {
+	private static void doTestStatus(HttpResponseStatus status) {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		InetSocketAddress localSocketAddress = AddressUtils.createUnresolved("localhost", 80);
 		InetSocketAddress remoteSocketAddress = AddressUtils.createUnresolved("localhost", 9999);
@@ -3293,7 +3293,7 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	private void doTestIsFormUrlencoded(String headerValue, boolean expectation) {
+	private static void doTestIsFormUrlencoded(String headerValue, boolean expectation) {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		request.headers().set(HttpHeaderNames.CONTENT_TYPE, headerValue);

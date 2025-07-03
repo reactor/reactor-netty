@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ class ConnectionObserverContextTest {
 		doTestContextIsPropagatedToConnectionObserver(false);
 	}
 
-	private void doTestContextIsPropagatedToConnectionObserver(boolean noHooks) throws Exception {
+	private static void doTestContextIsPropagatedToConnectionObserver(boolean noHooks) throws Exception {
 		final AtomicReference<String> contextualData = new AtomicReference<>();
 		final CountDownLatch channelInitialized = new CountDownLatch(1);
 

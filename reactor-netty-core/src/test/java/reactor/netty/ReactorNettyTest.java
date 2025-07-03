@@ -97,7 +97,7 @@ class ReactorNettyTest {
 				InetSocketAddress.createUnresolved("127.0.0.1", 9090)));
 	}
 
-	private void doTestFormatChannel(TestChannel channel) {
+	private static void doTestFormatChannel(TestChannel channel) {
 		channel.active = true;
 		String channelStr = channel.toString();
 		assertThat(ReactorNetty.format(channel, "testFormatWithChannel"))

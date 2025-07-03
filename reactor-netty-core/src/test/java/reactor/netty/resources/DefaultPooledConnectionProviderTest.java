@@ -493,7 +493,7 @@ class DefaultPooledConnectionProviderTest {
 		doTestIssue1790(false);
 	}
 
-	private void doTestIssue1790(boolean fifoPool) {
+	private static void doTestIssue1790(boolean fifoPool) {
 		DefaultPooledConnectionProvider provider;
 		if (fifoPool) {
 			provider =

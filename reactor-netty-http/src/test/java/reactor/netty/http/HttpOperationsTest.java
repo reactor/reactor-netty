@@ -133,7 +133,7 @@ class HttpOperationsTest {
 				Flux.just("", "/", "//", "///", "/a", "/a/", "/?b", "/a?b", "/#b", "/a#b", "/a?b#c", "/a%20b", "/a?b={}"));
 	}
 
-	private void doTestPath(TestHttpInfos infos, Flux<String> expectations, Flux<String> uris) {
+	private static void doTestPath(TestHttpInfos infos, Flux<String> expectations, Flux<String> uris) {
 		uris.zipWith(expectations)
 		            .doOnNext(tuple -> {
 		                infos.uri = tuple.getT1();

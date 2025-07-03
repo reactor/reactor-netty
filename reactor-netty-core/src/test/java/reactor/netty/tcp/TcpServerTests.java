@@ -445,7 +445,7 @@ class TcpServerTests {
 		}
 	}
 
-	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) throws Exception {
+	private static void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) throws Exception {
 		DisposableServer context =
 				TcpServer.create()
 				         .handle((in, out) ->

@@ -197,7 +197,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		startWrite(request, ctx.channel(), remoteAddress);
 	}
 
-	private long extractProcessedDataFromBuffer(Object msg) {
+	private static long extractProcessedDataFromBuffer(Object msg) {
 		if (msg instanceof ByteBufHolder) {
 			return ((ByteBufHolder) msg).content().readableBytes();
 		}

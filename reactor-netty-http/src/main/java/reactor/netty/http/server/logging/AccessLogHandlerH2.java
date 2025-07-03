@@ -77,7 +77,7 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops instanceof HttpServerInfos) {
-				super.applyServerInfos(accessLogArgProvider, (HttpServerInfos) ops);
+				applyServerInfos(accessLogArgProvider, (HttpServerInfos) ops);
 			}
 		}
 		if (msg instanceof Http2DataFrame) {

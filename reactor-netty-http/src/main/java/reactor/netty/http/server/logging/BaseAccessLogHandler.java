@@ -52,7 +52,7 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 		return socketAddress instanceof InetSocketAddress ? ((InetSocketAddress) socketAddress).getHostString() : MISSING;
 	}
 
-	final <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
+	static <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
 		accessLogArgs.cookies(serverInfos.cookies());
 		accessLogArgs.connectionInformation(serverInfos);
 	}

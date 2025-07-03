@@ -65,7 +65,7 @@ class TransportTest {
 			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset()), LogLevel.DEBUG);
 	}
 
-	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, ByteBufFormat expectedFormat) {
+	private static void doTestWiretap(TestTransport transport, LogLevel expectedLevel, ByteBufFormat expectedFormat) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
 		assertThat(loggingHandler).isNotNull();
@@ -73,7 +73,7 @@ class TransportTest {
 		assertThat(loggingHandler.byteBufFormat()).isSameAs(expectedFormat);
 	}
 
-	private void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
+	private static void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
 		assertThat(loggingHandler).isNotNull().hasFieldOrProperty("charset");

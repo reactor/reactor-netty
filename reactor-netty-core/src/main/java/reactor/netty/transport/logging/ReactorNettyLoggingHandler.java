@@ -167,7 +167,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 				.toString();
 	}
 
-	private String channelString(Channel channel) {
+	private static String channelString(Channel channel) {
 		String channelStr;
 		StringBuilder result;
 		Connection connection = Connection.from(channel);
@@ -299,7 +299,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		}
 	}
 
-	private String formatSimple(ChannelHandlerContext ctx, String eventName, Object msg) {
+	private static String formatSimple(ChannelHandlerContext ctx, String eventName, Object msg) {
 		String chStr = channelString(ctx.channel());
 		String msgStr = String.valueOf(msg);
 		return new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + msgStr.length())

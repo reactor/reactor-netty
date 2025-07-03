@@ -139,7 +139,7 @@ class QuicClientSmokeTests extends BaseQuicTests {
 		doTestClientOpensStream(quicClient, Mono.just(METHOD + ERROR_PATH_1 + "\r\n"), EMPTY_RESPONSE);
 	}
 
-	private void doTestClientOpensStream(QuicConnection client, Publisher<String> body, String expectation)
+	private static void doTestClientOpensStream(QuicConnection client, Publisher<String> body, String expectation)
 			throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		AtomicReference<String> response = new AtomicReference<>("");

@@ -291,7 +291,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		}
 	}
 
-	private void doTestAbsoluteAndRelativeLocationRedirection(
+	private static void doTestAbsoluteAndRelativeLocationRedirection(
 			HttpClient client, String uri, String expectedResponse, boolean expectRedirect, String... expectedResourceUrl) {
 		AtomicBoolean redirected = new AtomicBoolean();
 		AtomicReference<List<@Nullable String>> resourceUrls = new AtomicReference<>(new ArrayList<>());

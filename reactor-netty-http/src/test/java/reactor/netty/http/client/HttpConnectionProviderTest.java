@@ -118,7 +118,7 @@ class HttpConnectionProviderTest {
 		testReturnOriginalConnectionProvider(HttpClient.create(provider), provider);
 	}
 
-	private void testReturnOriginalConnectionProvider(HttpClient httpClient, @Nullable ConnectionProvider originalProvider) {
+	private static void testReturnOriginalConnectionProvider(HttpClient httpClient, @Nullable ConnectionProvider originalProvider) {
 		ConnectionProvider provider = httpClient.configuration().connectionProvider();
 		try {
 			assertThat(provider).isSameAs(originalProvider != null ? originalProvider : HttpResources.get());
