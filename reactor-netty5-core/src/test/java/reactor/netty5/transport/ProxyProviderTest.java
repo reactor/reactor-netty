@@ -88,7 +88,7 @@ class ProxyProviderTest {
 		assertThat(provider.connectTimeoutMillis).isEqualTo(10000);
 	}
 
-	private SocketAddress someAddress(String host) {
+	private static SocketAddress someAddress(String host) {
 		return new InetSocketAddress(host, 8080);
 	}
 
@@ -309,7 +309,7 @@ class ProxyProviderTest {
 				.withMessage("only socks versions 4 and 5 supported but got 42");
 	}
 
-	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
+	private static ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
 		                    .socketAddress(address)
@@ -319,7 +319,7 @@ class ProxyProviderTest {
 		                    .build();
 	}
 
-	private ProxyProvider createNoAuthProxy(InetSocketAddress address) {
+	private static ProxyProvider createNoAuthProxy(InetSocketAddress address) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
 		                    .socketAddress(address)
@@ -327,7 +327,7 @@ class ProxyProviderTest {
 		                    .build();
 	}
 
-	private ProxyProvider createConnectTimeoutProxy(long connectTimeoutMillis) {
+	private static ProxyProvider createConnectTimeoutProxy(long connectTimeoutMillis) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
 		                    .socketAddress(ADDRESS_1)
@@ -335,7 +335,7 @@ class ProxyProviderTest {
 		                    .build();
 	}
 
-	private ProxyProvider createNonProxyHostsProxy(String nonProxyHosts) {
+	private static ProxyProvider createNonProxyHostsProxy(String nonProxyHosts) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.HTTP)
 		                    .socketAddress(ADDRESS_1)

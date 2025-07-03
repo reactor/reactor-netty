@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,7 +137,7 @@ class BufferFluxTest {
 		doTestFromString(Mono.just("123"));
 	}
 
-	private void doTestFromString(Publisher<? extends String> source) {
+	private static void doTestFromString(Publisher<? extends String> source) {
 		StepVerifier.create(BufferFlux.fromString(source))
 				.expectNextMatches(b -> {
 					String result = b.toString(Charset.defaultCharset());

@@ -245,7 +245,7 @@ class ClientTransportTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void doTestHostsFileEntriesResolver(boolean customResolver) throws Exception {
+	private static void doTestHostsFileEntriesResolver(boolean customResolver) throws Exception {
 		LoopResources loop1 = LoopResources.create("test", 1, true);
 		EventLoopGroup loop2 = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 		ConnectionProvider provider = ConnectionProvider.create("test");

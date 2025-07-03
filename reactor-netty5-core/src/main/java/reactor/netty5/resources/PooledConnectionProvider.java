@@ -347,11 +347,11 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	protected void registerDefaultMetrics(String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
-		MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE.registerMetrics(name, id, remoteAddress, metrics);
+		MicrometerPooledConnectionProviderMeterRegistrar.registerMetrics(name, id, remoteAddress, metrics);
 	}
 
 	protected void deRegisterDefaultMetrics(String id, SocketAddress remoteAddress) {
-		MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE.deRegisterMetrics(name, id, remoteAddress);
+		MicrometerPooledConnectionProviderMeterRegistrar.deRegisterMetrics(name, id, remoteAddress);
 	}
 
 	Mono<Void> deRegisterDefaultMetrics(String id, PoolMetricsRecorder recorder, @Nullable Supplier<? extends MeterRegistrar> registrar, SocketAddress remoteAddress) {
@@ -368,7 +368,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		});
 	}
 
-	final boolean compareAddresses(SocketAddress origin, SocketAddress target) {
+	static boolean compareAddresses(SocketAddress origin, SocketAddress target) {
 		if (origin.equals(target)) {
 			return true;
 		}

@@ -122,7 +122,7 @@ class DefaultLoopResourcesTest {
 		testClientTransportWarmup(false);
 	}
 
-	private void testClientTransportWarmup(boolean preferNative) throws Exception {
+	private static void testClientTransportWarmup(boolean preferNative) throws Exception {
 		final DefaultLoopResources loop1 =
 				(DefaultLoopResources) LoopResources.create("testClientTransportWarmup", 1, true);
 		final EventLoopGroup loop2 = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
@@ -165,7 +165,7 @@ class DefaultLoopResourcesTest {
 		testServerTransportWarmup(false);
 	}
 
-	private void testServerTransportWarmup(boolean preferNative) {
+	private static void testServerTransportWarmup(boolean preferNative) {
 		final DefaultLoopResources loop =
 				(DefaultLoopResources) LoopResources.create("testServerTransportWarmup", 1, true);
 		try {

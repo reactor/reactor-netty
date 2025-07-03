@@ -211,7 +211,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		startWrite(request, ctx.channel(), remoteAddress);
 	}
 
-	private long extractProcessedDataFromBuffer(Object msg) {
+	private static long extractProcessedDataFromBuffer(Object msg) {
 		if (msg instanceof Buffer buffer) {
 			return buffer.readableBytes();
 		}

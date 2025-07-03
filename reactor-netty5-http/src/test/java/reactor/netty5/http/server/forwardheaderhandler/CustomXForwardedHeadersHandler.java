@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,6 @@ import static reactor.netty5.http.server.ConnectionInfo.getDefaultHostPort;
  */
 public final class CustomXForwardedHeadersHandler {
 
-	public static final CustomXForwardedHeadersHandler INSTANCE = new CustomXForwardedHeadersHandler();
-
 	static final String X_FORWARDED_IP_HEADER = "X-Forwarded-For";
 	static final String X_FORWARDED_HOST_HEADER = "X-Forwarded-Host";
 	static final String X_FORWARDED_PORT_HEADER = "X-Forwarded-Port";
@@ -41,11 +39,11 @@ public final class CustomXForwardedHeadersHandler {
 	private CustomXForwardedHeadersHandler() {
 	}
 
-	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
+	public static ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
 		return parseXForwardedInfo(connectionInfo, request);
 	}
 
-	private ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
+	private static ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
 		CharSequence ipHeader = request.headers().get(X_FORWARDED_IP_HEADER);
 		if (ipHeader != null) {
 			connectionInfo = connectionInfo.withRemoteAddress(

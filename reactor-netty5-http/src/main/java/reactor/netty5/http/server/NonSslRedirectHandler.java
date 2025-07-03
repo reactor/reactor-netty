@@ -65,7 +65,7 @@ final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 		}
 	}
 
-	private @Nullable String getRequestedUrlInHttps(HttpRequest request) {
+	private static @Nullable String getRequestedUrlInHttps(HttpRequest request) {
 		String uri = request.uri();
 		boolean isAbsoluteUri = uri.startsWith(HTTP_PROTOCOL);
 		if (isAbsoluteUri) {

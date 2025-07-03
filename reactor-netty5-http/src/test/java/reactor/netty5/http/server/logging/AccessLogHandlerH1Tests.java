@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ class AccessLogHandlerH1Tests extends BaseHttpTest {
 	}
 
 	@SuppressWarnings("deprecation")
-	private void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress, boolean chunked) {
+	private static void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress, boolean chunked) {
 		assertThat(args.remoteAddress()).isEqualTo(remoteAddress);
 		assertThat(args.user()).isEqualTo(AbstractAccessLogArgProvider.MISSING);
 		assertThat(args.accessDateTime()).isNotNull();

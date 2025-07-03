@@ -94,7 +94,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	static @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> getForwardedHandler(boolean useCustomForwardedHandler) {
-		return useCustomForwardedHandler ? CustomXForwardedHeadersHandler.INSTANCE::apply : null;
+		return useCustomForwardedHandler ? CustomXForwardedHeadersHandler::apply : null;
 	}
 
 	@Test

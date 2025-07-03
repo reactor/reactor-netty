@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ class JarFileShadingTest extends AbstractJarFileTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private ListAssert<String> assertThatFileList(Stream<Path> path) {
+	private static ListAssert<String> assertThatFileList(Stream<Path> path) {
 		return (ListAssert) assertThat(path)
 				.extracting(Path::getFileName)
 				.extracting(Path::toString)

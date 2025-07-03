@@ -1419,7 +1419,7 @@ class HttpClientTest extends BaseHttpTest {
 		};
 	}
 
-	private void doWithConnector_2(Publisher<String> content, String expectation) {
+	private static void doWithConnector_2(Publisher<String> content, String expectation) {
 		StepVerifier.create(content)
 		            .expectNext(expectation)
 		            .expectComplete()
@@ -1522,7 +1522,7 @@ class HttpClientTest extends BaseHttpTest {
 		doTestRetry(true, false);
 	}
 
-	private void doTestRetry(boolean retryDisabled, boolean expectRetry) throws Exception {
+	private static void doTestRetry(boolean retryDisabled, boolean expectRetry) throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 		int serverPort = SocketUtils.findAvailableTcpPort();
 		ConnectionResetByPeerServer server = new ConnectionResetByPeerServer(serverPort);
@@ -1986,7 +1986,7 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(allowPartialChunks).as("allow partial chunks").isFalse();
 	}
 
-	private Object getValueReflection(Object obj, String fieldName, int superLevel) {
+	private static Object getValueReflection(Object obj, String fieldName, int superLevel) {
 		try {
 			Field field;
 			if (superLevel == 1) {
@@ -2197,7 +2197,7 @@ class HttpClientTest extends BaseHttpTest {
 		doTestIssue777_1(client, "/test", "Test", receiver);
 	}
 
-	private void doTestIssue777_1(HttpClient client, String uri, String expectation,
+	private static void doTestIssue777_1(HttpClient client, String uri, String expectation,
 			BiFunction<? super HttpClientResponse, ? super BufferMono, ? extends Mono<String>> receiver) {
 		StepVerifier.create(
 		        client.post()
@@ -2208,7 +2208,7 @@ class HttpClientTest extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
-	private void doTestIssue777_2(HttpClient client, String uri, String expectation,
+	private static void doTestIssue777_2(HttpClient client, String uri, String expectation,
 			BiFunction<? super HttpClientResponse, ? super BufferMono, ? extends Mono<Tuple2<String, HttpClientResponse>>> receiver) {
 		StepVerifier.create(
 		        client.post()
@@ -2805,7 +2805,7 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(onResponseError.get()).isNull();
 	}
 
-	private void checkExpectationsIssue1031(HttpClientInfos info, String expectedUri, int expectedRedirections,
+	private static void checkExpectationsIssue1031(HttpClientInfos info, String expectedUri, int expectedRedirections,
 			String expectedResourceUri, @Nullable String expectedLocation) {
 		assertThat(info).isNotNull();
 		assertThat(info.method()).isEqualTo(HttpMethod.GET);
@@ -3108,7 +3108,7 @@ class HttpClientTest extends BaseHttpTest {
 		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.H2C), null);
 	}
 
-	private void doTestProtocolsAndDefaultSslProviderAvailability(HttpClient client, @Nullable SslProvider sslProvider) {
+	private static void doTestProtocolsAndDefaultSslProviderAvailability(HttpClient client, @Nullable SslProvider sslProvider) {
 		assertThat(client.configuration().sslProvider()).isSameAs(sslProvider);
 	}
 
@@ -3311,7 +3311,7 @@ class HttpClientTest extends BaseHttpTest {
 		doTestIssue1697(client.responseTimeout(null), false, onRequest, onResponse, onDisconnected);
 	}
 
-	private void doTestIssue1697(HttpClient client, boolean hasTimeout, AtomicBoolean onRequest,
+	private static void doTestIssue1697(HttpClient client, boolean hasTimeout, AtomicBoolean onRequest,
 			AtomicBoolean onResponse, AtomicBoolean onDisconnected) {
 		String response =
 				client.post()

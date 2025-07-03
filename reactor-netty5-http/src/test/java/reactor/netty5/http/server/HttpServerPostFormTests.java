@@ -360,7 +360,7 @@ class HttpServerPostFormTests extends BaseHttpTest {
 		assertThat(throwable).isNull();
 	}
 
-	private void testContent(CompositeBuffer file, byte[] expectedBytes) {
+	private static void testContent(CompositeBuffer file, byte[] expectedBytes) {
 		byte[] fileBytes = new byte[file.readableBytes()];
 		file.readBytes(fileBytes, 0, file.readableBytes());
 		assertThat(fileBytes).isEqualTo(expectedBytes);

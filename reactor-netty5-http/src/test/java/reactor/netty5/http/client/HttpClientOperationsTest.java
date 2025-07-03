@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -164,7 +164,7 @@ class HttpClientOperationsTest {
 		doTestStatus(new HttpResponseStatus(200, "Some custom reason phrase for 200 status code"));
 	}
 
-	private void doTestStatus(HttpResponseStatus status) {
+	private static void doTestStatus(HttpResponseStatus status) {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
 				ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE);

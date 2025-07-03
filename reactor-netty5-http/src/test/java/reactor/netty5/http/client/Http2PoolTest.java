@@ -253,7 +253,7 @@ class Http2PoolTest {
 		evictClosedConnectionMaxConnectionsNotReached(true);
 	}
 
-	private void evictClosedConnectionMaxConnectionsNotReached(boolean closeSecond) throws Exception {
+	private static void evictClosedConnectionMaxConnectionsNotReached(boolean closeSecond) throws Exception {
 		Channel channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build(),
 				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
 		AtomicReference<Channel> channelRef = new AtomicReference<>(channel);
@@ -1111,7 +1111,7 @@ class Http2PoolTest {
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 	}
 
-	private void doMaxLifeTimeMaxConnectionsReached(@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer)
+	private static void doMaxLifeTimeMaxConnectionsReached(@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer)
 			throws Exception {
 		Channel channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
 		AtomicReference<Channel> channelRef = new AtomicReference<>(channel);

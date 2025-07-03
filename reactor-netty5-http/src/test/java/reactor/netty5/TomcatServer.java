@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ public class TomcatServer {
 		addServlet(ctx, servlet, mapping);
 	}
 
-	private Wrapper addServlet(Context ctx, HttpServlet servlet, String mapping) {
+	private static Wrapper addServlet(Context ctx, HttpServlet servlet, String mapping) {
 		String servletName = servlet.getClass().getName();
 		Wrapper wrapper = Tomcat.addServlet(ctx, servletName, servlet);
 		ctx.addServletMappingDecoded(mapping, servletName);
@@ -218,7 +218,7 @@ public class TomcatServer {
 			sendResponse(resp, String.valueOf(count), HttpServletResponse.SC_OK);
 		}
 
-		private void sendResponse(HttpServletResponse resp, String message, int status) throws IOException {
+		private static void sendResponse(HttpServletResponse resp, String message, int status) throws IOException {
 			resp.setStatus(status);
 			resp.setHeader("Content-Length", String.valueOf(message.length()));
 			resp.setHeader("Content-Type", "text/plain");

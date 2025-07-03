@@ -219,7 +219,7 @@ public final class HttpServerFormDecoderProvider {
 		return result;
 	}
 
-	Mono<Path> createDefaultTempDirectory() {
+	static Mono<Path> createDefaultTempDirectory() {
 		return Mono.fromCallable(() -> Files.createTempDirectory(DEFAULT_TEMP_DIRECTORY_PREFIX))
 		           .cache();
 	}

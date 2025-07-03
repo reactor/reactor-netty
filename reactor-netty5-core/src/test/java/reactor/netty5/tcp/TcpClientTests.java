@@ -322,7 +322,7 @@ public class TcpClientTests {
 				         .doOnConnected(channelInit));
 	}
 
-	private void tcpClientHandlesLineFeedData(TcpClient client) throws InterruptedException {
+	private static void tcpClientHandlesLineFeedData(TcpClient client) throws InterruptedException {
 		final int messages = 100;
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<>();
@@ -369,7 +369,7 @@ public class TcpClientTests {
 	}
 
 	/*Check in details*/
-	private void connectionWillRetryConnectionAttemptWhenItFails(TcpClient client) throws InterruptedException {
+	private static void connectionWillRetryConnectionAttemptWhenItFails(TcpClient client) throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
 
@@ -801,7 +801,7 @@ public class TcpClientTests {
 		doTestIssue600(false);
 	}
 
-	private void doTestIssue600(boolean withLoop) {
+	private static void doTestIssue600(boolean withLoop) {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -909,7 +909,7 @@ public class TcpClientTests {
 		server.disposeNow();
 	}
 
-	private void connect(TcpClient  client, boolean reconnect, CountDownLatch latch) {
+	private static void connect(TcpClient client, boolean reconnect, CountDownLatch latch) {
 		client.connect()
 		      .subscribe(
 		          conn -> {
@@ -1035,7 +1035,7 @@ public class TcpClientTests {
 		conn.disposeNow();
 	}
 
-	private void checkReference(WeakReference<@Nullable Buffer> ref) throws Exception {
+	private static void checkReference(WeakReference<@Nullable Buffer> ref) throws Exception {
 		for (int i = 0; i < 10; i++) {
 			if (ref.get() == null) {
 				return;
@@ -1174,7 +1174,7 @@ public class TcpClientTests {
 		doTestSharedNameResolver(TcpClient.newConnection(), false);
 	}
 
-	private void doTestSharedNameResolver(TcpClient client, boolean sharedClient) throws InterruptedException {
+	private static void doTestSharedNameResolver(TcpClient client, boolean sharedClient) throws InterruptedException {
 		DisposableServer disposableServer =
 				TcpServer.create()
 				         .port(0)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -296,7 +296,7 @@ public final class SocketUtils {
 		 *
 		 * @return a random port number within the specified range
 		 */
-		private int findRandomPort(int minPort, int maxPort) {
+		private static int findRandomPort(int minPort, int maxPort) {
 			int portRange = maxPort - minPort;
 			return minPort + random.nextInt(portRange);
 		}

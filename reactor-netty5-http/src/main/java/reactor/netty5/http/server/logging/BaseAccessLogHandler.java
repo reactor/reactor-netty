@@ -53,7 +53,7 @@ class BaseAccessLogHandler extends ChannelHandlerAdapter {
 		return socketAddress instanceof InetSocketAddress inetSocketAddress ? inetSocketAddress.getHostString() : MISSING;
 	}
 
-	final <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
+	static <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
 		accessLogArgs.cookies(serverInfos.cookies());
 		accessLogArgs.connectionInformation(serverInfos);
 	}

@@ -133,7 +133,7 @@ class HttpClientWithTomcatTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void doTestPostUpload(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
+	private static void doTestPostUpload(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
 			String expectedResponse) throws Exception {
 		HttpClient client =
 				HttpClient.create()
@@ -176,7 +176,7 @@ class HttpClientWithTomcatTest {
 		pool.dispose();
 	}
 
-	private void doSimpleTest404(HttpClient client) {
+	private static void doSimpleTest404(HttpClient client) {
 		Integer res = client.followRedirect(true)
 		                    .get()
 		                    .uri("/status/404")
@@ -371,11 +371,11 @@ class HttpClientWithTomcatTest {
 		}
 	}
 
-	private int getPort() {
+	private static int getPort() {
 		return tomcat.port();
 	}
 
-	private String getURL() {
+	private static String getURL() {
 		return "http://localhost:" + tomcat.port();
 	}
 

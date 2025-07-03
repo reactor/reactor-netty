@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,13 +34,10 @@ import static reactor.netty5.Metrics.formatSocketAddress;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 
-	static final MicrometerHttp2ConnectionProviderMeterRegistrar INSTANCE =
-			new MicrometerHttp2ConnectionProviderMeterRegistrar();
-
 	private MicrometerHttp2ConnectionProviderMeterRegistrar() {
 	}
 
-	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
+	static void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
 		String addressAsString = formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), addressAsString, NAME.asString(), poolName);
 
@@ -61,7 +58,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 		     .register(REGISTRY);
 	}
 
-	void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
+	static void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 		String addressAsString = formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), addressAsString, NAME.asString(), poolName);
 
