@@ -70,7 +70,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		return parseXForwardedInfo(connectionInfo, request);
 	}
 
-	private ConnectionInfo parseForwardedInfo(ConnectionInfo connectionInfo, String forwardedHeader) {
+	private static ConnectionInfo parseForwardedInfo(ConnectionInfo connectionInfo, String forwardedHeader) {
 		String forwarded = forwardedHeader.split(",", 2)[0];
 		Matcher protoMatcher = FORWARDED_PROTO_PATTERN.matcher(forwarded);
 		if (protoMatcher.find()) {
@@ -91,7 +91,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		return connectionInfo;
 	}
 
-	private ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
+	private static ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
 		String ipHeader = request.headers().get(X_FORWARDED_IP_HEADER);
 		if (ipHeader != null) {
 			connectionInfo = connectionInfo.withRemoteAddress(

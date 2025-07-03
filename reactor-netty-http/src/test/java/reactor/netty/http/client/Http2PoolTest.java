@@ -243,7 +243,7 @@ class Http2PoolTest {
 		evictClosedConnectionMaxConnectionsNotReached(true);
 	}
 
-	private void evictClosedConnectionMaxConnectionsNotReached(boolean closeSecond) throws Exception {
+	private static void evictClosedConnectionMaxConnectionsNotReached(boolean closeSecond) throws Exception {
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.fromSupplier(() -> {
 				               Channel channel = new EmbeddedChannel(
@@ -1041,7 +1041,7 @@ class Http2PoolTest {
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 	}
 
-	private void doMaxLifeTimeMaxConnectionsReached(@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer)
+	private static void doMaxLifeTimeMaxConnectionsReached(@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer)
 			throws Exception {
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.fromSupplier(() -> {

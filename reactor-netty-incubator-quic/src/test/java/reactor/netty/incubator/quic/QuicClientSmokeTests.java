@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -139,7 +139,7 @@ class QuicClientSmokeTests extends BaseQuicTests {
 		doTestClientOpensStream(quicClient, Mono.just(METHOD + ERROR_PATH_1 + "\r\n"), EMPTY_RESPONSE);
 	}
 
-	private void doTestClientOpensStream(QuicConnection client, Publisher<String> body, String expectation)
+	private static void doTestClientOpensStream(QuicConnection client, Publisher<String> body, String expectation)
 			throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		AtomicReference<String> response = new AtomicReference<>("");

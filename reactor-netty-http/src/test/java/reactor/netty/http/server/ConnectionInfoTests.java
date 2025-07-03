@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 
 	@Nullable
 	static BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> getForwardedHandler(boolean useCustomForwardedHandler) {
-		return useCustomForwardedHandler ? CustomXForwardedHeadersHandler.INSTANCE::apply : null;
+		return useCustomForwardedHandler ? CustomXForwardedHeadersHandler::apply : null;
 	}
 
 	@Test

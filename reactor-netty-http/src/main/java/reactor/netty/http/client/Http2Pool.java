@@ -617,7 +617,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		return poolConfig.evictionPredicate().test(slot.connection, slot);
 	}
 
-	void pendingAcquireLimitReached(Borrower borrower, int maxPending) {
+	static void pendingAcquireLimitReached(Borrower borrower, int maxPending) {
 		if (maxPending == 0) {
 			borrower.fail(new PoolAcquirePendingLimitException(0,
 					"No pending allowed and pool has reached allocation limit"));

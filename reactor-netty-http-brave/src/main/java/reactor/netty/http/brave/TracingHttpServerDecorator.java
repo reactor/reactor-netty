@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -298,7 +298,7 @@ final class TracingHttpServerDecorator {
 			this.throwable = t;
 		}
 
-		void cleanup(Channel channel) {
+		static void cleanup(Channel channel) {
 			EventLoop eventLoop = channel.eventLoop();
 			if (eventLoop.inEventLoop()) {
 				channel.attr(REQUEST_ATTR_KEY).set(null);

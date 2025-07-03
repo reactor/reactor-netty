@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -172,11 +172,11 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 		testSpanHandler.takeRemoteSpanWithErrorMessage(CLIENT, "not ready");
 	}
 
-	void execute(HttpClient client, HttpMethod method, String pathIncludingQuery) {
+	static void execute(HttpClient client, HttpMethod method, String pathIncludingQuery) {
 		execute(client, method, pathIncludingQuery, null);
 	}
 
-	void execute(HttpClient client, HttpMethod method, String pathIncludingQuery, @Nullable String body) {
+	static void execute(HttpClient client, HttpMethod method, String pathIncludingQuery, @Nullable String body) {
 		client.request(method)
 		      .uri(pathIncludingQuery.isEmpty() ? "/" : pathIncludingQuery)
 		      .send((req, out) -> {

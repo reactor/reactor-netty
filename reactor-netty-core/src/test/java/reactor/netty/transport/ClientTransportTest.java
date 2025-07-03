@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -262,7 +262,7 @@ class ClientTransportTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void doTestHostsFileEntriesResolver(boolean customResolver) throws Exception {
+	private static void doTestHostsFileEntriesResolver(boolean customResolver) throws Exception {
 		LoopResources loop1 = LoopResources.create("test", 1, true);
 		EventLoopGroup loop2 = new NioEventLoopGroup(1);
 		ConnectionProvider provider = ConnectionProvider.create("test");

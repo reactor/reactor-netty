@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 		return socketAddress instanceof InetSocketAddress ? ((InetSocketAddress) socketAddress).getHostString() : MISSING;
 	}
 
-	final <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
+	static <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
 		accessLogArgs.cookies(serverInfos.cookies());
 		accessLogArgs.connectionInformation(serverInfos);
 	}

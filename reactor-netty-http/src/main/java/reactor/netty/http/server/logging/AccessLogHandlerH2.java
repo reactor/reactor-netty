@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops instanceof HttpServerInfos) {
-				super.applyServerInfos(accessLogArgProvider, (HttpServerInfos) ops);
+				applyServerInfos(accessLogArgProvider, (HttpServerInfos) ops);
 			}
 		}
 		if (msg instanceof Http2DataFrame) {

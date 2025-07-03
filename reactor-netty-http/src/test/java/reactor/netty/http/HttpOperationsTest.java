@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,7 +133,7 @@ class HttpOperationsTest {
 				Flux.just("", "/", "//", "///", "/a", "/a/", "/?b", "/a?b", "/#b", "/a#b", "/a?b#c", "/a%20b", "/a?b={}"));
 	}
 
-	private void doTestPath(TestHttpInfos infos, Flux<String> expectations, Flux<String> uris) {
+	private static void doTestPath(TestHttpInfos infos, Flux<String> expectations, Flux<String> uris) {
 		uris.zipWith(expectations)
 		            .doOnNext(tuple -> {
 		                infos.uri = tuple.getT1();

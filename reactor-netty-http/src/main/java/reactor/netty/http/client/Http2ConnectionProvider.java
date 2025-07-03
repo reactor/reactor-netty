@@ -155,13 +155,13 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	@Override
 	protected void registerDefaultMetrics(String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
-		MicrometerHttp2ConnectionProviderMeterRegistrar.INSTANCE
+		MicrometerHttp2ConnectionProviderMeterRegistrar
 				.registerMetrics(name(), id, remoteAddress, metrics);
 	}
 
 	@Override
 	protected void deRegisterDefaultMetrics(String id, SocketAddress remoteAddress) {
-		MicrometerHttp2ConnectionProviderMeterRegistrar.INSTANCE
+		MicrometerHttp2ConnectionProviderMeterRegistrar
 				.deRegisterMetrics(name(), id, remoteAddress);
 	}
 
@@ -226,7 +226,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			owner(connection.channel()).onStateChange(connection, newState);
 		}
 
-		ConnectionObserver owner(Channel channel) {
+		static ConnectionObserver owner(Channel channel) {
 			ConnectionObserver obs;
 
 			for (;;) {

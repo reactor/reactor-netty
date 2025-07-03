@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ class HttpConnectionProviderTest {
 		testReturnOriginalConnectionProvider(HttpClient.create(provider), provider);
 	}
 
-	private void testReturnOriginalConnectionProvider(HttpClient httpClient, @Nullable ConnectionProvider originalProvider) {
+	private static void testReturnOriginalConnectionProvider(HttpClient httpClient, @Nullable ConnectionProvider originalProvider) {
 		ConnectionProvider provider = httpClient.configuration().connectionProvider();
 		try {
 			assertThat(provider).isSameAs(originalProvider != null ? originalProvider : HttpResources.get());

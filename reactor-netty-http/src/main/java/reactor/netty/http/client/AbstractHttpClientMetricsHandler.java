@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -196,7 +196,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		startWrite(request, ctx.channel(), remoteAddress);
 	}
 
-	private long extractProcessedDataFromBuffer(Object msg) {
+	private static long extractProcessedDataFromBuffer(Object msg) {
 		if (msg instanceof ByteBufHolder) {
 			return ((ByteBufHolder) msg).content().readableBytes();
 		}

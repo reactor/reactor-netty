@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -318,7 +318,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			}
 		}
 
-		void registerClose(PooledRef<PooledConnection> pooledRef, InstrumentedPool<PooledConnection> pool) {
+		static void registerClose(PooledRef<PooledConnection> pooledRef, InstrumentedPool<PooledConnection> pool) {
 			Channel channel = pooledRef.poolable().channel;
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "Registering pool release on close event for channel"));

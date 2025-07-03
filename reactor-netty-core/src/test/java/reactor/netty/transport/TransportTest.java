@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,14 +65,14 @@ class TransportTest {
 			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset()), LogLevel.DEBUG);
 	}
 
-	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, ByteBufFormat expectedFormat) {
+	private static void doTestWiretap(TestTransport transport, LogLevel expectedLevel, ByteBufFormat expectedFormat) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
 		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
 		assertThat(loggingHandler.byteBufFormat()).isSameAs(expectedFormat);
 	}
 
-	private void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
+	private static void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
 		assertThat(loggingHandler).hasFieldOrProperty("charset");

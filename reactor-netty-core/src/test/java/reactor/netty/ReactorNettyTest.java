@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ class ReactorNettyTest {
 				InetSocketAddress.createUnresolved("127.0.0.1", 9090)));
 	}
 
-	private void doTestFormatChannel(TestChannel channel) {
+	private static void doTestFormatChannel(TestChannel channel) {
 		channel.active = true;
 		String channelStr = channel.toString();
 		assertThat(ReactorNetty.format(channel, "testFormatWithChannel"))

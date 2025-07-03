@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ class DefaultLoopResourcesTest {
 		testClientTransportWarmup(false);
 	}
 
-	private void testClientTransportWarmup(boolean preferNative) throws Exception {
+	private static void testClientTransportWarmup(boolean preferNative) throws Exception {
 		final DefaultLoopResources loop1 =
 				(DefaultLoopResources) LoopResources.create("testClientTransportWarmup", 1, true);
 		final EventLoopGroup loop2 = new NioEventLoopGroup(1);
@@ -163,7 +163,7 @@ class DefaultLoopResourcesTest {
 		testServerTransportWarmup(false);
 	}
 
-	private void testServerTransportWarmup(boolean preferNative) {
+	private static void testServerTransportWarmup(boolean preferNative) {
 		final DefaultLoopResources loop =
 				(DefaultLoopResources) LoopResources.create("testServerTransportWarmup", 1, true);
 		try {
