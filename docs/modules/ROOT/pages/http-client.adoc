@@ -779,7 +779,7 @@ include::{examples-dir}/resolver/Application.java[lines=18..39]
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
 
 [[http-client-spnego]]
-=== SPNEGO (Kerberos) Authentication
+== SPNEGO Authentication
 Reactor Netty HttpClient supports SPNEGO (Kerberos) authentication, which is widely used in enterprise environments.
 SPNEGO (Simple and Protected GSSAPI Negotiation Mechanism) provides secure authentication over HTTP using Kerberos.
 
@@ -800,7 +800,7 @@ include::{examples-dir}/spnego/Application.java[lines=18..39]
 <2> Configures the `krb5.conf`. krb5.conf is a Kerberos client configuration file used to define how the client locates and communicates with the Kerberos Key Distribution Center (KDC) for authentication.
 <3> Configures the SPNEGO jaas.conf. A JVM system property that enables detailed debug logging for Kerberos operations in Java.
 <4> `JaasAuthenticator` performs Kerberos authentication using a JAAS configuration (jaas.conf).
-<5> `SpnegoAuthProvider` generates a SPNEGO token from the Kerberos ticket and automatically adds the `Authorization: Negotiate ...` header to HTTP requests.
+<5> `SpnegoAuthProvider` generates a SPNEGO token from the Kerberos ticket and automatically adds the `Authorization: Negotiate ...` header to HTTP requests. If the server responds with `401 Unauthorized` and includes `WWW-Authenticate: Negotiate`, the client will automatically reauthenticate and retry the request once.
 
 ==== Environment Configuration
 ===== Example JAAS Configuration

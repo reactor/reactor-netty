@@ -16,14 +16,14 @@
 package reactor.netty.http.client;
 
 /**
- * Exception thrown when SPNEGO authentication fails.
+ * Exception thrown to trigger a retry when SPNEGO authentication fails with a 401 Unauthorized response.
  *
  * @author raccoonback
  * @since 1.3.0
  */
-public class SpnegoAuthenticationException extends RuntimeException {
+final class SpnegoRetryException extends RuntimeException {
 
-	public SpnegoAuthenticationException(String message, Throwable cause) {
-		super(message, cause);
+	SpnegoRetryException() {
+		super("SPNEGO authentication requires retry");
 	}
 }
