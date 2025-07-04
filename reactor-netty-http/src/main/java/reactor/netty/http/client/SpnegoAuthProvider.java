@@ -21,7 +21,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginException;
 import org.ietf.jgss.GSSContext;
@@ -30,6 +33,8 @@ import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import reactor.core.publisher.Mono;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * Provides SPNEGO authentication for Reactor Netty HttpClient.
@@ -50,6 +55,7 @@ import reactor.core.publisher.Mono;
  */
 public final class SpnegoAuthProvider {
 
+	private static final Logger log = Loggers.getLogger(SpnegoAuthProvider.class);
 	private static final String SPNEGO_HEADER = "Negotiate";
 	private static final String STR_OID = "1.3.6.1.5.5.2";
 
@@ -57,7 +63,9 @@ public final class SpnegoAuthProvider {
 	private final GSSManager gssManager;
 	private final int unauthorizedStatusCode;
 
-	private volatile String verifiedAuthHeader;
+	private final AtomicReference<String> verifiedAuthHeader = new AtomicReference<>();
+	private final AtomicInteger retryCount = new AtomicInteger(0);
+	private static final int MAX_RETRY_COUNT = 1;
 
 	/**
 	 * Constructs a new SpnegoAuthProvider with the given authenticator and GSSManager.
@@ -110,8 +118,9 @@ public final class SpnegoAuthProvider {
 	 * @throws SpnegoAuthenticationException if login or token generation fails
 	 */
 	public Mono<Void> apply(HttpClientRequest request, InetSocketAddress address) {
-		if (verifiedAuthHeader != null) {
-			request.header(HttpHeaderNames.AUTHORIZATION, verifiedAuthHeader);
+		String cachedToken = verifiedAuthHeader.get();
+		if (cachedToken != null) {
+			request.header(HttpHeaderNames.AUTHORIZATION, cachedToken);
 			return Mono.empty();
 		}
 
@@ -124,7 +133,7 @@ public final class SpnegoAuthProvider {
 								byte[] token = generateSpnegoToken(address.getHostName());
 								String authHeader = SPNEGO_HEADER + " " + Base64.getEncoder().encodeToString(token);
 
-								verifiedAuthHeader = authHeader;
+								verifiedAuthHeader.set(authHeader);
 								request.header(HttpHeaderNames.AUTHORIZATION, authHeader);
 								return token;
 							}
@@ -154,27 +163,61 @@ public final class SpnegoAuthProvider {
 	 * @throws GSSException if token generation fails
 	 */
 	private byte[] generateSpnegoToken(String hostName) throws GSSException {
-		GSSName serverName = gssManager.createName("HTTP/" + hostName, GSSName.NT_HOSTBASED_SERVICE);
+		if (hostName == null || hostName.trim().isEmpty()) {
+			throw new IllegalArgumentException("Host name cannot be null or empty");
+		}
+
+		GSSName serverName = gssManager.createName("HTTP/" + hostName.trim(), GSSName.NT_HOSTBASED_SERVICE);
 		Oid spnegoOid = new Oid(STR_OID); // SPNEGO OID
 
-		GSSContext context = gssManager.createContext(serverName, spnegoOid, null, GSSContext.DEFAULT_LIFETIME);
+		GSSContext context = null;
 		try {
+			context = gssManager.createContext(serverName, spnegoOid, null, GSSContext.DEFAULT_LIFETIME);
 			return context.initSecContext(new byte[0], 0, 0);
-		} finally {
-			context.dispose();
+		}
+		finally {
+			if (context != null) {
+				try {
+					context.dispose();
+				}
+				catch (GSSException e) {
+					// Log but don't propagate disposal errors
+					if (log.isDebugEnabled()) {
+						log.debug("Failed to dispose GSSContext", e);
+					}
+				}
+			}
 		}
 	}
 
 	/**
 	 * Invalidates the cached authentication token.
-	 * <p>
-	 * This method should be called when a response indicates that the current token
-	 * is no longer valid (typically after receiving an unauthorized status code).
-	 * The next request will generate a new authentication token.
-	 * </p>
 	 */
-	public void invalidateCache() {
-		this.verifiedAuthHeader = null;
+	public void invalidateTokenHeader() {
+		this.verifiedAuthHeader.set(null);
+	}
+
+	/**
+	 * Checks if SPNEGO authentication retry is allowed.
+	 *
+	 * @return true if retry is allowed, false otherwise
+	 */
+	public boolean canRetry() {
+		return retryCount.get() < MAX_RETRY_COUNT;
+	}
+
+	/**
+	 * Increments the retry count for SPNEGO authentication attempts.
+	 */
+	public void incrementRetryCount() {
+		retryCount.incrementAndGet();
+	}
+
+	/**
+	 * Resets the retry count for SPNEGO authentication.
+	 */
+	public void resetRetryCount() {
+		retryCount.set(0);
 	}
 
 	/**
@@ -194,6 +237,13 @@ public final class SpnegoAuthProvider {
 		}
 
 		String header = headers.get(HttpHeaderNames.WWW_AUTHENTICATE);
-		return header != null && header.startsWith(SPNEGO_HEADER);
+		if (header == null) {
+			return false;
+		}
+
+		// More robust parsing - handle multiple comma-separated authentication schemes
+		return Arrays.stream(header.split(","))
+			.map(String::trim)
+			.anyMatch(auth -> auth.toLowerCase().startsWith(SPNEGO_HEADER.toLowerCase()));
 	}
 }
