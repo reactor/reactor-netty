@@ -158,7 +158,11 @@ public final class SpnegoAuthProvider {
 		Oid spnegoOid = new Oid(STR_OID); // SPNEGO OID
 
 		GSSContext context = gssManager.createContext(serverName, spnegoOid, null, GSSContext.DEFAULT_LIFETIME);
-		return context.initSecContext(new byte[0], 0, 0);
+		try {
+			return context.initSecContext(new byte[0], 0, 0);
+		} finally {
+			context.dispose();
+		}
 	}
 
 	/**
