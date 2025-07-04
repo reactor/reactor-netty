@@ -107,7 +107,7 @@ public final class SpnegoAuthProvider {
 	 * @param request the HTTP client request to authenticate
 	 * @param address the target server address (used for service principal)
 	 * @return a Mono that completes when the authentication is applied
-	 * @throws RuntimeException if login or token generation fails
+	 * @throws SpnegoAuthenticationException if login or token generation fails
 	 */
 	public Mono<Void> apply(HttpClientRequest request, InetSocketAddress address) {
 		if (verifiedAuthHeader != null) {
@@ -129,13 +129,13 @@ public final class SpnegoAuthProvider {
 								return token;
 							}
 							catch (GSSException e) {
-								throw new RuntimeException("Failed to generate SPNEGO token", e);
+								throw new SpnegoAuthenticationException("Failed to generate SPNEGO token", e);
 							}
 						}
 					);
 				}
 				catch (LoginException e) {
-					throw new RuntimeException("Failed to login with SPNEGO", e);
+					throw new SpnegoAuthenticationException("Failed to login with SPNEGO", e);
 				}
 			})
 			.subscribeOn(boundedElastic())
