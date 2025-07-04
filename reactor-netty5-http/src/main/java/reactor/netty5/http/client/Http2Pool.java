@@ -954,6 +954,10 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			else {
 				this.applicationProtocol = null;
 			}
+			initMaxConcurrentStreams();
+		}
+
+		void initMaxConcurrentStreams() {
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
 			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
 				this.maxConcurrentStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
@@ -1048,6 +1052,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				}
 				pool.poolConfig.allocationStrategy().returnPermits(1);
 				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, -maxConcurrentStreams);
+				maxConcurrentStreams = 0;
 			}
 		}
 

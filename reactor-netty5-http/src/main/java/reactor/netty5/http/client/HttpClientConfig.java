@@ -93,6 +93,8 @@ import static io.netty5.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOL
 import static reactor.netty5.ReactorNetty.format;
 import static reactor.netty5.ReactorNetty.setChannelContext;
 import static reactor.netty5.http.client.Http2ConnectionProvider.OWNER;
+import static reactor.netty5.http.client.Http2ConnectionProvider.http2PooledRef;
+import static reactor.netty5.http.client.Http2ConnectionProvider.logStreamsState;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -788,9 +790,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ConnectionObserver channelOwner = ctx.channel().attr(OWNER).get();
 			Http2ConnectionProvider.DisposableAcquire owner = null;
 			ConnectionObserver obs = null;
+			Http2Pool.Http2PooledRef http2PooledRef = null;
 			if (channelOwner instanceof Http2ConnectionProvider.DisposableAcquire) {
 				owner = (Http2ConnectionProvider.DisposableAcquire) channelOwner;
 				obs = owner.obs;
+				http2PooledRef = http2PooledRef(owner.pooledRef);
 			}
 			if (responseTimeoutHandler != null) {
 				pipeline.remove(NettyPipeline.ResponseTimeoutHandler);
@@ -809,6 +813,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 			pipeline.remove(NettyPipeline.ReactiveBridge);
 			pipeline.remove(this);
+
+			if (http2PooledRef != null) {
+				http2PooledRef.slot.initMaxConcurrentStreams();
+			}
 		}
 	}
 
@@ -868,6 +876,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				}
 				addStreamHandlers(ch, observer.then(new StreamConnectionObserver(owner.currentContext())), opsFactory,
 						acceptGzip, metricsRecorder, proxyAddress, remoteAddress, responseTimeoutMillis, uriTagValue);
+				if (log.isDebugEnabled()) {
+					logStreamsState(ch, http2PooledRef(owner.pooledRef).slot, "Stream opened");
+				}
 			}
 			else {
 				// Handle server pushes (inbound streams)
