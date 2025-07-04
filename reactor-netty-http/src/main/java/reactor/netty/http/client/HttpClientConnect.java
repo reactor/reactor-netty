@@ -75,6 +75,7 @@ import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  */
 class HttpClientConnect extends HttpClient {
 
@@ -458,11 +459,12 @@ class HttpClientConnect extends HttpClient {
 			if (newState == HttpClientState.RESPONSE_RECEIVED) {
 				HttpClientOperations operations = connection.as(HttpClientOperations.class);
 				if (operations != null && handler.spnegoAuthProvider != null) {
-					int statusCode = operations.status().code();
-					HttpHeaders headers = operations.responseHeaders();
-					if (handler.spnegoAuthProvider.isUnauthorized(statusCode, headers)) {
-						handler.spnegoAuthProvider.invalidateCache();
+					if (shouldRetryWithSpnego(operations)) {
+						retryWithSpnego(operations);
+						return;
 					}
+
+					handler.spnegoAuthProvider.resetRetryCount();
 				}
 
 				sink.success(connection);
@@ -477,6 +479,42 @@ class HttpClientConnect extends HttpClient {
 				Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations) connection)))
 				    .subscribe(connection.disposeSubscriber());
 			}
+		}
+
+		/**
+		 * Determines if the current HTTP response requires a SPNEGO authentication retry.
+		 *
+		 * @param operations the HTTP client operations containing the response status and headers
+		 * @return {@code true} if SPNEGO re-authentication should be attempted, {@code false} otherwise
+		 */
+		private boolean shouldRetryWithSpnego(HttpClientOperations operations) {
+			int statusCode = operations.status().code();
+			HttpHeaders headers = operations.responseHeaders();
+
+			return handler.spnegoAuthProvider.isUnauthorized(statusCode, headers)
+				&& handler.spnegoAuthProvider.canRetry();
+		}
+
+		/**
+		 * Triggers a SPNEGO authentication retry by throwing a {@link SpnegoRetryException}.
+		 * <p>
+		 * The exception-based approach ensures that a completely new {@link HttpClientOperations}
+		 * instance is created, avoiding the "Status and headers already sent" error that would
+		 * occur if trying to reuse the existing connection.
+		 * </p>
+		 *
+		 * @param operations the current HTTP client operations that received the 401 response
+		 * @throws SpnegoRetryException always thrown to trigger the retry mechanism
+		 */
+		private void retryWithSpnego(HttpClientOperations operations) {
+			handler.spnegoAuthProvider.invalidateTokenHeader();
+			handler.spnegoAuthProvider.incrementRetryCount();
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(operations.channel(), "Triggering SPNEGO re-authentication"));
+			}
+
+			sink.error(new SpnegoRetryException());
 		}
 	}
 
@@ -751,6 +789,9 @@ class HttpClientConnect extends HttpClient {
 					method = HttpMethod.GET;
 				}
 				redirect(re.location);
+				return true;
+			}
+			if (throwable instanceof SpnegoRetryException) {
 				return true;
 			}
 			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {
