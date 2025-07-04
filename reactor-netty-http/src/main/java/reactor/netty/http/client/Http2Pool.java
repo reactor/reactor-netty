@@ -970,7 +970,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				this.applicationProtocol = null;
 			}
 			initMaxConcurrentStreams();
-			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
 		}
 
 		void initMaxConcurrentStreams() {
@@ -980,6 +979,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				this.maxConcurrentStreams = pool.maxConcurrentStreams == -1 ? maxConcurrentStreams :
 						Math.min(pool.maxConcurrentStreams, maxConcurrentStreams);
 			}
+			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
 		}
 
 		boolean canOpenStream() {
@@ -1067,6 +1067,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				}
 				pool.poolConfig.allocationStrategy().returnPermits(1);
 				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, -maxConcurrentStreams);
+				maxConcurrentStreams = 0;
 			}
 		}
 
