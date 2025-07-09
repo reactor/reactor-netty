@@ -226,6 +226,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 					.block(Duration.ofSeconds(30));
 		}
 
+		Metrics.removeRegistry(registry);
+		registry.clear();
+		registry.close();
+
 		// In case the ServerCloseHandler is registered on the server, make sure client socket is closed on the server side
 		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
 
@@ -238,10 +242,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			group.close()
 			     .asStage().get(5, TimeUnit.SECONDS);
 		}
-
-		Metrics.removeRegistry(registry);
-		registry.clear();
-		registry.close();
 	}
 
 	@ParameterizedTest
