@@ -266,30 +266,30 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 
 			Connection client =
 					TcpClient.create()
-							.port(disposableServer.port())
-							.wiretap(true)
-							.connectNow();
+					         .port(disposableServer.port())
+					         .wiretap(true)
+					         .connectNow();
 
 			int port = disposableServer.port();
 			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
 			String request = repeatString("GET /%s HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 			client.outbound()
-					.sendObject(client.outbound().alloc().copyOf(request, Charset.defaultCharset()))
-					.then()
-					.subscribe();
+			      .sendObject(client.outbound().alloc().copyOf(request, Charset.defaultCharset()))
+			      .then()
+			      .subscribe();
 
 			CountDownLatch responses = new CountDownLatch(16);
 			client.inbound()
-					.receive()
-					.asString()
-					.doOnNext(s -> {
-						int ind = 0;
-						while ((ind = s.indexOf("200", ind)) != -1) {
-							responses.countDown();
-							ind += 3;
-						}
-					})
-					.subscribe();
+			      .receive()
+			      .asString()
+			      .doOnNext(s -> {
+			          int ind = 0;
+			          while ((ind = s.indexOf("200", ind)) != -1) {
+			              responses.countDown();
+			              ind += 3;
+			          }
+			      })
+			      .subscribe();
 
 			assertThat(responses.await(5, TimeUnit.SECONDS)).isTrue();
 
@@ -339,30 +339,30 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 
 			Connection client =
 					TcpClient.create()
-							.port(disposableServer.port())
-							.wiretap(true)
-							.connectNow();
+					         .port(disposableServer.port())
+					         .wiretap(true)
+					         .connectNow();
 
 			int port = disposableServer.port();
 			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
 			String request = repeatString("GET /%s HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 			client.outbound()
-					.sendObject(client.outbound().alloc().copyOf(request, Charset.defaultCharset()))
-					.then()
-					.subscribe();
+			      .sendObject(client.outbound().alloc().copyOf(request, Charset.defaultCharset()))
+			      .then()
+			      .subscribe();
 
 			CountDownLatch responses = new CountDownLatch(16);
 			client.inbound()
-					.receive()
-					.asString()
-					.doOnNext(s -> {
-						int ind = 0;
-						while ((ind = s.indexOf("200", ind)) != -1) {
-							responses.countDown();
-							ind += 3;
-						}
-					})
-					.subscribe();
+			      .receive()
+			      .asString()
+			      .doOnNext(s -> {
+			          int ind = 0;
+			          while ((ind = s.indexOf("200", ind)) != -1) {
+			              responses.countDown();
+			              ind += 3;
+			          }
+			      })
+			      .subscribe();
 
 			assertThat(responses.await(5, TimeUnit.SECONDS)).isTrue();
 
