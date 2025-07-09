@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -303,14 +303,13 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			if (enableMetricsAndAccessLog) {
 				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 				assertThat(logTracker.actualMessages).hasSize(16);
+				for (int i = 0; i < 16; i++) {
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+				}
 			}
 		}
 		finally {
 			if (registry != null) {
-				for (int i = 0; i < 16; i++) {
-					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
-				}
-
 				Metrics.removeRegistry(registry);
 				registry.clear();
 				registry.close();
@@ -377,14 +376,13 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			if (enableMetricsAndAccessLog) {
 				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 				assertThat(logTracker.actualMessages).hasSize(16);
+				for (int i = 0; i < 16; i++) {
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+				}
 			}
 		}
 		finally {
 			if (registry != null) {
-				for (int i = 0; i < 16; i++) {
-					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
-				}
-
 				Metrics.removeRegistry(registry);
 				registry.clear();
 				registry.close();
