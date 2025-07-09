@@ -953,6 +953,19 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 	}
 
+	static void copyState(HttpClientOperations streamOps) {
+		ChannelOperations<?, ?> ops = ChannelOperations.get(streamOps.channel().parent());
+		if (ops instanceof HttpClientOperations) {
+			HttpClientOperations parentOps = (HttpClientOperations) ops;
+			if (parentOps.hasSentBody()) {
+				streamOps.markSentHeaderAndBody();
+			}
+			else if (parentOps.hasSentHeaders()) {
+				streamOps.markSentHeaders();
+			}
+		}
+	}
+
 	static Throwable addOutboundErrorCause(Throwable exception, @Nullable Throwable cause) {
 		if (cause != null) {
 			cause.setStackTrace(new StackTraceElement[0]);
