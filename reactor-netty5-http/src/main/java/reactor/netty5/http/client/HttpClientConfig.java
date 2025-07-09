@@ -517,6 +517,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ConnectionObserver obs,
 			ChannelOperations.OnSetup opsFactory,
 			boolean acceptGzip,
+			boolean copyState,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			@Nullable SocketAddress proxyAddress,
 			SocketAddress remoteAddress,
@@ -594,6 +595,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ch), obs, null);
 		if (ops != null) {
 			ops.bind();
+			if (copyState && ops instanceof HttpClientOperations) {
+				HttpClientOperations.copyState(((HttpClientOperations) ops));
+			}
 		}
 	}
 
@@ -875,7 +879,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					setChannelContext(ch, owner.currentContext());
 				}
 				addStreamHandlers(ch, observer.then(new StreamConnectionObserver(owner.currentContext())), opsFactory,
-						acceptGzip, metricsRecorder, proxyAddress, remoteAddress, responseTimeoutMillis, uriTagValue);
+						acceptGzip, true, metricsRecorder, proxyAddress, remoteAddress, responseTimeoutMillis, uriTagValue);
 				if (log.isDebugEnabled()) {
 					logStreamsState(ch, http2PooledRef(owner.pooledRef).slot, "Stream opened");
 				}

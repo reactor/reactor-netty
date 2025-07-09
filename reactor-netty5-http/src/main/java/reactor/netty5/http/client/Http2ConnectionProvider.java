@@ -449,7 +449,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					// Deliberately suppress "NullAway"
 					// remoteAddress null is handled in Http2ConnectionProvider.DisposableAcquire.onNext
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
-							opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
+							opsFactory, acceptGzip, false, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 
 					if (log.isDebugEnabled()) {
 						logStreamsState(ch, http2PooledRef.slot, "Stream opened");
