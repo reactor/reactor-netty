@@ -302,14 +302,13 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			if (enableMetricsAndAccessLog) {
 				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 				assertThat(logTracker.actualMessages).hasSize(16);
+				for (int i = 0; i < 16; i++) {
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+				}
 			}
 		}
 		finally {
 			if (registry != null) {
-				for (int i = 0; i < 16; i++) {
-					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
-				}
-
 				Metrics.removeRegistry(registry);
 				registry.clear();
 				registry.close();
@@ -376,14 +375,13 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			if (enableMetricsAndAccessLog) {
 				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 				assertThat(logTracker.actualMessages).hasSize(16);
+				for (int i = 0; i < 16; i++) {
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+				}
 			}
 		}
 		finally {
 			if (registry != null) {
-				for (int i = 0; i < 16; i++) {
-					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
-				}
-
 				Metrics.removeRegistry(registry);
 				registry.clear();
 				registry.close();
