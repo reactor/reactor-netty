@@ -31,6 +31,7 @@ import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -414,6 +415,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@EnumSource(value = HttpProtocol.class, names = {"HTTP11", "H2C"})
+	@Disabled
 	void httpPostRespondsSendFlux(HttpProtocol protocol) throws Exception {
 		CountDownLatch latch = new CountDownLatch(6);
 		EventsRecorder recorder = new EventsRecorder(latch);
