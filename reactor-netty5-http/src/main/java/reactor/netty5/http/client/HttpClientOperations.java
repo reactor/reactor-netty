@@ -726,6 +726,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				else {
 					request.close();
 				}
+				// EmitResult is ignored as it is guaranteed that there will be only one emission of LastHttpContent
+				// Whether there are subscribers or the subscriber cancels is not of interest
+				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
+				// FAIL_ZERO_SUBSCRIBER
+				trailerHeaders.tryEmitValue(request.trailingHeaders());
 				terminate();
 			}
 			return;
