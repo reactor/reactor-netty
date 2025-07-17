@@ -633,51 +633,68 @@ class HttpProtocolsTests extends BaseHttpTest {
 	@ParameterizedCompatibleCombinationsTest
 	void testTrailerHeadersFullResponseSend(HttpServer server, HttpClient client) {
 		disposableServer =
-				server.handle((req, res) ->
-				          res.header(HttpHeaderNames.TRAILER, "foo")
-				             .trailerHeaders(h -> h.set("foo", "bar"))
-				             .send())
+				server.route(r ->
+				          r.get("/1", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(h -> h.set("foo", "bar"))
+				                  .send())
+				           .get("/2", (req, res) -> res.send()))
 				      .bindNow();
 
 		HttpProtocol[] serverProtocols = server.configuration().protocols();
 		HttpProtocol[] clientProtocols = client.configuration().protocols();
 		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
 				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
-		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+		HttpClient localClient = client.port(disposableServer.port());
+		doTestTrailerHeaders(localClient, "/1", isHttp11 ? "empty" : "bar", "empty");
+
+		doTestTrailerHeaders(localClient, "/2", "empty", "empty");
 	}
 
 	@ParameterizedCompatibleCombinationsTest
 	void testTrailerHeadersFullResponseSendFluxContentAlwaysEmpty(HttpServer server, HttpClient client) {
 		disposableServer =
-				server.handle((req, res) ->
-				          res.header(HttpHeaderNames.TRAILER, "foo")
-				             .trailerHeaders(h -> h.set("foo", "bar"))
-				             .status(HttpResponseStatus.NO_CONTENT)
-				             .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				server.route(r ->
+				          r.get("/1", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(h -> h.set("foo", "bar"))
+				                  .status(HttpResponseStatus.NO_CONTENT)
+				                  .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				           .get("/2", (req, res) ->
+				               res.status(HttpResponseStatus.NO_CONTENT)
+				                  .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response"))))
 				      .bindNow();
 
 		HttpProtocol[] serverProtocols = server.configuration().protocols();
 		HttpProtocol[] clientProtocols = client.configuration().protocols();
 		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
 				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
-		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+		doTestTrailerHeaders(client.port(disposableServer.port()), "/1", isHttp11 ? "empty" : "bar", "empty");
+
+		doTestTrailerHeaders(client.port(disposableServer.port()), "/2", "empty", "empty");
 	}
 
 	@ParameterizedCompatibleCombinationsTest
 	void testTrailerHeadersFullResponseSendFluxContentLengthZero(HttpServer server, HttpClient client) {
 		disposableServer =
-				server.handle((req, res) ->
-				          res.header(HttpHeaderNames.TRAILER, "foo")
-				             .header(HttpHeaderNames.CONTENT_LENGTH, "0")
-				             .trailerHeaders(h -> h.set("foo", "bar"))
-				             .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				server.route(r ->
+				          r.get("/1", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .header(HttpHeaderNames.CONTENT_LENGTH, "0")
+				                  .trailerHeaders(h -> h.set("foo", "bar"))
+				                  .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response")))
+				           .get("/2", (req, res) ->
+				               res.header(HttpHeaderNames.CONTENT_LENGTH, "0")
+				                  .sendString(Flux.just("test", "Trailer", "Headers", "Full", "Response"))))
 				      .bindNow();
 
 		HttpProtocol[] serverProtocols = server.configuration().protocols();
 		HttpProtocol[] clientProtocols = client.configuration().protocols();
 		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
 				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
-		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+		doTestTrailerHeaders(client.port(disposableServer.port()), "/1", isHttp11 ? "empty" : "bar", "empty");
+
+		doTestTrailerHeaders(client.port(disposableServer.port()), "/2", "empty", "empty");
 	}
 
 	@ParameterizedCompatibleCombinationsTest
@@ -711,18 +728,22 @@ class HttpProtocolsTests extends BaseHttpTest {
 	@ParameterizedCompatibleCombinationsTest
 	void testTrailerHeadersFullResponseSendMonoEmpty(HttpServer server, HttpClient client) {
 		disposableServer =
-				server.handle((req, res) -> {
-				          res.header(HttpHeaderNames.TRAILER, "foo")
-				             .trailerHeaders(h -> h.set("foo", "bar"));
-				          return Mono.empty();
-				      })
+				server.route(r ->
+				          r.get("/1", (req, res) -> {
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(h -> h.set("foo", "bar"));
+				               return Mono.empty();
+				           })
+				           .get("/2", (req, res) -> Mono.empty()))
 				      .bindNow();
 
 		HttpProtocol[] serverProtocols = server.configuration().protocols();
 		HttpProtocol[] clientProtocols = client.configuration().protocols();
 		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
 				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
-		doTestTrailerHeaders(client.port(disposableServer.port()), isHttp11 ? "empty" : "bar", "empty");
+		doTestTrailerHeaders(client.port(disposableServer.port()), "/1", isHttp11 ? "empty" : "bar", "empty");
+
+		doTestTrailerHeaders(client.port(disposableServer.port()), "/2", "empty", "empty");
 	}
 
 	@ParameterizedCompatibleCombinationsTest
@@ -742,8 +763,12 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	private static void doTestTrailerHeaders(HttpClient client, String expectedHeaderValue, String expectedResponse) {
+		doTestTrailerHeaders(client, "/", expectedHeaderValue, expectedResponse);
+	}
+
+	private static void doTestTrailerHeaders(HttpClient client, String uri, String expectedHeaderValue, String expectedResponse) {
 		client.get()
-		      .uri("/")
+		      .uri(uri)
 		      .responseSingle((res, bytes) -> bytes.asString().defaultIfEmpty("empty").zipWith(res.trailerHeaders()))
 		      .as(StepVerifier::create)
 		      .expectNextMatches(t -> expectedResponse.equals(t.getT1()) &&
