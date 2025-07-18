@@ -3650,9 +3650,11 @@ class HttpClientTest extends BaseHttpTest {
 		}
 	}
 
-	static void testIssue3285SendRequest(HttpClient client, @Nullable Class<? extends Throwable> exception) {
+	static void testIssue3285SendRequest(HttpClient client, @Nullable Class<? extends Throwable> exception) throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
 		Mono<String> response =
-				client.get()
+				client.doAfterResponseSuccess((res, conn) -> res.trailerHeaders().subscribe(null, null, latch::countDown))
+				      .get()
 				      .uri("/")
 				      .responseSingle((res, bytes) -> bytes.asString());
 		if (exception != null) {
@@ -3666,6 +3668,7 @@ class HttpClientTest extends BaseHttpTest {
 			        .expectComplete()
 			        .verify(Duration.ofSeconds(5));
 		}
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 	}
 
 	@Test

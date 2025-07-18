@@ -312,6 +312,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (log.isDebugEnabled()) {
 			log.debug(format(channel(), INBOUND_CANCEL_LOG));
 		}
+		// EmitResult is ignored as it is guaranteed that there will be only one emission of LastHttpContent
+		// Whether there are subscribers or the subscriber cancels is not of interest
+		// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
+		// FAIL_ZERO_SUBSCRIBER
+		trailerHeaders.tryEmitEmpty();
 		channel().close();
 	}
 
@@ -326,6 +331,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			listener().onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 			return;
 		}
+		// EmitResult is ignored as it is guaranteed that there will be only one emission of LastHttpContent
+		// Whether there are subscribers or the subscriber cancels is not of interest
+		// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
+		// FAIL_ZERO_SUBSCRIBER
+		trailerHeaders.tryEmitEmpty();
 		listener().onStateChange(this, HttpClientState.RESPONSE_INCOMPLETE);
 		if (responseState == null) {
 			Throwable exception;
@@ -706,6 +716,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (response.decoderResult().isFailure()) {
 				onInboundError(response.decoderResult().cause());
 				ReferenceCountUtil.release(msg);
+				// EmitResult is ignored as it is guaranteed that there will be only one emission of LastHttpContent
+				// Whether there are subscribers or the subscriber cancels is not of interest
+				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
+				// FAIL_ZERO_SUBSCRIBER
+				trailerHeaders.tryEmitEmpty();
 				terminate();
 				return;
 			}
@@ -778,6 +793,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (lastHttpContent.decoderResult().isFailure()) {
 				onInboundError(lastHttpContent.decoderResult().cause());
 				lastHttpContent.release();
+				// EmitResult is ignored as it is guaranteed that there will be only one emission of LastHttpContent
+				// Whether there are subscribers or the subscriber cancels is not of interest
+				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
+				// FAIL_ZERO_SUBSCRIBER
+				trailerHeaders.tryEmitValue(lastHttpContent.trailingHeaders());
 				terminate();
 				return;
 			}
