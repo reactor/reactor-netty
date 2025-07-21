@@ -70,7 +70,6 @@ import reactor.netty.transport.ClientTransport;
 import reactor.netty.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Incubating;
 
 import static reactor.netty.http.client.HttpClientConfig.h3;
 import static reactor.netty.http.internal.Http3.isHttp3Available;
