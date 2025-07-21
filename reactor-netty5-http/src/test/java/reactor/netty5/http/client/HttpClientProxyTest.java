@@ -442,7 +442,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 		AtomicReference<@Nullable AddressResolverGroup<?>> resolver1 = new AtomicReference<>();
 		client.doOnConnect(config -> resolver1.set(config.resolver()))
 		      .get()
-		      .uri("https://example.com")
+		      .uri("https://projectreactor.io")
 		      .responseSingle((response, body) -> Mono.zip(body.asString(),
 		                                                   Mono.just(response.responseHeaders())))
 		      .block(Duration.ofSeconds(30));
@@ -461,7 +461,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 		AtomicReference<@Nullable AddressResolverGroup<?>> resolver3 = new AtomicReference<>();
 		client.doOnConnect(config -> resolver3.set(config.resolver()))
 		      .get()
-		      .uri("https://example.com")
+		      .uri("https://projectreactor.io")
 		      .responseSingle((response, body) -> Mono.zip(body.asString(),
 		                                                   Mono.just(response.responseHeaders())))
 		      .block(Duration.ofSeconds(30));
