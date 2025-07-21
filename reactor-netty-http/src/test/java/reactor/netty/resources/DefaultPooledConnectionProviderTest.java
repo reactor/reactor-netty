@@ -187,7 +187,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		          })
 		          .wiretap(true)
 		          .get()
-		          .uri("https://example.com/")
+		          .uri("https://projectreactor.io/")
 		          .responseContent()
 		          .aggregate()
 		          .block(Duration.ofSeconds(30));
