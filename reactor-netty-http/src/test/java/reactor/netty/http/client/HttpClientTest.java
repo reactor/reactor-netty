@@ -395,7 +395,7 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(HttpClient.create()
 		                              .wiretap(true)
 		                              .get()
-		                              .uri("https://example.com")
+		                              .uri("https://projectreactor.io")
 		                              .response((r, buf) -> Mono.just(r.status().code())))
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -404,7 +404,7 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(HttpClient.create()
 		                              .wiretap(true)
 		                              .get()
-		                              .uri("https://example.com")
+		                              .uri("https://projectreactor.io")
 		                              .response((r, buf) -> Mono.just(r.status().code())))
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -2950,7 +2950,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .wiretap(true);
 
 		StepVerifier.create(client.get()
-		                          .uri("https://example.com")
+		                          .uri("https://projectreactor.io")
 		                          .response((r, buf) -> Mono.just(r.status().code())))
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -2958,7 +2958,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		StepVerifier.create(client.runOn(loop, false)
 		                          .get()
-		                          .uri("https://example.com")
+		                          .uri("https://projectreactor.io")
 		                          .response((r, buf) -> Mono.just(r.status().code())))
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -2967,7 +2967,7 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(client.runOn(loop, false)
 		                          .resolver(spec -> spec.trace("reactor.netty.testLoopAndResolver", LogLevel.DEBUG))
 		                          .get()
-		                          .uri("https://example.com")
+		                          .uri("https://projectreactor.io")
 		                          .response((r, buf) -> Mono.just(r.status().code())))
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -3795,11 +3795,11 @@ class HttpClientTest extends BaseHttpTest {
 		          .wiretap(true)
 		          .resolvedAddressesSelector((config, resolvedAddresses) -> null)
 		          .get()
-		          .uri("https://example.com")
+		          .uri("https://projectreactor.io")
 		          .responseContent()
 		          .asString()
 		          .as(StepVerifier::create)
-		          .expectErrorMatches(t -> t.getMessage() != null && t.getMessage().startsWith("Failed to resolve [example.com"))
+		          .expectErrorMatches(t -> t.getMessage() != null && t.getMessage().startsWith("Failed to resolve [projectreactor.io:443"))
 		          .verify(Duration.ofSeconds(5));
 	}
 
