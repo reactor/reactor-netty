@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ public final class Http3 {
 	static {
 		boolean http3;
 		try {
-			Class.forName("io.netty.incubator.codec.http3.Http3");
+			Class.forName("io.netty.handler.codec.http3.Http3");
 			http3 = true;
 		}
 		catch (Throwable t) {
@@ -38,9 +38,9 @@ public final class Http3 {
 	}
 
 	/**
-	 * Check if the current runtime supports HTTP/3, by verifying if {@code netty-incubator-codec-http3} is on the classpath.
+	 * Check if the current runtime supports HTTP/3, by verifying if {@code io.netty:netty-codec-native-quic} is on the classpath.
 	 *
-	 * @return true if {@code netty-incubator-codec-http3} is available
+	 * @return true if {@code io.netty:netty-codec-native-quic} is available
 	 */
 	public static boolean isHttp3Available() {
 		return isHttp3Available;

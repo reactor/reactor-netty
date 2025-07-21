@@ -17,7 +17,7 @@ package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.incubator.codec.http3.Http3ClientConnectionHandler;
+import io.netty.handler.codec.http3.Http3ClientConnectionHandler;
 import org.jspecify.annotations.Nullable;
 import reactor.netty.Connection;
 import reactor.netty.internal.shaded.reactor.pool.PoolConfig;

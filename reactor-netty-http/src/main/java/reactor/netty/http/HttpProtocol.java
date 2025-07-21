@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 package reactor.netty.http;
-
-import reactor.util.annotation.Incubating;
 
 /**
  * An enum defining various HTTP negotiations between H2, H2C-upgrade,
@@ -56,6 +54,5 @@ public enum HttpProtocol {
 	 * HTTP/3.0 support.
 	 * @since 1.2.0
 	 */
-	@Incubating
 	HTTP3
 }

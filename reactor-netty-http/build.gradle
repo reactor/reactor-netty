@@ -25,11 +25,7 @@ ext {
 			"Export-Package" : "reactor.netty.http*;version=$osgiVersion;-noimport:=true",
 			"Import-Package": [
 					"!javax.annotation",
-					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.2,5)\"",
 					"io.netty.handler.codec.haproxy;resolution:=optional;version=\"[4.2,5)\"",
-					"io.netty.channel.uring;resolution:=optional;version=\"[4.2,5)\"",
-					"io.netty.incubator.channel.uring;resolution:=optional",
-					"io.netty.incubator.codec.http3;resolution:=optional",
 					"io.micrometer.*;resolution:=optional",
 					"*"
 			].join(","),
@@ -88,7 +84,7 @@ dependencies {
 		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion"
 	}
 	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
-	compileOnly "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
+	compileOnly "io.netty:netty-codec-http3:$nettyVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
@@ -208,7 +204,8 @@ dependencies {
 	http3TestImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 	http3TestImplementation "org.assertj:assertj-core:$assertJVersion"
 	http3TestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-	http3TestImplementation "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
+	http3TestImplementation "io.netty:netty-codec-http3:$nettyVersion"
+	http3TestImplementation "io.netty:netty-codec-native-quic:$nettyVersion$os_suffix"
 	http3TestImplementation "io.netty:netty-pkitesting:$nettyVersion"
 	http3TestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	http3TestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -284,6 +281,10 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
+			'reactor.netty.http.Http3SettingsSpec$Builder#tokenHandler(io.netty.handler.codec.quic.QuicTokenHandler)',
+			'reactor.netty.http.Http3SettingsSpec$Builder#tokenHandler(io.netty.incubator.codec.quic.QuicTokenHandler)',
+			'reactor.netty.http.Http3SettingsSpec#tokenHandler()',
+			'reactor.netty.http.Http3SslContextSpec#configure(java.util.function.Consumer)'
 	]
 }
 

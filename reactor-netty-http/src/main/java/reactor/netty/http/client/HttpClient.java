@@ -70,7 +70,6 @@ import reactor.netty.transport.ClientTransport;
 import reactor.netty.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Incubating;
 
 import static reactor.netty.http.client.HttpClientConfig.h3;
 import static reactor.netty.http.internal.Http3.isHttp3Available;
@@ -1121,12 +1120,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 1.2.0
 	 */
-	@Incubating
 	public final HttpClient http3Settings(Consumer<Http3SettingsSpec.Builder> http3Settings) {
 		Objects.requireNonNull(http3Settings, "http3Settings");
 		if (!isHttp3Available()) {
 			throw new UnsupportedOperationException(
-					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+					"To enable HTTP/3 support, you must add the dependency `io.netty:netty-codec-native-quic`" +
 							" to the class path first");
 		}
 		Http3SettingsSpec.Builder builder = Http3SettingsSpec.builder();
@@ -1383,7 +1381,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		if (config.checkProtocol(h3)) {
 			if (!isHttp3Available()) {
 				throw new UnsupportedOperationException(
-						"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+						"To enable HTTP/3 support, you must add the dependency `io.netty:netty-codec-native-quic`" +
 								" to the class path first");
 			}
 

@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.incubator.codec.http3.Http3HeadersFrame;
+import io.netty.handler.codec.http3.Http3HeadersFrame;
 import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;

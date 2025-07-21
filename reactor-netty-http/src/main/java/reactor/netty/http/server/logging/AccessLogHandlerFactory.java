@@ -17,7 +17,6 @@ package reactor.netty.http.server.logging;
 
 import io.netty.channel.ChannelHandler;
 import org.jspecify.annotations.Nullable;
-import reactor.util.annotation.Incubating;
 
 import java.util.function.Function;
 
@@ -39,7 +38,6 @@ public enum AccessLogHandlerFactory {
 	/**
 	 * HTTP/3.0.
 	 */
-	@Incubating
 	H3;
 
 	/**

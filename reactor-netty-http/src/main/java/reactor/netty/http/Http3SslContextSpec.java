@@ -16,12 +16,11 @@
 package reactor.netty.http;
 
 import io.netty.handler.ssl.SslContext;
-import io.netty.incubator.codec.quic.QuicSslContext;
-import io.netty.incubator.codec.quic.QuicSslContextBuilder;
+import io.netty.handler.codec.quic.QuicSslContext;
+import io.netty.handler.codec.quic.QuicSslContextBuilder;
 import io.netty.util.DomainWildcardMappingBuilder;
 import org.jspecify.annotations.Nullable;
 import reactor.netty.tcp.SslProvider;
-import reactor.util.annotation.Incubating;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -33,8 +32,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import static io.netty.incubator.codec.http3.Http3.supportedApplicationProtocols;
-import static io.netty.incubator.codec.quic.QuicSslContextBuilder.buildForServerWithSni;
+import static io.netty.handler.codec.http3.Http3.supportedApplicationProtocols;
+import static io.netty.handler.codec.quic.QuicSslContextBuilder.buildForServerWithSni;
 
 /**
  * SslContext builder that provides default configuration specific to HTTP/3 as follows:
@@ -45,9 +44,8 @@ import static io.netty.incubator.codec.quic.QuicSslContextBuilder.buildForServer
  *
  * @author Violeta Georgieva
  * @since 1.2.0
- * @see io.netty.incubator.codec.http3.Http3#supportedApplicationProtocols()
+ * @see io.netty.handler.codec.http3.Http3#supportedApplicationProtocols()
  */
-@Incubating
 public final class Http3SslContextSpec implements SslProvider.GenericSslContextSpecWithSniSupport<QuicSslContextBuilder> {
 
 	/**

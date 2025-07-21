@@ -339,7 +339,7 @@ include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=26..61]
 [[HTTP3]]
 == HTTP/3
 By default, the `HTTP` client supports `HTTP/1.1`. If you need `HTTP/3`, you can get it through configuration.
-In addition to the protocol configuration, you need to add dependency to `io.netty.incubator:netty-incubator-codec-http3`.
+In addition to the protocol configuration, you need to add dependency to `io.netty:netty-codec-native-quic`.
 
 The following listing presents a simple `HTTP3` example:
 
