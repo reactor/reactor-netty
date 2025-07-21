@@ -15,7 +15,7 @@
  */
 package reactor.netty.http;
 
-import io.netty.incubator.codec.quic.QuicTokenHandler;
+import io.netty.handler.codec.quic.QuicTokenHandler;
 import org.jspecify.annotations.Nullable;
 import reactor.util.annotation.Incubating;
 
@@ -28,7 +28,6 @@ import java.util.Objects;
  * @author Violeta Georgieva
  * @since 1.2.0
  */
-@Incubating
 public final class Http3SettingsSpec {
 
 	public interface Builder {

@@ -19,8 +19,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
-import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.handler.codec.quic.QuicServerCodecBuilder;
+import io.netty.handler.codec.quic.QuicSslContext;
 import io.netty.util.AttributeKey;
 import org.jspecify.annotations.Nullable;
 import reactor.netty.NettyPipeline;
@@ -29,7 +29,7 @@ import reactor.netty.http.Http3SettingsSpec;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.incubator.codec.http3.Http3.newQuicServerCodecBuilder;
+import static io.netty.handler.codec.http3.Http3.newQuicServerCodecBuilder;
 
 final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 

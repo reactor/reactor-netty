@@ -207,7 +207,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * @return the HTTP/3 configuration
 	 * @since 1.2.0
 	 */
-	@Incubating
 	public @Nullable Http3SettingsSpec http3SettingsSpec() {
 		return http3Settings;
 	}

@@ -16,7 +16,7 @@
 package reactor.netty.http.server.logging.error;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
+import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;

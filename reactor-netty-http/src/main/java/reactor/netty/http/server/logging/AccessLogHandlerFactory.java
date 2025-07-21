@@ -39,7 +39,6 @@ public enum AccessLogHandlerFactory {
 	/**
 	 * HTTP/3.0.
 	 */
-	@Incubating
 	H3;
 
 	/**

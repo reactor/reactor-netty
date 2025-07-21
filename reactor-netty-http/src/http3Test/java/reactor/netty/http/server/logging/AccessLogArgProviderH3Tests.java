@@ -19,10 +19,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.incubator.codec.http3.DefaultHttp3Headers;
-import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame;
-import io.netty.incubator.codec.http3.Http3Headers;
-import io.netty.incubator.codec.http3.Http3HeadersFrame;
+import io.netty.handler.codec.http3.DefaultHttp3Headers;
+import io.netty.handler.codec.http3.DefaultHttp3HeadersFrame;
+import io.netty.handler.codec.http3.Http3Headers;
+import io.netty.handler.codec.http3.Http3HeadersFrame;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

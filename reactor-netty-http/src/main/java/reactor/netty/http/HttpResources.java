@@ -213,7 +213,7 @@ public final class HttpResources extends TcpResources {
 	public ConnectionProvider getOrCreateHttp3ConnectionProvider(Function<ConnectionProvider, ConnectionProvider> create) {
 		if (!isHttp3Available()) {
 			throw new UnsupportedOperationException(
-					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+					"To enable HTTP/3 support, you must add the dependency `io.netty:netty-codec-native-quic`" +
 							" to the class path first");
 		}
 		ConnectionProvider provider = http3ConnectionProvider.get();
