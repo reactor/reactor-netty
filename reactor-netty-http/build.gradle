@@ -281,6 +281,10 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
+			'reactor.netty.http.Http3SettingsSpec$Builder#tokenHandler(io.netty.handler.codec.quic.QuicTokenHandler)',
+			'reactor.netty.http.Http3SettingsSpec$Builder#tokenHandler(io.netty.incubator.codec.quic.QuicTokenHandler)',
+			'reactor.netty.http.Http3SettingsSpec#tokenHandler()',
+			'reactor.netty.http.Http3SslContextSpec#configure(java.util.function.Consumer)'
 	]
 }
 
