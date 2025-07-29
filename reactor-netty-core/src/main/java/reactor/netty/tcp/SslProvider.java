@@ -560,7 +560,7 @@ public final class SslProvider {
 
 		@Override
 		public final Builder handlerConfigurator(Consumer<? super SslHandler> handlerConfigurator) {
-			Objects.requireNonNull(handlerConfigurator, "handshakeTimeout");
+			Objects.requireNonNull(handlerConfigurator, "handlerConfigurator");
 			this.handlerConfigurator = handlerConfigurator;
 			return this;
 		}
