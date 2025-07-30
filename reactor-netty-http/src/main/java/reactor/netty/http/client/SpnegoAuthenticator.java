@@ -15,13 +15,12 @@
  */
 package reactor.netty.http.client;
 
-import javax.security.auth.Subject;
-import javax.security.auth.login.LoginException;
+import org.ietf.jgss.GSSContext;
 
 /**
  * An abstraction for authentication logic used by SPNEGO providers.
  * <p>
- * Implementations are responsible for performing a login and returning a logged-in Subject.
+ * Implementations are responsible for creating a GSSContext for the specified remote host.
  * </p>
  *
  * @author raccoonback
@@ -30,10 +29,12 @@ import javax.security.auth.login.LoginException;
 public interface SpnegoAuthenticator {
 
 	/**
-	 * Performs a login and returns the authenticated Subject.
+	 * Creates a GSSContext for the specified remote host.
 	 *
-	 * @return the authenticated Subject
-	 * @throws LoginException if login fails
+	 * @param serviceName the service name (e.g., "HTTP", "FTP")
+	 * @param remoteHost the remote host to authenticate with
+	 * @return the created GSSContext
+	 * @throws Exception if context creation fails
 	 */
-	Subject login() throws LoginException;
+	GSSContext createContext(String serviceName, String remoteHost) throws Exception;
 }

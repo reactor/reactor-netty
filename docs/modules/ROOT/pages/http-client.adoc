@@ -785,24 +785,26 @@ SPNEGO (Simple and Protected GSSAPI Negotiation Mechanism) provides secure authe
 
 ==== How It Works
 SPNEGO authentication follows this HTTP authentication flow:
-1. The client sends an HTTP request to a protected resource.
-2. The server responds with `401 Unauthorized` and a `WWW-Authenticate: Negotiate` header.
-3. The client generates a SPNEGO token based on its Kerberos ticket, and resends the request with an `Authorization: Negotiate <base64-encoded-token>` header.
-4. The server validates the token and, if authentication is successful, returns 200 OK.
 
-If further negotiation is required, the server may return another 401 with additional data in the WWW-Authenticate header.
+. The client sends an HTTP request to a protected resource.
+. The server responds with `401 Unauthorized` and a `WWW-Authenticate: Negotiate` header.
+. The client generates a SPNEGO token based on its Kerberos ticket, and resends the request with an `Authorization: Negotiate <base64-encoded-token>` header.
+. The server validates the token and, if authentication is successful, returns 200 OK.
 
-{examples-link}/spnego/Application.java
+If further negotiation is required, the server may return another 401 with additional data in the `WWW-Authenticate` header.
+
+==== JAAS-based Authenticator
+{examples-link}/spnego/jaas/Application.java
 ----
-include::{examples-dir}/spnego/Application.java[lines=18..39]
+include::{examples-dir}/spnego/jaas/Application.java[lines=18..45]
 ----
 <1> Configures the `jaas.conf`. A JAAS configuration file in Java for integrating with authentication backends such as Kerberos.
 <2> Configures the `krb5.conf`. krb5.conf is a Kerberos client configuration file used to define how the client locates and communicates with the Kerberos Key Distribution Center (KDC) for authentication.
 <3> Configures the SPNEGO jaas.conf. A JVM system property that enables detailed debug logging for Kerberos operations in Java.
 <4> `JaasAuthenticator` performs Kerberos authentication using a JAAS configuration (jaas.conf).
-<5> `SpnegoAuthProvider` generates a SPNEGO token from the Kerberos ticket and automatically adds the `Authorization: Negotiate ...` header to HTTP requests. If the server responds with `401 Unauthorized` and includes `WWW-Authenticate: Negotiate`, the client will automatically reauthenticate and retry the request once.
+<5> `SpnegoAuthProvider.Builder` supports the following configuration methods. Please refer to <<spnegoauthprovider-config>>.
+<6> `SpnegoAuthProvider`  generates a SPNEGO token from the Kerberos ticket. It automatically adds the `Authorization: Negotiate ...` header to HTTP requests. If the server responds with `401 Unauthorized` and includes `WWW-Authenticate: Negotiate`, the client will automatically reauthenticate and retry the request once.
 
-==== Environment Configuration
 ===== Example JAAS Configuration
 Specify the path to your JAAS configuration file using the `java.security.auth.login.config` system property.
 
@@ -844,6 +846,75 @@ Specify Kerberos realm and KDC information using the `java.security.krb5.conf` s
 -Djava.security.krb5.conf=/path/to/krb5.conf
 ----
 
+==== GSSCredential-based Authenticator
+For scenarios where you already have a `GSSCredential` available or want to avoid JAAS configuration, you can use `GssCredentialAuthenticator`:
+
+{examples-link}/spnego/gsscredential/Application.java
+----
+include::{examples-dir}/spnego/gsscredential/Application.java[lines=18..46]
+----
+<1> Obtain the `GSSCredential` through other means.
+<2> Configure the GSSCredential-based authenticator for SPNEGO authentication.
+
+This approach is useful when:
+- You want to reuse existing credentials
+- You need more control over credential management
+- JAAS configuration is not available or preferred
+
+==== Custom Authenticator Implementation
+For advanced scenarios where the provided authenticators don't meet your specific requirements, you can implement the `SpnegoAuthenticator` interface directly:
+
+----
+import org.ietf.jgss.GSSContext;
+import reactor.netty.http.client.SpnegoAuthenticator;
+import reactor.netty.http.client.SpnegoAuthProvider;
+
+public class CustomSpnegoAuthenticator implements SpnegoAuthenticator {
+
+    @Override
+    public GSSContext createContext(String serviceName, String remoteHost) throws Exception {
+        // Your custom authentication logic here
+        // This method should return a configured GSSContext
+        // for the specified service and remote host
+        // serviceName: e.g., "HTTP", "LDAP"
+        // remoteHost: target server hostname
+
+        return null; // Replace with actual GSSContext creation logic
+    }
+}
+
+// Usage with advanced configuration
+HttpClient client = HttpClient.create()
+	.spnego(
+		SpnegoAuthProvider.builder(new CustomSpnegoAuthenticator())
+			.serviceName("HTTP")  // Custom service name
+			.unauthorizedStatusCode(401)  // Custom status code
+			.resolveCanonicalHostname(true)  // Use canonical hostname
+			.build()
+	);
+----
+
+This approach is useful when you need:
+- Custom credential acquisition logic
+- Integration with third-party authentication systems
+- Special handling for token caching or refresh
+- Environment-specific authentication flows
+
+[[spnegoauthprovider-config]]
+==== SpnegoAuthProvider Configuration Options
+The `SpnegoAuthProvider.Builder` supports the following configuration Options:
+
+[width="100%",options="header"]
+|=======
+| Method | Default | Description | Example
+| `serviceName(String)` | "HTTP" | Service name for constructing service principal names (serviceName/hostname) | "HTTP", "LDAP"
+| `unauthorizedStatusCode(int)` | 401 | HTTP status code that triggers authentication retry | 401, 407
+| `resolveCanonicalHostname(boolean)` | false | Whether to use canonical hostname resolution via reverse DNS lookup | true for FQDN requirements
+|=======
+
 ==== Notes
 - SPNEGO authentication is fully supported on Java 1.6 and above.
 - If authentication fails, check the server logs and client exception messages, and verify your Kerberos environment settings (realm, KDC, ticket, etc.).
+- `JaasAuthenticator` performs authentication through JAAS login configuration.
+- `GssCredentialAuthenticator` uses pre-existing `GSSCredential` objects, bypassing JAAS configuration.
+- For custom scenarios, implement the `SpnegoAuthenticator` interface to provide your own authentication logic.
