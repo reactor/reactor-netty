@@ -20,18 +20,12 @@ import static reactor.core.scheduler.Schedulers.boundedElastic;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.security.auth.Subject;
-import javax.security.auth.login.LoginException;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.Oid;
 import reactor.core.publisher.Mono;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -43,11 +37,30 @@ import reactor.util.Loggers;
  * to the HTTP Authorization header for outgoing requests, enabling single sign-on and
  * secure authentication in enterprise environments.
  * </p>
+ * <p>
+ * The provider supports authentication caching and retry mechanisms to handle token
+ * expiration and authentication failures gracefully. It can be configured with different
+ * service names, unauthorized status codes, and hostname resolution strategies.
+ * </p>
  *
- * <p>Typical usage:</p>
+ * <p>Basic usage with JAAS:</p>
  * <pre>
+ *     SpnegoAuthProvider provider = SpnegoAuthProvider
+ *         .builder(new JaasAuthenticator("KerberosLogin"))
+ *         .build();
+ *
  *     HttpClient client = HttpClient.create()
- *         .spnego(SpnegoAuthProvider.create(new JaasAuthenticator("KerberosLogin")));
+ *         .spnego(provider);
+ * </pre>
+ *
+ * <p>Advanced configuration:</p>
+ * <pre>
+ *     SpnegoAuthProvider provider = SpnegoAuthProvider
+ *         .builder(new GssCredentialAuthenticator(credential))
+ *         .serviceName("CIFS")
+ *         .unauthorizedStatusCode(401)
+ *         .resolveCanonicalHostname(true)
+ *         .build();
  * </pre>
  *
  * @author raccoonback
@@ -57,52 +70,99 @@ public final class SpnegoAuthProvider {
 
 	private static final Logger log = Loggers.getLogger(SpnegoAuthProvider.class);
 	private static final String SPNEGO_HEADER = "Negotiate";
-	private static final String STR_OID = "1.3.6.1.5.5.2";
 
 	private final SpnegoAuthenticator authenticator;
-	private final GSSManager gssManager;
 	private final int unauthorizedStatusCode;
+	private final String serviceName;
+	private final boolean resolveCanonicalHostname;
 
 	private final AtomicReference<String> verifiedAuthHeader = new AtomicReference<>();
 	private final AtomicInteger retryCount = new AtomicInteger(0);
 	private static final int MAX_RETRY_COUNT = 1;
 
 	/**
-	 * Constructs a new SpnegoAuthProvider with the given authenticator and GSSManager.
-	 *
-	 * @param authenticator the authenticator to use for JAAS login
-	 * @param gssManager the GSSManager to use for SPNEGO token generation
-	 */
-	private SpnegoAuthProvider(SpnegoAuthenticator authenticator, GSSManager gssManager, int unauthorizedStatusCode) {
-		this.authenticator = authenticator;
-		this.gssManager = gssManager;
-		this.unauthorizedStatusCode = unauthorizedStatusCode;
-	}
-
-	/**
-	 * Creates a new SPNEGO authentication provider using the default GSSManager instance.
-	 *
-	 * @param authenticator the authenticator to use for JAAS login
-	 * @param unauthorizedStatusCode the HTTP status code that indicates authentication failure
-	 * @return a new SPNEGO authentication provider
-	 */
-	public static SpnegoAuthProvider create(SpnegoAuthenticator authenticator, int unauthorizedStatusCode) {
-		return create(authenticator, GSSManager.getInstance(), unauthorizedStatusCode);
-	}
-
-	/**
-	 * Creates a new SPNEGO authentication provider with a custom GSSManager instance.
+	 * Constructs a new SpnegoAuthProvider with the specified configuration.
 	 * <p>
-	 * This overload is intended for testing or advanced scenarios where a custom GSSManager is needed.
+	 * This constructor is private and should only be used by the {@link Builder}.
+	 * Use {@link #builder(SpnegoAuthenticator)} to create instances.
 	 * </p>
 	 *
-	 * @param authenticator the authenticator to use for JAAS login
-	 * @param gssManager the GSSManager to use for SPNEGO token generation
+	 * @param authenticator the authenticator to use for SPNEGO authentication (must not be null)
 	 * @param unauthorizedStatusCode the HTTP status code that indicates authentication failure
-	 * @return a new SPNEGO authentication provider
+	 * @param serviceName the service name for constructing service principal names
+	 * @param resolveCanonicalHostname whether to resolve canonical hostnames for service principals
 	 */
-	public static SpnegoAuthProvider create(SpnegoAuthenticator authenticator, GSSManager gssManager, int unauthorizedStatusCode) {
-		return new SpnegoAuthProvider(authenticator, gssManager, unauthorizedStatusCode);
+	private SpnegoAuthProvider(SpnegoAuthenticator authenticator, int unauthorizedStatusCode, String serviceName, boolean resolveCanonicalHostname) {
+		this.authenticator = authenticator;
+		this.unauthorizedStatusCode = unauthorizedStatusCode;
+		this.serviceName = serviceName;
+		this.resolveCanonicalHostname = resolveCanonicalHostname;
+	}
+
+	/**
+	 * Creates a new builder for configuring SPNEGO authentication provider.
+	 *
+	 * @param authenticator the authenticator to use for SPNEGO authentication
+	 * @return a new builder instance
+	 */
+	public static Builder builder(SpnegoAuthenticator authenticator) {
+		return new Builder(authenticator);
+	}
+
+	/**
+	 * Builder for creating SpnegoAuthProvider instances.
+	 */
+	public static final class Builder {
+		private final SpnegoAuthenticator authenticator;
+		private int unauthorizedStatusCode = 401;
+		private String serviceName = "HTTP";
+		private boolean resolveCanonicalHostname;
+
+		private Builder(SpnegoAuthenticator authenticator) {
+			this.authenticator = authenticator;
+		}
+
+		/**
+		 * Sets the HTTP status code that indicates authentication failure.
+		 *
+		 * @param statusCode the status code (default: 401)
+		 * @return this builder
+		 */
+		public Builder unauthorizedStatusCode(int statusCode) {
+			this.unauthorizedStatusCode = statusCode;
+			return this;
+		}
+
+		/**
+		 * Sets the service name for the service principal.
+		 *
+		 * @param serviceName the service name (default: "HTTP")
+		 * @return this builder
+		 */
+		public Builder serviceName(String serviceName) {
+			this.serviceName = serviceName;
+			return this;
+		}
+
+		/**
+		 * Sets whether to resolve canonical hostname.
+		 *
+		 * @param resolveCanonicalHostname true to resolve canonical hostname (default: false)
+		 * @return this builder
+		 */
+		public Builder resolveCanonicalHostname(boolean resolveCanonicalHostname) {
+			this.resolveCanonicalHostname = resolveCanonicalHostname;
+			return this;
+		}
+
+		/**
+		 * Builds the SpnegoAuthProvider instance.
+		 *
+		 * @return a new SpnegoAuthProvider
+		 */
+		public SpnegoAuthProvider build() {
+			return new SpnegoAuthProvider(authenticator, unauthorizedStatusCode, serviceName, resolveCanonicalHostname);
+		}
 	}
 
 	/**
@@ -126,25 +186,16 @@ public final class SpnegoAuthProvider {
 
 		return Mono.fromCallable(() -> {
 				try {
-					return Subject.doAs(
-						authenticator.login(),
-						(PrivilegedAction<byte[]>) () -> {
-							try {
-								byte[] token = generateSpnegoToken(address.getHostName());
-								String authHeader = SPNEGO_HEADER + " " + Base64.getEncoder().encodeToString(token);
+					String hostName = resolveHostName(address);
+					byte[] token = generateSpnegoToken(hostName);
+					String authHeader = SPNEGO_HEADER + " " + Base64.getEncoder().encodeToString(token);
 
-								verifiedAuthHeader.set(authHeader);
-								request.header(HttpHeaderNames.AUTHORIZATION, authHeader);
-								return token;
-							}
-							catch (GSSException e) {
-								throw new SpnegoAuthenticationException("Failed to generate SPNEGO token", e);
-							}
-						}
-					);
+					verifiedAuthHeader.set(authHeader);
+					request.header(HttpHeaderNames.AUTHORIZATION, authHeader);
+					return token;
 				}
-				catch (LoginException e) {
-					throw new SpnegoAuthenticationException("Failed to login with SPNEGO", e);
+				catch (Exception e) {
+					throw new SpnegoAuthenticationException("Failed to generate SPNEGO token", e);
 				}
 			})
 			.subscribeOn(boundedElastic())
@@ -152,27 +203,43 @@ public final class SpnegoAuthProvider {
 	}
 
 	/**
+	 * Resolves the hostname from the given socket address.
+	 * <p>
+	 * This method returns either the hostname or canonical hostname based on the
+	 * {@code resolveCanonicalHostname} configuration. When canonical hostname resolution
+	 * is enabled, it performs a reverse DNS lookup to get the fully qualified domain name.
+	 * </p>
+	 *
+	 * @param address the socket address to resolve hostname from
+	 * @return the resolved hostname (canonical if configured, otherwise standard hostname)
+	 */
+	private String resolveHostName(InetSocketAddress address) {
+		String hostName = address.getHostName();
+		if (resolveCanonicalHostname) {
+			hostName = address.getAddress().getCanonicalHostName();
+		}
+		return hostName;
+	}
+
+	/**
 	 * Generates a SPNEGO token for the given host name.
 	 * <p>
-	 * This method uses the GSSManager to create a GSSContext and generate a SPNEGO token
+	 * This method uses the authenticator to create a GSSContext and generate a SPNEGO token
 	 * for the specified service principal (HTTP/hostName).
 	 * </p>
 	 *
 	 * @param hostName the target server host name
 	 * @return the raw SPNEGO token bytes
-	 * @throws GSSException if token generation fails
+	 * @throws Exception if token generation fails
 	 */
-	private byte[] generateSpnegoToken(String hostName) throws GSSException {
+	private byte[] generateSpnegoToken(String hostName) throws Exception {
 		if (hostName == null || hostName.trim().isEmpty()) {
 			throw new IllegalArgumentException("Host name cannot be null or empty");
 		}
 
-		GSSName serverName = gssManager.createName("HTTP/" + hostName.trim(), GSSName.NT_HOSTBASED_SERVICE);
-		Oid spnegoOid = new Oid(STR_OID); // SPNEGO OID
-
 		GSSContext context = null;
 		try {
-			context = gssManager.createContext(serverName, spnegoOid, null, GSSContext.DEFAULT_LIFETIME);
+			context = authenticator.createContext(serviceName, hostName.trim());
 			return context.initSecContext(new byte[0], 0, 0);
 		}
 		finally {
@@ -241,7 +308,6 @@ public final class SpnegoAuthProvider {
 			return false;
 		}
 
-		// More robust parsing - handle multiple comma-separated authentication schemes
 		return Arrays.stream(header.split(","))
 			.map(String::trim)
 			.anyMatch(auth -> auth.toLowerCase().startsWith(SPNEGO_HEADER.toLowerCase()));

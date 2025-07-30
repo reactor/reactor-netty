@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.http.client.spnego;
+package reactor.netty.examples.documentation.http.client.spnego.jaas;
 
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.JaasAuthenticator;
@@ -28,8 +28,15 @@ public class Application {
 		System.setProperty("sun.security.krb5.debug", "true"); // <3>
 
 		SpnegoAuthenticator authenticator = new JaasAuthenticator("KerberosLogin"); // <4>
+		SpnegoAuthProvider provider = SpnegoAuthProvider.builder(authenticator)
+				.serviceName("HTTP")
+				.unauthorizedStatusCode(401)
+				.resolveCanonicalHostname(false)
+				.build();
 		HttpClient client = HttpClient.create()
-				.spnego(SpnegoAuthProvider.create(authenticator, 401)); // <5>
+				.spnego(
+						provider // <5>
+				); // <6>
 
 		client.get()
 				.uri("http://protected.example.com/")
