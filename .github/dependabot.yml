@@ -71,6 +71,10 @@ updates:
   - dependency-name: io.specto:hoverfly-java-junit5
     versions:
     - "[0.20.a, 1]"
+  # Versions > 8 require JDK11+
+  - dependency-name: com.gradleup.shadow
+    versions:
+    - "[9.a, 10]"
   rebase-strategy: disabled
 - package-ecosystem: gradle
   directory: "/"
