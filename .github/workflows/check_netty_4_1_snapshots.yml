@@ -36,9 +36,9 @@ jobs:
             distribution: 'graalvm'
             java-version: '17.0.12'
       - name: Build with Gradle against Netty 4.1
-        run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.124.Final-SNAPSHOT'
+        run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.125.Final-SNAPSHOT'
       - name: GraalVM smoke tests against Netty 4.1
-        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.124.Final-SNAPSHOT'
+        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.125.Final-SNAPSHOT'
       - name: Build with Gradle against Netty 4.2
         run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.5.Final-SNAPSHOT'
       - name: GraalVM smoke tests against Netty 4.2
