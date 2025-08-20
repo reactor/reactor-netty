@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -519,12 +519,16 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		public final void dispose() {
 			if (channel != null) {
 				if (channel.isActive()) {
+					SocketAddress localAddress = channel.localAddress();
 					//"FutureReturnValueIgnored" this is deliberate
 					channel.close();
 
 					LoopResources loopResources = config.loopResources();
 					if (loopResources instanceof ConnectionProvider) {
 						((ConnectionProvider) loopResources).disposeWhen(bindAddress);
+						if (localAddress != null) {
+							((ConnectionProvider) loopResources).disposeWhen(localAddress);
+						}
 					}
 				}
 			}
