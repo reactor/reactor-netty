@@ -519,12 +519,16 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		public final void dispose() {
 			if (channel != null) {
 				if (channel.isActive()) {
+					SocketAddress localAddress = channel.localAddress();
 					//"FutureReturnValueIgnored" this is deliberate
 					channel.close();
 
 					LoopResources loopResources = config.loopResources();
 					if (loopResources instanceof ConnectionProvider) {
 						((ConnectionProvider) loopResources).disposeWhen(bindAddress);
+						if (localAddress != null) {
+							((ConnectionProvider) loopResources).disposeWhen(localAddress);
+						}
 					}
 				}
 			}
