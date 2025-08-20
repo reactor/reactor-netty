@@ -542,11 +542,15 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		public final void dispose() {
 			if (channel != null) {
 				if (channel.isActive()) {
+					SocketAddress localAddress = channel.localAddress();
 					channel.close();
 
 					LoopResources loopResources = config.loopResources();
 					if (loopResources instanceof ConnectionProvider connectionProvider) {
 						connectionProvider.disposeWhen(bindAddress);
+						if (localAddress != null) {
+							connectionProvider.disposeWhen(localAddress);
+						}
 					}
 				}
 			}
