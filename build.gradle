@@ -122,7 +122,7 @@ ext {
 	nettyHttp3Version = '0.0.30.Final'
 
 	// Testing
-	brotli4jVersion = '1.18.0'
+	brotli4jVersion = '1.20.0'
 	zstdJniVersion = '1.5.7-4'
 	jacksonDatabindVersion = '2.19.2'
 	testAddonVersion = reactorCoreVersion
