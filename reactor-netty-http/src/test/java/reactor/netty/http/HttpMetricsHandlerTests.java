@@ -30,6 +30,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2StreamChannel;
@@ -169,13 +171,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 * <ul>
 	 *  <li> /1 is used by testExistingEndpoint test</li>
 	 *  <li> /2 is used by testExistingEndpoint, and testUriTagValueFunctionNotSharedForClient tests</li>
-	 *  <li> /3 does not exists but is used by testNonExistingEndpoint, checkExpectationsNonExisting tests</li>
+	 *  <li> /3 does not exist but is used by testNonExistingEndpoint, checkExpectationsNonExisting tests</li>
 	 *  <li> /4 is used by testServerConnectionsMicrometer test</li>
 	 *  <li> /5 is used by testServerConnectionsRecorder test</li>
 	 *  <li> /6 is used by testServerConnectionsMicrometerConnectionClose test</li>
 	 *  <li> /7 is used by testServerConnectionsRecorderConnectionClose test</li>
 	 *  <li> /8 is used by testServerConnectionsWebsocketMicrometer test</li>
 	 *  <li> /9 is used by testServerConnectionsWebsocketRecorder test</li>
+	 *  <li> /10 is used by testIssue3883 for testing 100-Continue</li>
 	 * </ul>
 	 */
 	@BeforeEach
@@ -210,6 +213,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				                     out.sendString(Mono.just("Hello World!").doOnNext(b -> checkServerConnectionsMicrometer(req)))))
 				             .get("/9", (req, res) -> res.sendWebsocket((in, out) ->
 				                     out.sendString(Mono.just("Hello World!").doOnNext(b -> checkServerConnectionsRecorder(req)))))
+				             .post("/10", (req, res) -> req.receive()
+				                                           .aggregate()
+				                                           .asString()
+				                                           .flatMap(s -> res.header("Connection", "close").sendString(Mono.just(s)).then()))
 				);
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
@@ -1074,6 +1081,58 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		String[] summaryTags = new String[]{REMOTE_ADDRESS, "1.1.1.1:11111", PROXY_ADDRESS, NA, STATUS, ERROR};
 		assertTimer(registry, CLIENT_CONNECT_TIME, summaryTags).hasCountEqualTo(1);
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testIssue3883(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
+		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
+		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.doOnConnection(cnx -> responseSentHandler.register(responseSentRef, cnx.channel().pipeline()))
+				.bindNow();
+
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		CountDownLatch clientCompleted = new CountDownLatch(1); // client received full response
+		AtomicReference<CountDownLatch> clientCompletedRef = new AtomicReference<>(clientCompleted);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols)
+				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
+				.doAfterResponseSuccess((resp, conn) -> clientCompletedRef.get().countDown());
+
+		httpClient.headers(h -> h.add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE))
+		          .post()
+		          .uri("/10")
+		          .send(body)
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(5));
+
+		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
+		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
+
+		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+
+		int[] numWrites = new int[]{14, 25};
+		int[] bytesWrite = new int[]{160, 243};
+		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
+			numWrites = new int[]{14, 28};
+			bytesWrite = new int[]{151, 310};
+		}
+		else if (clientProtocols.length == 2 &&
+				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
+			numWrites = new int[]{17, 28};
+			bytesWrite = new int[]{315, 435};
+		}
+
+		checkExpectationsExisting("/10", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null,
+				numWrites[0], bytesWrite[0]);
 	}
 
 	static Stream<Arguments> combinationsIssue2956() {
