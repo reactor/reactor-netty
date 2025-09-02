@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.jspecify.annotations.Nullable;
 import reactor.netty.channel.ChannelOperations;
@@ -74,6 +75,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	int lastWriteSeq;
 
+	boolean isNot100Continue;
+
 	protected AbstractHttpClientMetricsHandler(SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress, @Nullable Function<String, String> uriTagValue) {
 		this.proxyAddress = proxyAddress;
 		this.remoteAddress = remoteAddress;
@@ -94,6 +97,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		this.uriTagValue = copy.uriTagValue;
 		this.lastWriteSeq = copy.lastWriteSeq;
 		this.lastReadSeq = copy.lastReadSeq;
+		this.isNot100Continue = copy.isNot100Continue;
 	}
 
 	@Override
@@ -140,14 +144,18 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		try {
 			if (msg instanceof HttpResponse) {
-				status = ((HttpResponse) msg).status().codeAsText().toString();
+				HttpResponseStatus httpResponseStatus = ((HttpResponse) msg).status();
+				isNot100Continue = httpResponseStatus.code() != HttpResponseStatus.CONTINUE.code();
+				if (isNot100Continue) {
+					status = httpResponseStatus.codeAsText().toString();
 
-				startRead((HttpResponse) msg);
+					startRead((HttpResponse) msg);
+				}
 			}
 
 			dataReceived += extractProcessedDataFromBuffer(msg);
 
-			if (msg instanceof LastHttpContent) {
+			if (isNot100Continue && msg instanceof LastHttpContent) {
 				// Detect if we have received an early response before the request has been fully flushed.
 				// In this case, invoke #recordWrite now (because next we will reset all class fields).
 				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
