@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.concurrent.Future;
 import reactor.netty5.channel.ChannelOperations;
@@ -74,6 +75,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	int lastWriteSeq;
 
+	boolean isNot100Continue;
+
 	protected AbstractHttpClientMetricsHandler(SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress, @Nullable Function<String, String> uriTagValue) {
 		this.proxyAddress = proxyAddress;
 		this.remoteAddress = remoteAddress;
@@ -94,6 +97,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		this.uriTagValue = copy.uriTagValue;
 		this.lastWriteSeq = copy.lastWriteSeq;
 		this.lastReadSeq = copy.lastReadSeq;
+		this.isNot100Continue = copy.isNot100Continue;
 	}
 
 	@Override
@@ -155,14 +159,18 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		try {
 			if (msg instanceof HttpResponse response) {
-				status = response.status().codeAsText().toString();
+				HttpResponseStatus httpResponseStatus = response.status();
+				isNot100Continue = httpResponseStatus.code() != HttpResponseStatus.CONTINUE.code();
+				if (isNot100Continue) {
+					status = response.status().codeAsText().toString();
 
-				startRead(response);
+					startRead(response);
+				}
 			}
 
 			dataReceived += extractProcessedDataFromBuffer(msg);
 
-			if (msg instanceof LastHttpContent) {
+			if (isNot100Continue && msg instanceof LastHttpContent) {
 				// Detect if we have received an early response before the write listener has been invoked.
 				// In this case, invoke #recordWrite now (because next we will reset all class fields).
 				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
