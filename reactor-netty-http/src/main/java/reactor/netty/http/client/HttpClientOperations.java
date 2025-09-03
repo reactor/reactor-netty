@@ -196,6 +196,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public HttpClientRequest addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
+			this.cookieEncoder.encode(cookie);
 			this.cookieList.add(cookie);
 		}
 		else {
