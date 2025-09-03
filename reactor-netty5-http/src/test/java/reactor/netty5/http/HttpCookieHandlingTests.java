@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import io.netty5.handler.codec.http.headers.DefaultHttpSetCookie;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.http.server.HttpServerInfos;
@@ -205,6 +206,28 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 		        //.expectNext("testIssue2983_3=3; testIssue2983_2=2; testIssue2983_1=1")
 		        .expectNext("testIssue2983_1=1; testIssue2983_2=2; testIssue2983_3=3")
 		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testIssue3896() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("Should not happen!")))
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .post()
+		        .uri("/")
+		        .send((req, out) ->
+		            Flux.concat(
+		                Mono.fromRunnable(() -> req.addCookie(new DefaultHttpCookiePair("cookie-with-@", "testIssue3896"))),
+		                Mono.empty()))
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectErrorMessage("Cookie name contains an invalid char: @")
 		        .verify(Duration.ofSeconds(5));
 	}
 }
