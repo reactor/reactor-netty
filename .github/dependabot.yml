@@ -44,7 +44,7 @@ updates:
   # Versions > 4 require JDK11+
   - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
     versions:
-    - "[5.a, 6]"
+    - "[5.a, 7]"
   # Versions > 4 require JDK11+
   - dependency-name: org.mockito:mockito-core
     versions:
