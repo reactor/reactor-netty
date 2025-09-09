@@ -431,6 +431,11 @@ shadowJar {
 
 	dependsOn(project.tasks.jar)
 
+	from("${rootDir}/docs/src/docs/dist") {
+		include "LICENSE"
+		into "META-INF"
+	}
+
 	manifest {
 		inheritFrom project.tasks.jar.manifest
 	}
