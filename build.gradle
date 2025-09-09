@@ -331,6 +331,10 @@ subprojects {
 					"Implementation-Title": project.name,
 					"Implementation-Version": project.version)
 		}
+		from("${rootDir}/docs/src/docs/dist") {
+			include "LICENSE"
+			into "META-INF"
+		}
 	}
 
 	check.dependsOn jacocoTestReport

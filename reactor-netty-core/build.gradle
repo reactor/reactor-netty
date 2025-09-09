@@ -304,6 +304,11 @@ shadowJar {
 		from sourceSets.java17.output
 	}
 
+	from("${rootDir}/docs/src/docs/dist") {
+		include "LICENSE"
+		into "META-INF"
+	}
+
 	manifest {
 		inheritFrom project.tasks.jar.manifest
 	}
