@@ -85,7 +85,7 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.16.0-M2' //optional baseline
+	micrometerVersion = '1.16.0-M3' //optional baseline
 	micrometerTracingVersion = '1.6.0-M2' //optional baseline
 	micrometerDocsVersion = '1.0.4' //optional baseline
 
