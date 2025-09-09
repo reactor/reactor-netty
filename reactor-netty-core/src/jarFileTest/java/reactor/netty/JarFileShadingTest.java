@@ -48,7 +48,7 @@ class JarFileShadingTest extends AbstractJarFileTest {
 			assertThatFileList(stream).containsOnly("netty");
 		}
 		try (Stream<Path> stream = Files.list(root.resolve("META-INF"))) {
-			assertThatFileList(stream).containsOnly("native-image", "services", "versions", "MANIFEST.MF");
+			assertThatFileList(stream).containsOnly("native-image", "services", "versions", "LICENSE", "MANIFEST.MF");
 		}
 	}
 
