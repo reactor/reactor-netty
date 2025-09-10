@@ -15,17 +15,17 @@
  */
 package reactor.netty.http.server;
 
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
+import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
+import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
+import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
+import static reactor.netty.ReactorNetty.format;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
@@ -43,26 +43,31 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.Http2ConnectionLiveness;
+import reactor.netty.http.Http2SettingsSpec;
+import reactor.netty.http.HttpConnectionImmediateClose;
+import reactor.netty.http.IdleTimeoutHandler;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
-
-import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
-import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
-import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
-import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
-import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
-import static reactor.netty.ReactorNetty.format;
 
 /**
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
@@ -85,6 +90,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final HttpMessageLogFactory                                   httpMessageLogFactory;
 	final Duration                                                idleTimeout;
+	final Http2SettingsSpec  http2SettingsSpec;
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
@@ -121,6 +127,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable Duration idleTimeout,
+			@Nullable Http2SettingsSpec http2SettingsSpec,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			int maxKeepAliveRequests,
@@ -136,6 +143,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		this.cookieDecoder = decoder;
 		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.idleTimeout = idleTimeout;
+		this.http2SettingsSpec = http2SettingsSpec;
 		this.mapHandle = mapHandle;
 		this.maxKeepAliveRequests = maxKeepAliveRequests;
 		this.readTimeout = readTimeout;
@@ -155,8 +163,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
-		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
-
+		setupIdleTimeoutHandler(ctx.pipeline());
 		ctx.fireChannelActive();
 	}
 
@@ -546,7 +553,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			ctx.executor().execute(this);
 		}
 		else {
-			IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+			setupIdleTimeoutHandler(ctx.pipeline());
 			ctx.read();
 		}
 	}
@@ -688,6 +695,29 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 				MULTIPART_PREFIX,
 				0,
 				MULTIPART_PREFIX.length());
+	}
+
+	private void setupIdleTimeoutHandler(ChannelPipeline pipeline) {
+		Http2FrameCodec httpCodec = pipeline.get(Http2FrameCodec.class);
+		if (httpCodec != null) {
+			IdleTimeoutHandler.addIdleTimeoutHandler(
+					pipeline,
+					idleTimeout,
+					new Http2ConnectionLiveness(
+							httpCodec,
+							http2SettingsSpec != null ? http2SettingsSpec.pingAckTimeout() : null,
+							http2SettingsSpec != null ? http2SettingsSpec.pingScheduleInterval() : null,
+							http2SettingsSpec != null ? http2SettingsSpec.pingAckDropThreshold() : null
+					)
+			);
+			return;
+		}
+
+		IdleTimeoutHandler.addIdleTimeoutHandler(
+				pipeline,
+				idleTimeout,
+				new HttpConnectionImmediateClose()
+		);
 	}
 
 	static final class HttpRequestHolder {
