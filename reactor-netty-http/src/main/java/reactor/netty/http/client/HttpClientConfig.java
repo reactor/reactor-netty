@@ -601,6 +601,18 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		ChannelPipeline pipeline = ch.pipeline();
+
+		if (responseTimeoutMillis > -1 && ch.pipeline().get(NettyPipeline.ResponseTimeoutHandler) == null) {
+			// This handler has to be always as early as possible in order to handle correctly the time for receiving the read/readComplete events.
+			// We don't want other handlers to delay read/readComplete events delivery.
+			ch.pipeline().addLast(NettyPipeline.ResponseTimeoutHandler,
+					new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
+			Connection conn = Connection.from(ch);
+			if (conn.isPersistent()) {
+				conn.onTerminate().subscribe(null, null, () -> conn.removeHandler(NettyPipeline.ResponseTimeoutHandler));
+			}
+		}
+
 		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, HTTP2_STREAM_FRAME_TO_HTTP_OBJECT)
 				.addLast(NettyPipeline.HttpTrafficHandler, HTTP_2_STREAM_BRIDGE_CLIENT_HANDLER);
 
@@ -640,23 +652,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					}
 				}
 				pipeline.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
-			}
-		}
-
-		if (responseTimeoutMillis > -1) {
-			Connection conn = Connection.from(ch);
-			if (ch.pipeline().get(NettyPipeline.HttpMetricsHandler) != null) {
-				if (ch.pipeline().get(NettyPipeline.ResponseTimeoutHandler) == null) {
-					ch.pipeline().addBefore(NettyPipeline.HttpMetricsHandler, NettyPipeline.ResponseTimeoutHandler,
-							new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
-					if (conn.isPersistent()) {
-						conn.onTerminate().subscribe(null, null, () -> conn.removeHandler(NettyPipeline.ResponseTimeoutHandler));
-					}
-				}
-			}
-			else {
-				conn.addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
-						new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
 			}
 		}
 
