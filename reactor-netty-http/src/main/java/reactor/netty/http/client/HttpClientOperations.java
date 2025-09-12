@@ -40,11 +40,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -674,19 +676,32 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
-		if (responseTimeout != null) {
-			if (channel().pipeline().get(NettyPipeline.HttpMetricsHandler) != null) {
-				if (channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) == null) {
-					channel().pipeline().addBefore(NettyPipeline.HttpMetricsHandler, NettyPipeline.ResponseTimeoutHandler,
-							new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
-					if (isPersistent()) {
-						onTerminate().subscribe(null, null, () -> removeHandler(NettyPipeline.ResponseTimeoutHandler));
-					}
-				}
+		ChannelPipeline pipeline = channel().pipeline();
+		if (responseTimeout != null && pipeline.get(NettyPipeline.ResponseTimeoutHandler) == null) {
+			// This handler has to be always as early as possible in order to handle correctly the time for receiving the read/readComplete events.
+			// We don't want other handlers to delay read/readComplete events delivery.
+			String baseName = null;
+			if (pipeline.get(NettyPipeline.HttpCodec) != null) {
+				baseName = NettyPipeline.HttpCodec;
+			}
+			else if (pipeline.get(NettyPipeline.H2ToHttp11Codec) != null) {
+					baseName = NettyPipeline.H2ToHttp11Codec;
 			}
 			else {
-				addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
-						new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
+				ChannelHandler httpClientCodec = pipeline.get(HttpClientCodec.class);
+				if (httpClientCodec != null) {
+					baseName = pipeline.context(httpClientCodec).name();
+				}
+			}
+			pipeline.addBefore(baseName, NettyPipeline.ResponseTimeoutHandler,
+					new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Added encoder [{}] at the beginning of the user pipeline, full pipeline: {}"),
+						NettyPipeline.ResponseTimeoutHandler,
+						pipeline.names());
+			}
+			if (isPersistent()) {
+				onTerminate().subscribe(null, null, () -> removeHandler(NettyPipeline.ResponseTimeoutHandler));
 			}
 		}
 		channel().read();
