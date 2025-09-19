@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -28,6 +29,7 @@ import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import org.junit.jupiter.api.Test;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.PROXY_AUTHORIZATION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -45,9 +47,28 @@ class ProxyProviderTest {
 	private static final InetSocketAddress ADDRESS_2 = InetSocketAddress.createUnresolved("example.com", 80);
 
 	@SuppressWarnings("UnnecessaryLambda")
-	private static final Consumer<HttpHeaders> HEADER_1 = list -> list.add("Authorization", "Bearer 123");
+	private static final Consumer<HttpHeaders> HEADER_1 = list -> list.add(PROXY_AUTHORIZATION, "Bearer 123");
 	@SuppressWarnings("UnnecessaryLambda")
-	private static final Consumer<HttpHeaders> HEADER_2 = list -> list.add("Authorization", "Bearer 456");
+	private static final Consumer<HttpHeaders> HEADER_2 = list -> list.add(PROXY_AUTHORIZATION, "Bearer 456");
+	@SuppressWarnings("UnnecessaryLambda")
+	private static final Consumer<HttpHeaders> HEADER_3 = list -> list.add(PROXY_AUTHORIZATION, "Bearer 456_new");
+	@SuppressWarnings("UnnecessaryLambda")
+	private static final Consumer<HttpHeaders> HEADER_4 = list -> list.add(PROXY_AUTHORIZATION, "Bearer 456")
+	                                                                  .add("Test", "test");
+	@SuppressWarnings("UnnecessaryLambda")
+	private static final Consumer<HttpHeaders> HEADER_5 = list -> list.add("Test", "test");
+	@SuppressWarnings("UnnecessaryLambda")
+	private static final Consumer<HttpHeaders> HEADER_6 = list -> list.add(PROXY_AUTHORIZATION, UUID.randomUUID().toString());
+	@SuppressWarnings("UnnecessaryLambda")
+	private static final Function<String, Integer> PROXY_AUTHORIZATION_HEADER_UID_FUNCTION = s -> {
+		if (s.startsWith("Bearer 123")) {
+			return 123;
+		}
+		else if (s.startsWith("Bearer 456")) {
+			return 456;
+		}
+		return 0;
+	};
 
 	private static final long CONNECT_TIMEOUT_1 = 100;
 	private static final long CONNECT_TIMEOUT_2 = 200;
@@ -68,8 +89,56 @@ class ProxyProviderTest {
 
 	@Test
 	void equalProxyProvidersAuthHeader() {
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1));
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode()).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode());
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_1);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_1);
+		assertThat(proxyProvider1).isEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(proxyProvider2.proxyAuthorizationHeaderUID).isNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isEqualTo(proxyProvider2.httpHeadersNoProxyAuthorization).isNull();
+	}
+
+	@Test
+	void equalProxyProvidersNoAuthHeader() {
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_5, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_5, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		assertThat(proxyProvider1).isEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(proxyProvider2.proxyAuthorizationHeaderUID).isNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isEqualTo(proxyProvider2.httpHeadersNoProxyAuthorization).isNull();
+	}
+
+	@Test
+	void equalProxyProvidersProxyAuthorizationHeaderUID_1() {
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_1, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_1, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		assertThat(proxyProvider1).isEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(proxyProvider2.proxyAuthorizationHeaderUID).isEqualTo(123);
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isEqualTo(proxyProvider2.httpHeadersNoProxyAuthorization).isNotNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization.contains(PROXY_AUTHORIZATION)).isFalse();
+	}
+
+	@Test
+	void equalProxyProvidersProxyAuthorizationHeaderUID_2() {
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_2, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_3, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		assertThat(proxyProvider1).isEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(proxyProvider2.proxyAuthorizationHeaderUID).isEqualTo(456);
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isEqualTo(proxyProvider2.httpHeadersNoProxyAuthorization).isNotNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization.contains(PROXY_AUTHORIZATION)).isFalse();
+	}
+
+	@Test
+	void equalProxyProvidersProxyAuthorizationHeaderUID_3() {
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_6, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_6, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		assertThat(proxyProvider1).isEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(proxyProvider2.proxyAuthorizationHeaderUID).isEqualTo(0);
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isEqualTo(proxyProvider2.httpHeadersNoProxyAuthorization).isNotNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization.contains(PROXY_AUTHORIZATION)).isFalse();
+		assertThat(proxyProvider1.httpHeaders.get(PROXY_AUTHORIZATION)).isNotEqualTo(proxyProvider2.httpHeaders.get(PROXY_AUTHORIZATION));
 	}
 
 	@Test
@@ -86,8 +155,40 @@ class ProxyProviderTest {
 
 	@Test
 	void differentAuthHeaders() {
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).isNotEqualTo(createHeaderProxy(ADDRESS_1, HEADER_2));
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode()).isNotEqualTo(createHeaderProxy(ADDRESS_1, HEADER_2).hashCode());
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_1);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_2);
+		assertThat(proxyProvider1).isNotEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isNotEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(proxyProvider2.proxyAuthorizationHeaderUID).isNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isEqualTo(proxyProvider2.httpHeadersNoProxyAuthorization).isNull();
+	}
+
+	@Test
+	void differentProxyAuthorizationHeaderUID_1() {
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_1, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_2, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		assertThat(proxyProvider1).isNotEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isNotEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(123);
+		assertThat(proxyProvider2.proxyAuthorizationHeaderUID).isEqualTo(456);
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isNotNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization.contains(PROXY_AUTHORIZATION)).isFalse();
+		assertThat(proxyProvider2.httpHeadersNoProxyAuthorization).isNotNull();
+		assertThat(proxyProvider2.httpHeadersNoProxyAuthorization.contains(PROXY_AUTHORIZATION)).isFalse();
+	}
+
+	@Test
+	void differentProxyAuthorizationHeaderUID_2() {
+		ProxyProvider proxyProvider1 = createHeaderProxy(ADDRESS_1, HEADER_2, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		ProxyProvider proxyProvider2 = createHeaderProxy(ADDRESS_1, HEADER_4, PROXY_AUTHORIZATION_HEADER_UID_FUNCTION);
+		assertThat(proxyProvider1).isNotEqualTo(proxyProvider2);
+		assertThat(proxyProvider1.hashCode()).isNotEqualTo(proxyProvider2.hashCode());
+		assertThat(proxyProvider1.proxyAuthorizationHeaderUID).isEqualTo(proxyProvider2.proxyAuthorizationHeaderUID).isEqualTo(456);
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isNotNull();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization.contains(PROXY_AUTHORIZATION)).isFalse();
+		assertThat(proxyProvider2.httpHeadersNoProxyAuthorization).isNotNull();
+		assertThat(proxyProvider2.httpHeadersNoProxyAuthorization.contains(PROXY_AUTHORIZATION)).isFalse();
+		assertThat(proxyProvider1.httpHeadersNoProxyAuthorization).isNotEqualTo(proxyProvider2.httpHeadersNoProxyAuthorization);
 	}
 
 	@Test
@@ -607,6 +708,15 @@ class ProxyProviderTest {
 		                    .type(ProxyProvider.Proxy.HTTP)
 		                    .socketAddress(address)
 		                    .httpHeaders(authHeader)
+		                    .build();
+	}
+
+	private static ProxyProvider createHeaderProxy(InetSocketAddress address, Consumer<HttpHeaders> authHeader,
+			Function<String, Integer> proxyAuthorizationHeaderUIDFunction) {
+		return ProxyProvider.builder()
+		                    .type(ProxyProvider.Proxy.HTTP)
+		                    .socketAddress(address)
+		                    .httpHeaders(authHeader, proxyAuthorizationHeaderUIDFunction)
 		                    .build();
 	}
 

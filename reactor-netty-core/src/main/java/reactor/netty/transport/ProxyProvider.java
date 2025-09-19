@@ -45,6 +45,8 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.PROXY_AUTHORIZATION;
+
 /**
  * Proxy configuration.
  *
@@ -66,6 +68,8 @@ public final class ProxyProvider {
 	final SocketAddress address;
 	final Predicate<SocketAddress> nonProxyHostPredicate;
 	final HttpHeaders httpHeaders;
+	final HttpHeaders httpHeadersNoProxyAuthorization;
+	final Integer proxyAuthorizationHeaderUID;
 	final Proxy type;
 	final long connectTimeoutMillis;
 
@@ -85,6 +89,23 @@ public final class ProxyProvider {
 			this.address = builder.address.get();
 		}
 		this.httpHeaders = builder.httpHeaders.get();
+		if (builder.proxyAuthorizationHeaderUIDFunction != null && this.httpHeaders != null) {
+			String proxyAuthorizationHeader = this.httpHeaders.get(PROXY_AUTHORIZATION);
+			if (proxyAuthorizationHeader != null) {
+				this.httpHeadersNoProxyAuthorization = this.httpHeaders.copy();
+				this.httpHeadersNoProxyAuthorization.remove(PROXY_AUTHORIZATION);
+				this.proxyAuthorizationHeaderUID =
+						builder.proxyAuthorizationHeaderUIDFunction.apply(proxyAuthorizationHeader);
+			}
+			else {
+				this.httpHeadersNoProxyAuthorization = null;
+				this.proxyAuthorizationHeaderUID = null;
+			}
+		}
+		else {
+			this.httpHeadersNoProxyAuthorization = null;
+			this.proxyAuthorizationHeaderUID = null;
+		}
 		this.type = builder.type;
 		this.connectTimeoutMillis = builder.connectTimeoutMillis;
 	}
@@ -230,7 +251,7 @@ public final class ProxyProvider {
 				Objects.equals(password, that.password) &&
 				Objects.equals(address, that.address) &&
 				getNonProxyHostsValue() == that.getNonProxyHostsValue() &&
-				Objects.equals(httpHeaders, that.httpHeaders) &&
+				compareHttpHeaders(that) &&
 				type == that.type &&
 				connectTimeoutMillis == that.connectTimeoutMillis;
 	}
@@ -242,7 +263,13 @@ public final class ProxyProvider {
 		result = 31 * result + Objects.hashCode(password);
 		result = 31 * result + Objects.hashCode(address);
 		result = 31 * result + Boolean.hashCode(getNonProxyHostsValue());
-		result = 31 * result + Objects.hashCode(httpHeaders);
+		if (proxyAuthorizationHeaderUID == null) {
+			result = 31 * result + Objects.hashCode(httpHeaders);
+		}
+		else {
+			result = 31 * result + Objects.hashCode(httpHeadersNoProxyAuthorization);
+			result = 31 * result + Objects.hashCode(proxyAuthorizationHeaderUID);
+		}
 		result = 31 * result + Objects.hashCode(type);
 		result = 31 * result + Long.hashCode(connectTimeoutMillis);
 		return result;
@@ -250,6 +277,16 @@ public final class ProxyProvider {
 
 	private boolean getNonProxyHostsValue() {
 		return nonProxyHostPredicate.test(address);
+	}
+
+	private boolean compareHttpHeaders(ProxyProvider that) {
+		if (proxyAuthorizationHeaderUID == null && that.proxyAuthorizationHeaderUID == null) {
+			return Objects.equals(httpHeaders, that.httpHeaders);
+		}
+		else {
+			return Objects.equals(proxyAuthorizationHeaderUID, that.proxyAuthorizationHeaderUID) &&
+					Objects.equals(httpHeadersNoProxyAuthorization, that.httpHeadersNoProxyAuthorization);
+		}
 	}
 
 	@Nullable
@@ -405,6 +442,7 @@ public final class ProxyProvider {
 		Supplier<? extends SocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
 		Supplier<? extends HttpHeaders> httpHeaders = NO_HTTP_HEADERS;
+		Function<String, Integer> proxyAuthorizationHeaderUIDFunction;
 		Proxy type;
 		long connectTimeoutMillis = 10000;
 
@@ -494,6 +532,13 @@ public final class ProxyProvider {
 					}
 				};
 			}
+			return this;
+		}
+
+		@Override
+		public Builder httpHeaders(Consumer<HttpHeaders> headers, Function<String, Integer> proxyAuthorizationHeaderUIDFunction) {
+			httpHeaders(headers);
+			this.proxyAuthorizationHeaderUIDFunction = Objects.requireNonNull(proxyAuthorizationHeaderUIDFunction, "proxyAuthorizationHeaderUIDFunction");
 			return this;
 		}
 
@@ -716,6 +761,18 @@ public final class ProxyProvider {
 		 * @return {@code this}
 		 */
 		Builder httpHeaders(Consumer<HttpHeaders> headers);
+
+		/**
+		 * A consumer to add request headers for the http proxy.
+		 *
+		 * @param headers A consumer to add request headers for the http proxy
+		 * @param proxyAuthorizationHeaderUIDFunction A function to provide the UID for {@code Proxy-Authorization} header value.
+		 * This function should return a consistent identifier for logically equivalent authorization values,
+		 * enabling stable hashCode computation even when the actual token value changes due to renewal.
+		 * @return {@code this}
+		 * @since 1.2.11
+		 */
+		Builder httpHeaders(Consumer<HttpHeaders> headers, Function<String, Integer> proxyAuthorizationHeaderUIDFunction);
 
 		/**
 		 * The proxy connect timeout in millis. Default to 10000 ms.
