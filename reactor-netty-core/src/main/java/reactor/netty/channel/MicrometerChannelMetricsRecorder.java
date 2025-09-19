@@ -89,7 +89,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		recordDataReceived(remoteAddress, formatSocketAddress(proxyAddress), bytes);
 	}
 
-	void recordDataReceived(SocketAddress remoteAddress, @Nullable String proxyAddress, long bytes) {
+	void recordDataReceived(SocketAddress remoteAddress, String proxyAddress, long bytes) {
 		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, proxyAddress, null, null);
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, meterKey, key -> {
@@ -118,7 +118,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		recordDataSent(remoteAddress, formatSocketAddress(proxyAddress), bytes);
 	}
 
-	void recordDataSent(SocketAddress remoteAddress, @Nullable String proxyAddress, long bytes) {
+	void recordDataSent(SocketAddress remoteAddress, String proxyAddress, long bytes) {
 		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, proxyAddress, null, null);
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, meterKey, key -> {
@@ -147,7 +147,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		incrementErrorsCount(remoteAddress, formatSocketAddress(proxyAddress));
 	}
 
-	void incrementErrorsCount(SocketAddress remoteAddress, @Nullable String proxyAddress) {
+	void incrementErrorsCount(SocketAddress remoteAddress, String proxyAddress) {
 		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, proxyAddress, null, null);
 		Counter c = MapUtils.computeIfAbsent(errorsCache, meterKey, key -> {
@@ -208,7 +208,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	 * @param status the status of the TLS handshake operation
 	 * @return TLS handshake timer
 	 */
-	public final @Nullable Timer getTlsHandshakeTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String status) {
+	public final @Nullable Timer getTlsHandshakeTimer(String name, String remoteAddress, String proxyAddress, String status) {
 		MeterKey meterKey = new MeterKey(null, remoteAddress, proxyAddress, null, status);
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey, key -> {
 			Timer.Builder builder = Timer.builder(name).tags(REMOTE_ADDRESS, remoteAddress, STATUS, status);
@@ -235,7 +235,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
-	final @Nullable Timer getConnectTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String status) {
+	final @Nullable Timer getConnectTimer(String name, String remoteAddress, String proxyAddress, String status) {
 		MeterKey meterKey = new MeterKey(null, remoteAddress, proxyAddress, null, status);
 		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -252,7 +252,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
-	public final @Nullable Timer getResolveAddressTimer(String name, @Nullable String address, String status) {
+	public final @Nullable Timer getResolveAddressTimer(String name, String address, String status) {
 		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
 				key -> filter(Timer.builder(name)

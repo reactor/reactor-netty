@@ -1235,7 +1235,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
-		String address = formatSocketAddress(request.connectionHostAddress());
+		SocketAddress connectionHostAddress = request.connectionHostAddress();
+		String address = connectionHostAddress != null ? formatSocketAddress(connectionHostAddress) : null;
 		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
 		assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(1);
 		if (isHttp2) {
@@ -1248,7 +1249,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private static void checkServerConnectionsRecorder(HttpServerRequest request) {
 		try {
-			String address = formatSocketAddress(request.hostAddress());
+			InetSocketAddress hostAddress = request.hostAddress();
+			String address = hostAddress != null ? formatSocketAddress(hostAddress) : null;
 			boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);

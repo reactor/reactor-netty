@@ -101,7 +101,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@Nullable ContextView parentContextView;
 
 		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder, @Nullable SocketAddress proxyAddress) {
-			this.proxyAddress = formatSocketAddress(proxyAddress);
+			this.proxyAddress = proxyAddress != null ? formatSocketAddress(proxyAddress) : null;
 			this.recorder = recorder;
 		}
 
@@ -250,7 +250,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer,
 				@Nullable SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress) {
-			this.proxyAddress = formatSocketAddress(proxyAddress);
+			this.proxyAddress = proxyAddress != null ? formatSocketAddress(proxyAddress) : null;
 			this.recorder = recorder;
 			this.remoteAddress = remoteAddress;
 			this.type = onServer ? TYPE_SERVER : TYPE_CLIENT;

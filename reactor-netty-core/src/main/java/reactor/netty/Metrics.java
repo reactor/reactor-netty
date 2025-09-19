@@ -302,17 +302,14 @@ public class Metrics {
 		return OBSERVATION_REGISTRY.getCurrentObservation();
 	}
 
-	public static @Nullable String formatSocketAddress(@Nullable SocketAddress socketAddress) {
-		if (socketAddress != null) {
-			if (socketAddress instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) socketAddress;
-				return address.getHostString() + ":" + address.getPort();
-			}
-			else {
-				return socketAddress.toString();
-			}
+	public static String formatSocketAddress(SocketAddress socketAddress) {
+		if (socketAddress instanceof InetSocketAddress) {
+			InetSocketAddress address = (InetSocketAddress) socketAddress;
+			return address.getHostString() + ":" + address.getPort();
 		}
-		return null;
+		else {
+			return socketAddress.toString();
+		}
 	}
 
 	/**

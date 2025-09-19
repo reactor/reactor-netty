@@ -187,7 +187,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 				this.netPeerPort = "";
 			}
 			this.path = path;
-			this.proxyAddress = formatSocketAddress(proxyAddress);
+			this.proxyAddress = proxyAddress != null ? formatSocketAddress(proxyAddress) : null;
 			setCarrier(request);
 			setContextualName(HTTP_PREFIX + this.method);
 		}
