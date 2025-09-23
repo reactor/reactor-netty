@@ -72,6 +72,35 @@ public final class Http2SettingsSpec {
 		Builder maxConcurrentStreams(long maxConcurrentStreams);
 
 		/**
+		 * Sets the maximum number RST frames that are allowed per window before the connection is closed.
+		 * This allows to protect against the remote peer flooding us with such frames and so use up a lot of CPU.
+		 * {@code 0} for any of the parameters means no protection should be applied.
+		 * For server, the default {code maxDecodedRstFramesPerWindow} is {@code 200} and for the client it is {@code 0}.
+		 * The default {code maxDecodedRstFramesSecondsPerWindow} is {@code 30}.
+		 *
+		 * @param maxDecodedRstFramesPerWindow the maximum number RST frames that are allowed per window
+		 * @param maxDecodedRstFramesSecondsPerWindow the maximum seconds per window
+		 * @return {@code this}
+		 * @since 1.2.11
+		 */
+		Builder maxDecodedRstFramesPerWindow(int maxDecodedRstFramesPerWindow, int maxDecodedRstFramesSecondsPerWindow);
+
+		/**
+		 * Sets the maximum number RST frames that are allowed per window before the connection is closed.
+		 * This allows to protect against the remote peer that will trigger us to generate a flood
+		 * of RST frames and so use up a lot of CPU.
+		 * {@code 0} for any of the parameters means no protection should be applied.
+		 * For server, the default {code maxEncodedRstFramesPerWindow} is {@code 200} and for the client - is {@code 0}.
+		 * The default {code maxEncodedRstFramesSecondsPerWindow} is {@code 30}.
+		 *
+		 * @param maxEncodedRstFramesPerWindow the maximum number RST frames that are allowed per window
+		 * @param maxEncodedRstFramesSecondsPerWindow the maximum seconds per window
+		 * @return {@code this}
+		 * @since 1.2.11
+		 */
+		Builder maxEncodedRstFramesPerWindow(int maxEncodedRstFramesPerWindow, int maxEncodedRstFramesSecondsPerWindow);
+
+		/**
 		 * Sets the {@code SETTINGS_MAX_FRAME_SIZE} value.
 		 *
 		 * @param maxFrameSize the {@code SETTINGS_MAX_FRAME_SIZE} value
@@ -155,6 +184,50 @@ public final class Http2SettingsSpec {
 	}
 
 	/**
+	 * Returns the configured maximum number RST frames that are allowed per window or null.
+	 *
+	 * @return the configured maximum number RST frames that are allowed per window or null
+	 * @since 1.2.11
+	 */
+	@Nullable
+	public Integer maxDecodedRstFramesPerWindow() {
+		return maxDecodedRstFramesPerWindow;
+	}
+
+	/**
+	 * Returns the configured maximum seconds per window or null.
+	 *
+	 * @return the configured maximum seconds per window or null
+	 * @since 1.2.11
+	 */
+	@Nullable
+	public Integer maxDecodedRstFramesSecondsPerWindow() {
+		return maxDecodedRstFramesSecondsPerWindow;
+	}
+
+	/**
+	 * Returns the configured maximum number RST frames that are allowed per window or null.
+	 *
+	 * @return the configured maximum number RST frames that are allowed per window or null
+	 * @since 1.2.11
+	 */
+	@Nullable
+	public Integer maxEncodedRstFramesPerWindow() {
+		return maxEncodedRstFramesPerWindow;
+	}
+
+	/**
+	 * Returns the configured maximum seconds per window or null.
+	 *
+	 * @return the configured maximum seconds per window or null
+	 * @since 1.2.11
+	 */
+	@Nullable
+	public Integer maxEncodedRstFramesSecondsPerWindow() {
+		return maxEncodedRstFramesSecondsPerWindow;
+	}
+
+	/**
 	 * Returns the configured {@code SETTINGS_MAX_FRAME_SIZE} value or null.
 	 *
 	 * @return the configured {@code SETTINGS_MAX_FRAME_SIZE} value or null
@@ -209,6 +282,10 @@ public final class Http2SettingsSpec {
 				Objects.equals(headerTableSize, that.headerTableSize) &&
 				Objects.equals(initialWindowSize, that.initialWindowSize) &&
 				Objects.equals(maxConcurrentStreams, that.maxConcurrentStreams) &&
+				Objects.equals(maxDecodedRstFramesPerWindow, that.maxDecodedRstFramesPerWindow) &&
+				Objects.equals(maxDecodedRstFramesSecondsPerWindow, that.maxDecodedRstFramesSecondsPerWindow) &&
+				Objects.equals(maxEncodedRstFramesPerWindow, that.maxEncodedRstFramesPerWindow) &&
+				Objects.equals(maxEncodedRstFramesSecondsPerWindow, that.maxEncodedRstFramesSecondsPerWindow) &&
 				Objects.equals(maxFrameSize, that.maxFrameSize) &&
 				maxHeaderListSize.equals(that.maxHeaderListSize) &&
 				Objects.equals(maxStreams, that.maxStreams) &&
@@ -222,6 +299,10 @@ public final class Http2SettingsSpec {
 		result = 31 * result + (headerTableSize == null ? 0 : Long.hashCode(headerTableSize));
 		result = 31 * result + (initialWindowSize == null ? 0 : initialWindowSize);
 		result = 31 * result + (maxConcurrentStreams == null ? 0 : Long.hashCode(maxConcurrentStreams));
+		result = 31 * result + (maxDecodedRstFramesPerWindow == null ? 0 : Long.hashCode(maxDecodedRstFramesPerWindow));
+		result = 31 * result + (maxDecodedRstFramesSecondsPerWindow == null ? 0 : Long.hashCode(maxDecodedRstFramesSecondsPerWindow));
+		result = 31 * result + (maxEncodedRstFramesPerWindow == null ? 0 : Long.hashCode(maxEncodedRstFramesPerWindow));
+		result = 31 * result + (maxEncodedRstFramesSecondsPerWindow == null ? 0 : Long.hashCode(maxEncodedRstFramesSecondsPerWindow));
 		result = 31 * result + (maxFrameSize == null ? 0 : maxFrameSize);
 		result = 31 * result + (maxHeaderListSize == null ? 0 : Long.hashCode(maxHeaderListSize));
 		result = 31 * result + (maxStreams == null ? 0 : Long.hashCode(maxStreams));
@@ -233,6 +314,10 @@ public final class Http2SettingsSpec {
 	final Long headerTableSize;
 	final Integer initialWindowSize;
 	final Long maxConcurrentStreams;
+	final Integer maxDecodedRstFramesPerWindow;
+	final Integer maxDecodedRstFramesSecondsPerWindow;
+	final Integer maxEncodedRstFramesPerWindow;
+	final Integer maxEncodedRstFramesSecondsPerWindow;
 	final Integer maxFrameSize;
 	final Long maxHeaderListSize;
 	final Long maxStreams;
@@ -250,6 +335,10 @@ public final class Http2SettingsSpec {
 		else {
 			maxConcurrentStreams = build.maxStreams;
 		}
+		maxDecodedRstFramesPerWindow = build.maxDecodedRstFramesPerWindow;
+		maxDecodedRstFramesSecondsPerWindow = build.maxDecodedRstFramesSecondsPerWindow;
+		maxEncodedRstFramesPerWindow = build.maxEncodedRstFramesPerWindow;
+		maxEncodedRstFramesSecondsPerWindow = build.maxEncodedRstFramesSecondsPerWindow;
 		maxFrameSize = settings.maxFrameSize();
 		maxHeaderListSize = settings.maxHeaderListSize();
 		maxStreams = build.maxStreams;
@@ -258,6 +347,10 @@ public final class Http2SettingsSpec {
 
 	static final class Build implements Builder {
 		Boolean connectProtocolEnabled;
+		Integer maxDecodedRstFramesPerWindow;
+		Integer maxDecodedRstFramesSecondsPerWindow;
+		Integer maxEncodedRstFramesPerWindow;
+		Integer maxEncodedRstFramesSecondsPerWindow;
 		Long maxStreams;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
 
@@ -287,6 +380,32 @@ public final class Http2SettingsSpec {
 		@Override
 		public Builder maxConcurrentStreams(long maxConcurrentStreams) {
 			http2Settings.maxConcurrentStreams(maxConcurrentStreams);
+			return this;
+		}
+
+		@Override
+		public Builder maxDecodedRstFramesPerWindow(int maxDecodedRstFramesPerWindow, int maxDecodedRstFramesSecondsPerWindow) {
+			if (maxDecodedRstFramesPerWindow < 0) {
+				throw new IllegalArgumentException("maxDecodedRstFramesPerWindow must be positive or zero");
+			}
+			if (maxDecodedRstFramesSecondsPerWindow < 0) {
+				throw new IllegalArgumentException("maxDecodedRstFramesSecondsPerWindow must be positive or zero");
+			}
+			this.maxDecodedRstFramesPerWindow = Integer.valueOf(maxDecodedRstFramesPerWindow);
+			this.maxDecodedRstFramesSecondsPerWindow = Integer.valueOf(maxDecodedRstFramesSecondsPerWindow);
+			return this;
+		}
+
+		@Override
+		public Builder maxEncodedRstFramesPerWindow(int maxEncodedRstFramesPerWindow, int maxEncodedRstFramesSecondsPerWindow) {
+			if (maxEncodedRstFramesPerWindow < 0) {
+				throw new IllegalArgumentException("maxEncodedRstFramesPerWindow must be positive or zero");
+			}
+			if (maxEncodedRstFramesSecondsPerWindow < 0) {
+				throw new IllegalArgumentException("maxEncodedRstFramesSecondsPerWindow must be positive or zero");
+			}
+			this.maxEncodedRstFramesPerWindow = Integer.valueOf(maxEncodedRstFramesPerWindow);
+			this.maxEncodedRstFramesSecondsPerWindow = Integer.valueOf(maxEncodedRstFramesSecondsPerWindow);
 			return this;
 		}
 
