@@ -284,6 +284,8 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
+			'reactor.netty.http.Http2SettingsSpec$Builder#maxDecodedRstFramesPerWindow(int, int)',
+			'reactor.netty.http.Http2SettingsSpec$Builder#maxEncodedRstFramesPerWindow(int, int)'
 	]
 }
 
