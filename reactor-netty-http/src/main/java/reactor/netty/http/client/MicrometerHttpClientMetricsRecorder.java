@@ -76,7 +76,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		recordDataReceivedTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, status, time);
 	}
 
-	void recordDataReceivedTime(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, String method, String status, Duration time) {
+	void recordDataReceivedTime(SocketAddress remoteAddress, String proxyAddress, String uri, String method, String status, Duration time) {
 		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, method, status);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
@@ -102,7 +102,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		recordDataSentTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, time);
 	}
 
-	void recordDataSentTime(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, String method, Duration time) {
+	void recordDataSentTime(SocketAddress remoteAddress, String proxyAddress, String uri, String method, Duration time) {
 		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, method, null);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
@@ -133,7 +133,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		}
 	}
 
-	@Nullable Timer getResponseTimeTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String uri, String method, String status) {
+	@Nullable Timer getResponseTimeTimer(String name, String remoteAddress, String proxyAddress, String uri, String method, String status) {
 		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -151,7 +151,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		recordDataReceived(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
 	}
 
-	void recordDataReceived(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, long bytes) {
+	void recordDataReceived(SocketAddress remoteAddress, String proxyAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
@@ -176,7 +176,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		recordDataSent(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
 	}
 
-	void recordDataSent(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, long bytes) {
+	void recordDataSent(SocketAddress remoteAddress, String proxyAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
@@ -201,7 +201,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		incrementErrorsCount(remoteAddress, formatSocketAddress(proxyAddress), uri);
 	}
 
-	void incrementErrorsCount(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri) {
+	void incrementErrorsCount(SocketAddress remoteAddress, String proxyAddress, String uri) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
 		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
