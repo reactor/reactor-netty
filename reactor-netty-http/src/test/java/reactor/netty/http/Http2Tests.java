@@ -831,8 +831,8 @@ class Http2Tests extends BaseHttpTest {
 						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestMaxRstFramesPerWindow(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
 				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)),
-				spec -> spec.maxDecodedRstFramesPerWindow(30, 10).maxEncodedRstFramesPerWindow(30, 10),
-				new String[]{"server: decoder=30:10 encoder=30:10", "client: decoder=30:10 encoder=30:10"});
+				spec -> spec.maxDecodedRstFramesPerWindow(30, 10).maxEncodedRstFramesPerWindow(40, 20),
+				new String[]{"server: decoder=30:10 encoder=40:20", "client: decoder=30:10 encoder=40:20"});
 	}
 
 	@ParameterizedTest
@@ -849,8 +849,8 @@ class Http2Tests extends BaseHttpTest {
 	void testMaxRstFramesPerWindowH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		doTestMaxRstFramesPerWindow(createServer().protocol(serverProtocols),
 				createClient(() -> disposableServer.address()).protocol(clientProtocols),
-				spec -> spec.maxDecodedRstFramesPerWindow(30, 10).maxEncodedRstFramesPerWindow(30, 10),
-				new String[]{"server: decoder=30:10 encoder=30:10", "client: decoder=30:10 encoder=30:10"});
+				spec -> spec.maxDecodedRstFramesPerWindow(30, 10).maxEncodedRstFramesPerWindow(40, 20),
+				new String[]{"server: decoder=30:10 encoder=40:20", "client: decoder=30:10 encoder=40:20"});
 	}
 
 	private void doTestMaxRstFramesPerWindow(HttpServer server, HttpClient client, Consumer<Http2SettingsSpec.Builder> spec,

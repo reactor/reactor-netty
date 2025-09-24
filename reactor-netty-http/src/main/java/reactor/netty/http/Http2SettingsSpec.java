@@ -90,7 +90,7 @@ public final class Http2SettingsSpec {
 		 * This allows to protect against the remote peer that will trigger us to generate a flood
 		 * of RST frames and so use up a lot of CPU.
 		 * {@code 0} for any of the parameters means no protection should be applied.
-		 * For server, the default {code maxEncodedRstFramesPerWindow} is {@code 200} and for the client - is {@code 0}.
+		 * For server, the default {code maxEncodedRstFramesPerWindow} is {@code 200} and for the client it is {@code 0}.
 		 * The default {code maxEncodedRstFramesSecondsPerWindow} is {@code 30}.
 		 *
 		 * @param maxEncodedRstFramesPerWindow the maximum number RST frames that are allowed per window
