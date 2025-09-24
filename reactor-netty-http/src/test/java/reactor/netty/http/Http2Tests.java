@@ -811,8 +811,8 @@ class Http2Tests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
 	@SuppressWarnings("deprecation")
-	void testMaxRstFramesPerWindowDefaultH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testMaxRstFramesPerWindowDefaultH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
@@ -825,8 +825,8 @@ class Http2Tests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
 	@SuppressWarnings("deprecation")
-	void testMaxRstFramesPerWindowH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+	void testMaxRstFramesPerWindowH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
