@@ -44,6 +44,7 @@ import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
+import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
@@ -51,7 +52,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -803,5 +806,108 @@ class Http2Tests extends BaseHttpTest {
 				.isNotNull()
 				.hasSize(3)
 				.allMatch(throwable -> "http2ClientSendsError".equals(throwable.getMessage()));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
+	void testMaxRstFramesPerWindowDefaultH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestMaxRstFramesPerWindow(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)),
+				spec -> {},
+				new String[]{"server: decoder=200:30 encoder=200:30", "client: "});
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
+	void testMaxRstFramesPerWindowH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestMaxRstFramesPerWindow(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)),
+				spec -> spec.maxDecodedRstFramesPerWindow(30, 10).maxEncodedRstFramesPerWindow(40, 20),
+				new String[]{"server: decoder=30:10 encoder=40:20", "client: decoder=30:10 encoder=40:20"});
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testMaxRstFramesPerWindowDefaultH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		doTestMaxRstFramesPerWindow(createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols),
+				spec -> {},
+				new String[]{"server: decoder=200:30 encoder=200:30", "client: "});
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testMaxRstFramesPerWindowH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		doTestMaxRstFramesPerWindow(createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols),
+				spec -> spec.maxDecodedRstFramesPerWindow(30, 10).maxEncodedRstFramesPerWindow(40, 20),
+				new String[]{"server: decoder=30:10 encoder=40:20", "client: decoder=30:10 encoder=40:20"});
+	}
+
+	private void doTestMaxRstFramesPerWindow(HttpServer server, HttpClient client, Consumer<Http2SettingsSpec.Builder> spec,
+			String[] expectations) {
+		disposableServer =
+				server.http2Settings(spec)
+				      .handle((req, res) -> {
+				          AtomicReference<Http2FrameCodec> serverCodec = new AtomicReference<>();
+				          return res.withConnection(conn -> serverCodec.set(conn.channel().parent().pipeline().get(Http2FrameCodec.class)))
+				                    .sendString(Mono.just("server: " + getValuesReflection(serverCodec.get())));
+				      })
+				      .bindNow();
+
+		AtomicReference<Http2FrameCodec> clientCodec = new AtomicReference<>();
+		client.http2Settings(spec)
+		      .doOnResponse((res, conn) -> clientCodec.set(conn.channel().parent().pipeline().get(Http2FrameCodec.class)))
+		      .get()
+		      .uri("/")
+		      .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just("client: " + getValuesReflection(clientCodec.get()))))
+		      .as(StepVerifier::create)
+		      .expectNextMatches(t -> expectations[0].equals(t.getT1()) && expectations[1].equals(t.getT2()))
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+	}
+
+	static String getValuesReflection(Http2FrameCodec obj) {
+		if (obj == null) {
+			return "null";
+		}
+		String result = "";
+		try {
+			Object decoderObj = obj.decoder();
+			Field field1 = decoderObj.getClass().getDeclaredField("maxRstFramesPerWindow");
+			field1.setAccessible(true);
+			Integer maxRstFramesPerWindow = (Integer) field1.get(decoderObj);
+			Field field2 = decoderObj.getClass().getDeclaredField("secondsPerWindow");
+			field2.setAccessible(true);
+			Integer secondsPerWindow = (Integer) field2.get(decoderObj);
+			result = "decoder=" + maxRstFramesPerWindow + ":" + secondsPerWindow;
+		}
+		catch (NoSuchFieldException | IllegalAccessException e) {
+			// no-op
+		}
+		try {
+			Object encoderObj = obj.encoder();
+			Field field3 = encoderObj.getClass().getDeclaredField("maxRstFramesPerWindow");
+			field3.setAccessible(true);
+			Integer maxRstFramesPerWindow = (Integer) field3.get(encoderObj);
+			Field field4 = encoderObj.getClass().getDeclaredField("nanosPerWindow");
+			field4.setAccessible(true);
+			Long nanosPerWindow = (Long) field4.get(encoderObj);
+			result += " encoder=" + maxRstFramesPerWindow + ":" + nanosPerWindow / 1000000000;
+		}
+		catch (NoSuchFieldException | IllegalAccessException e) {
+			//no-op
+		}
+		return result;
 	}
 }

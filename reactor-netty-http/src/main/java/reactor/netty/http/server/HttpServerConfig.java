@@ -694,6 +694,18 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					"reactor.netty.http.server.h2"));
 		}
 
+		if (http2SettingsSpec != null) {
+			if (http2SettingsSpec.maxDecodedRstFramesPerWindow() != null && http2SettingsSpec.maxDecodedRstFramesSecondsPerWindow() != null) {
+				http2FrameCodecBuilder.decoderEnforceMaxRstFramesPerWindow(http2SettingsSpec.maxDecodedRstFramesPerWindow(),
+						http2SettingsSpec.maxDecodedRstFramesSecondsPerWindow());
+			}
+
+			if (http2SettingsSpec.maxEncodedRstFramesPerWindow() != null && http2SettingsSpec.maxEncodedRstFramesSecondsPerWindow() != null) {
+				http2FrameCodecBuilder.encoderEnforceMaxRstFramesPerWindow(http2SettingsSpec.maxEncodedRstFramesPerWindow(),
+						http2SettingsSpec.maxEncodedRstFramesSecondsPerWindow());
+			}
+		}
+
 		Http2FrameCodec http2FrameCodec = http2FrameCodecBuilder.build();
 		if (maxStreams != null) {
 			http2FrameCodec.connection().addListener(new H2ConnectionListener(p.channel(), maxStreams));
@@ -1204,6 +1216,17 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(
 						LogLevel.DEBUG,
 						"reactor.netty.http.server.h2"));
+			}
+			if (http2SettingsSpec != null) {
+				if (http2SettingsSpec.maxDecodedRstFramesPerWindow() != null && http2SettingsSpec.maxDecodedRstFramesSecondsPerWindow() != null) {
+					http2FrameCodecBuilder.decoderEnforceMaxRstFramesPerWindow(http2SettingsSpec.maxDecodedRstFramesPerWindow(),
+							http2SettingsSpec.maxDecodedRstFramesSecondsPerWindow());
+				}
+
+				if (http2SettingsSpec.maxEncodedRstFramesPerWindow() != null && http2SettingsSpec.maxEncodedRstFramesSecondsPerWindow() != null) {
+					http2FrameCodecBuilder.encoderEnforceMaxRstFramesPerWindow(http2SettingsSpec.maxEncodedRstFramesPerWindow(),
+							http2SettingsSpec.maxEncodedRstFramesSecondsPerWindow());
+				}
 			}
 			this.http2FrameCodec = http2FrameCodecBuilder.build();
 			this.httpMessageLogFactory = httpMessageLogFactory;
