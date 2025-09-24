@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.server.logging;
 
+import org.jspecify.annotations.Nullable;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -34,15 +35,15 @@ public class AccessLog {
 	static final Logger LOG = Loggers.getLogger("reactor.netty.http.server.AccessLog");
 
 	final String logFormat;
-	final Object[] args;
+	final @Nullable Object @Nullable [] args;
 
-	protected AccessLog(String logFormat, Object... args) {
+	protected AccessLog(String logFormat, @Nullable Object @Nullable... args) {
 		Objects.requireNonNull(logFormat, "logFormat");
 		this.logFormat = logFormat;
 		this.args = args;
 	}
 
-	public static AccessLog create(String logFormat, Object... args) {
+	public static AccessLog create(String logFormat, @Nullable Object @Nullable... args) {
 		return new AccessLog(logFormat, args);
 	}
 
