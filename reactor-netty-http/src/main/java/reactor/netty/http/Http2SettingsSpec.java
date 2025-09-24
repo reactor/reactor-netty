@@ -299,10 +299,10 @@ public final class Http2SettingsSpec {
 		result = 31 * result + (headerTableSize == null ? 0 : Long.hashCode(headerTableSize));
 		result = 31 * result + (initialWindowSize == null ? 0 : initialWindowSize);
 		result = 31 * result + (maxConcurrentStreams == null ? 0 : Long.hashCode(maxConcurrentStreams));
-		result = 31 * result + (maxDecodedRstFramesPerWindow == null ? 0 : Long.hashCode(maxDecodedRstFramesPerWindow));
-		result = 31 * result + (maxDecodedRstFramesSecondsPerWindow == null ? 0 : Long.hashCode(maxDecodedRstFramesSecondsPerWindow));
-		result = 31 * result + (maxEncodedRstFramesPerWindow == null ? 0 : Long.hashCode(maxEncodedRstFramesPerWindow));
-		result = 31 * result + (maxEncodedRstFramesSecondsPerWindow == null ? 0 : Long.hashCode(maxEncodedRstFramesSecondsPerWindow));
+		result = 31 * result + (maxDecodedRstFramesPerWindow == null ? 0 : maxDecodedRstFramesPerWindow);
+		result = 31 * result + (maxDecodedRstFramesSecondsPerWindow == null ? 0 : maxDecodedRstFramesSecondsPerWindow);
+		result = 31 * result + (maxEncodedRstFramesPerWindow == null ? 0 : maxEncodedRstFramesPerWindow);
+		result = 31 * result + (maxEncodedRstFramesSecondsPerWindow == null ? 0 : maxEncodedRstFramesSecondsPerWindow);
 		result = 31 * result + (maxFrameSize == null ? 0 : maxFrameSize);
 		result = 31 * result + (maxHeaderListSize == null ? 0 : Long.hashCode(maxHeaderListSize));
 		result = 31 * result + (maxStreams == null ? 0 : Long.hashCode(maxStreams));
