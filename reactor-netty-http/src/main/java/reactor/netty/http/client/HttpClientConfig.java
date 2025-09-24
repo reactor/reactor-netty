@@ -1121,7 +1121,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			else {
 				if ((protocols & h11orH2C) == h11orH2C) {
 					configureHttp11OrH2CleartextPipeline(channel.pipeline(), acceptGzip, decoder, http2Settings,
-							http2SettingsSpec, metricsRecorder, observer, opsFactory, proxyAddress, remoteAddress, uriTagValue);
+							http2SettingsSpec, metricsRecorder, observer, opsFactory, proxyAddress, requireNonNull(remoteAddress), uriTagValue);
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, requireNonNull(remoteAddress), uriTagValue);
