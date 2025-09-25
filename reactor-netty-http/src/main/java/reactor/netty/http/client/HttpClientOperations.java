@@ -26,8 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -94,6 +96,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -519,6 +522,31 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 
 		return super.send(source);
+	}
+
+	@Override
+	public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+			BiFunction<? super Connection, ? super S, ?> mappedInput,
+			Consumer<? super S> sourceCleanup) {
+		requireNonNull(sourceInput, "sourceInput");
+		requireNonNull(mappedInput, "mappedInput");
+		requireNonNull(sourceCleanup, "sourceCleanup");
+
+		return then(Mono.using(
+				sourceInput,
+				s -> {
+					if (!hasSentBody()) {
+						return FutureMono.from(channel().writeAndFlush(mappedInput.apply(this, s)));
+					}
+					else {
+						if (log.isDebugEnabled()) {
+							log.debug(format(channel(), "Dropped HTTP content, since request has been sent already."));
+						}
+						return Mono.empty();
+					}
+				},
+				sourceCleanup)
+		);
 	}
 
 	final URI websocketUri() {
