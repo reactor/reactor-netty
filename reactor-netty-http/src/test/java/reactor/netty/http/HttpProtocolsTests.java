@@ -68,9 +68,11 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
 import reactor.netty.LogTracker;
+import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientConfig;
+import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.HttpClientResponse;
 import reactor.netty.http.client.PrematureCloseException;
 import reactor.netty.http.server.ConnectionInformation;
@@ -90,6 +92,9 @@ import java.lang.annotation.Target;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1312,6 +1317,108 @@ class HttpProtocolsTests extends BaseHttpTest {
 			assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
 			assertThat(requestHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING)).isNotNull();
 		}
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void clientDropsEmptyFileChunked(HttpServer server, HttpClient client) throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		clientDropsFile(server, client, (req, out) -> out.sendFileChunked(path, 0, 0));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void clientDropsEmptyFileDefault(HttpServer server, HttpClient client) throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		clientDropsFile(server, client, (req, out) -> out.sendFile(path));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void clientDropsFileChunked(HttpServer server, HttpClient client) throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		clientDropsFile(server, client, (req, out) -> out.sendFileChunked(path, 0, 0));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void clientDropsFileDefault(HttpServer server, HttpClient client) throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		clientDropsFile(server, client, (req, out) -> out.sendFile(path));
+	}
+
+	private void clientDropsFile(HttpServer server, HttpClient client,
+			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender) {
+		disposableServer =
+				server.route(r -> r.post("/", (req, res) ->
+				          res.sendString(req.receive()
+				                            .aggregate()
+				                            .asString()
+				                            .defaultIfEmpty("empty"))))
+				      .bindNow();
+
+		client.port(disposableServer.port())
+		      .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, "0"))
+		      .post()
+		      .uri("/")
+		      .send(sender)
+		      .responseSingle((res, buf) -> buf.asString())
+		      .as(StepVerifier::create)
+		      .expectNext("empty")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void serverDropsEmptyFileChunked(HttpServer server, HttpClient client) throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		serverDropsFile(server, client,
+				(req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFileChunked(path, 0, 0));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void serverDropsEmptyFileDefault(HttpServer server, HttpClient client) throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		serverDropsFile(server, client,
+				(req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFile(path));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void serverDropsFileChunked(HttpServer server, HttpClient client) throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		serverDropsFile(server, client,
+				(req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFileChunked(path, 0, 0));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void serverDropsFileDefault(HttpServer server, HttpClient client) throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		serverDropsFile(server, client,
+				(req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFile(path));
+	}
+
+	private void serverDropsFile(HttpServer server, HttpClient client,
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> sender) {
+		disposableServer =
+				server.route(r -> r.get("/", sender))
+				      .bindNow();
+
+		client.port(disposableServer.port())
+		      .get()
+		      .uri("/")
+		      .responseSingle((res, buf) -> buf.asString().defaultIfEmpty("empty"))
+		      .as(StepVerifier::create)
+		      .expectNext("empty")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 	}
 
 	static final class IdleTimeoutTestChannelInboundHandler extends ChannelInboundHandlerAdapter {

@@ -52,8 +52,10 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.DisposableServer;
 import reactor.netty.LogTracker;
+import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.HttpClientResponse;
 import reactor.netty.http.client.HttpConnectionPoolMetrics;
 import reactor.netty.http.client.HttpMeterRegistrarAdapter;
@@ -71,6 +73,9 @@ import javax.net.ssl.SNIHostName;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1045,6 +1050,104 @@ class Http3Tests {
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(5));
 		}
+	}
+
+	@Test
+	void clientDropsEmptyFileChunked() throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		clientDropsFile((req, out) -> out.sendFileChunked(path, 0, 0));
+	}
+
+	@Test
+	void clientDropsEmptyFileDefault() throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		clientDropsFile((req, out) -> out.sendFile(path));
+	}
+
+	@Test
+	void clientDropsFileChunked() throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		clientDropsFile((req, out) -> out.sendFileChunked(path, 0, 0));
+	}
+
+	@Test
+	void clientDropsFileDefault() throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		clientDropsFile((req, out) -> out.sendFile(path));
+	}
+
+	private void clientDropsFile(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender) throws Exception {
+		disposableServer =
+				createServer()
+				        .route(r -> r.post("/", (req, res) ->
+				            res.sendString(req.receive()
+				                              .aggregate()
+				                              .asString()
+				                              .defaultIfEmpty("empty"))))
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, "0"))
+		        .post()
+		        .uri("/")
+		        .send(sender)
+		        .responseSingle((res, buf) -> buf.asString())
+		        .as(StepVerifier::create)
+		        .expectNext("empty")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void serverDropsEmptyFileChunked() throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		serverDropsFile((req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFileChunked(path, 0, 0));
+	}
+
+	@Test
+	void serverDropsEmptyFileDefault() throws Exception {
+		Path path = Files.createTempFile("empty", ".txt");
+		path.toFile().deleteOnExit();
+
+		serverDropsFile((req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFile(path));
+	}
+
+	@Test
+	void serverDropsFileChunked() throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		serverDropsFile((req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFileChunked(path, 0, 0));
+	}
+
+	@Test
+	void serverDropsFileDefault() throws Exception {
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		serverDropsFile((req, res) -> res.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendFile(path));
+	}
+
+	private void serverDropsFile(BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> sender) throws Exception {
+		disposableServer =
+				createServer()
+				        .route(r -> r.get("/", sender))
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .get()
+		        .uri("/")
+		        .responseSingle((res, buf) -> buf.asString().defaultIfEmpty("empty"))
+		        .as(StepVerifier::create)
+		        .expectNext("empty")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
 	}
 
 	static HttpClient createClient(int port) {
