@@ -66,7 +66,8 @@ def initializeAtBuildTime = "org.junit.jupiter.api.DisplayNameGenerator\$Indicat
 		"org.junit.platform.launcher.core.HierarchicalOutputDirectoryProvider," +
 		"org.junit.platform.launcher.core.LauncherDiscoveryResult\$EngineResultInfo," +
 		"org.junit.platform.suite.engine.SuiteTestDescriptor\$LifecycleMethods," +
-		"org.junit.platform.launcher.core.LauncherPhase"
+		"org.junit.platform.launcher.core.LauncherPhase," +
+		"org.junit.platform.launcher.core.HierarchicalOutputDirectoryCreator"
 
 graalvmNative {
 	binaries {
