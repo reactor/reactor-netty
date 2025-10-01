@@ -67,6 +67,14 @@ updates:
   - dependency-name: com.gradleup.shadow
     versions:
     - "[9.a, 10]"
+  # Versions > 5 require JDK17+
+  - dependency-name: org.junit.jupiter:*
+    versions:
+    - "[6.a, 7]"
+  # Versions > 1 require JDK17+
+  - dependency-name: org.junit.platform:junit-platform-launcher
+    versions:
+    - "[6.a, 7]"
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
