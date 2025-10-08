@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-13, windows-2022]
+        os: [ubuntu-22.04, macos-15-intel, windows-2022]
         transport: [native, nio]
         exclude:
           # excludes native on Windows (there's none)
