@@ -13,7 +13,7 @@ jobs:
           fetch-depth: 0 #needed by spotless
       - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: 8
       - name: spotless (license header)
         if: always()
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-13, windows-2022]
+        os: [ubuntu-22.04, macos-14, windows-2022]
         transport: [native, nio]
         #transport: [native, nio, io_uring]
         exclude:
@@ -52,7 +52,7 @@ jobs:
             transport: native
           #- os: windows-2022
           #  transport: io_uring
-          #- os: macos-13
+          #- os: macos-14
           #  transport: io_uring
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
@@ -60,12 +60,12 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
         with:
-            distribution: 'temurin'
+            distribution: 'zulu'
             java-version: '17'
       - name: Set up JDK 1.8
         uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: '8'
       - name: Build and test with Java 8
         #if: ${{ ! startsWith(matrix.transport, 'io_uring') }}
