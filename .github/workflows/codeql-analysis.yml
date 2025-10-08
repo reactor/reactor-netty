@@ -32,7 +32,7 @@ jobs:
     #   - https://gh.io/supported-runners-and-hardware-resources
     #   - https://gh.io/using-larger-runners
     # Consider using larger runners for possible analysis time improvements.
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-13') || 'ubuntu-22.04' }}
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-14') || 'ubuntu-22.04' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
 
     permissions:
@@ -57,7 +57,7 @@ jobs:
     - name: setup java
       uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
       with:
-        distribution: 'temurin'
+        distribution: 'zulu'
         java-version: '8'
 
     # Initializes the CodeQL tools for scanning.
