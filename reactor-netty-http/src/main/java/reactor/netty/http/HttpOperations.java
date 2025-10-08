@@ -86,6 +86,12 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		this.statusAndHeadersSent = replaced.statusAndHeadersSent;
 	}
 
+	protected HttpOperations(Connection connection, ConnectionObserver listener, HttpOperations<INBOUND, OUTBOUND> replaced) {
+		super(connection, listener, replaced);
+		this.httpMessageLogFactory = replaced.httpMessageLogFactory;
+		this.statusAndHeadersSent = replaced.statusAndHeadersSent;
+	}
+
 	protected HttpOperations(Connection connection, ConnectionObserver listener, HttpMessageLogFactory httpMessageLogFactory) {
 		super(connection, listener);
 		this.httpMessageLogFactory = httpMessageLogFactory;

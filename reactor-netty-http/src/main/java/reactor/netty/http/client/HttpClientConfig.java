@@ -659,12 +659,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			log.debug(format(ch, "Initialized HTTP/2 stream pipeline {}"), ch.pipeline());
 		}
 
-		ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ch), obs, null);
+		ChannelOperations<?, ?> parentOps = ChannelOperations.get(ch.parent());
+		ChannelOperations<?, ?> ops = copyState && parentOps instanceof HttpClientOperations ?
+				new HttpClientOperations(Connection.from(ch), obs, (HttpClientOperations) parentOps) :
+				opsFactory.create(Connection.from(ch), obs, null);
 		if (ops != null) {
 			ops.bind();
-			if (copyState && ops instanceof HttpClientOperations) {
-				HttpClientOperations.copyState(((HttpClientOperations) ops));
-			}
 		}
 	}
 

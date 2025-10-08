@@ -166,6 +166,35 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		// no need to carry it over because it's considered as a terminal/concluding state.
 	}
 
+	HttpClientOperations(Connection c, ConnectionObserver listener, HttpClientOperations replaced) {
+		super(c, listener, replaced);
+		this.started = replaced.started;
+		this.retrying = replaced.retrying;
+		this.redirecting = replaced.redirecting;
+		this.redirectedFrom = replaced.redirectedFrom;
+		this.redirectRequestConsumer = replaced.redirectRequestConsumer;
+		this.previousRequestHeaders = replaced.previousRequestHeaders;
+		this.redirectRequestBiConsumer = replaced.redirectRequestBiConsumer;
+		this.isSecure = replaced.isSecure;
+		this.nettyRequest = replaced.nettyRequest;
+		this.responseState = replaced.responseState;
+		this.followRedirectPredicate = replaced.followRedirectPredicate;
+		this.requestHeaders = replaced.requestHeaders;
+		this.cookieEncoder = replaced.cookieEncoder;
+		this.cookieDecoder = replaced.cookieDecoder;
+		this.cookieList = replaced.cookieList;
+		this.resourceUrl = replaced.resourceUrl;
+		this.path = replaced.path;
+		this.responseTimeout = replaced.responseTimeout;
+		this.is100Continue = replaced.is100Continue;
+		this.trailerHeaders = replaced.trailerHeaders;
+		this.version = initHttpVersion(c);
+		// No need to copy the unprocessedOutboundError field from the replaced instance. The reason for this is that the
+		// "unprocessedOutboundError" field contains an error that occurs when the connection of the HttpClientOperations
+		// is already closed. In essence, this error represents the final state for the HttpClientOperations, and there's
+		// no need to carry it over because it's considered as a terminal/concluding state.
+	}
+
 	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder,
 			ClientCookieDecoder decoder, HttpMessageLogFactory httpMessageLogFactory) {
 		super(c, listener, httpMessageLogFactory);
@@ -177,25 +206,31 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.cookieList = new ArrayList<>();
+		this.version = initHttpVersion(c);
+		this.trailerHeaders = Sinks.unsafe().one();
+	}
+
+	private HttpVersion initHttpVersion(Connection c) {
+		HttpVersion version;
 		if (c.channel() instanceof Http2StreamChannel) {
-			this.version = H2;
+			version = H2;
 		}
 		else if (c.channel() instanceof SocketChannel || c.channel() instanceof DomainSocketChannel) {
-			HttpVersion version = this.nettyRequest.protocolVersion();
-			if (version.equals(HttpVersion.HTTP_1_0)) {
-				this.version = HttpVersion.HTTP_1_0;
+			HttpVersion protocolVersion = this.nettyRequest.protocolVersion();
+			if (protocolVersion.equals(HttpVersion.HTTP_1_0)) {
+				version = HttpVersion.HTTP_1_0;
 			}
-			else if (version.equals(HttpVersion.HTTP_1_1)) {
-				this.version = HttpVersion.HTTP_1_1;
+			else if (protocolVersion.equals(HttpVersion.HTTP_1_1)) {
+				version = HttpVersion.HTTP_1_1;
 			}
 			else {
-				throw new IllegalStateException(version.protocolName() + " not supported");
+				throw new IllegalStateException(protocolVersion.protocolName() + " not supported");
 			}
 		}
 		else {
-			this.version = H3;
+			version = H3;
 		}
-		this.trailerHeaders = Sinks.unsafe().one();
+		return version;
 	}
 
 	@Override
@@ -1018,19 +1053,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (!rebind(ops)) {
 				log.error(format(channel(), "Error while rebinding websocket in channel attribute: " +
 						get(channel()) + " to " + ops));
-			}
-		}
-	}
-
-	static void copyState(HttpClientOperations streamOps) {
-		ChannelOperations<?, ?> ops = ChannelOperations.get(streamOps.channel().parent());
-		if (ops instanceof HttpClientOperations) {
-			HttpClientOperations parentOps = (HttpClientOperations) ops;
-			if (parentOps.hasSentBody()) {
-				streamOps.markSentHeaderAndBody();
-			}
-			else if (parentOps.hasSentHeaders()) {
-				streamOps.markSentHeaders();
 			}
 		}
 	}

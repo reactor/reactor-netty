@@ -154,6 +154,15 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.localActive = replaced.localActive;
 	}
 
+	protected ChannelOperations(Connection connection, ConnectionObserver listener, ChannelOperations<INBOUND, OUTBOUND> replaced) {
+		this.connection = connection;
+		this.listener = listener;
+		this.onTerminate = replaced.onTerminate;
+		this.inbound = new FluxReceive(this);
+		// No need to copy the shortId, longId, localActive fields from the replaced instance. The reason for this is that
+		// these fields contain information for the parent connection, while this constructor is used when creating the stream.
+	}
+
 	/**
 	 * Create a new {@link ChannelOperations} attached to the {@link Channel}. Attach the {@link NettyPipeline#ReactiveBridge} handle.
 	 *
