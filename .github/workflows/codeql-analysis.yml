@@ -57,7 +57,7 @@ jobs:
     - name: setup java
       uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
       with:
-        distribution: 'temurin'
+        distribution: 'zulu'
         java-version: '8'
 
     # Initializes the CodeQL tools for scanning.
