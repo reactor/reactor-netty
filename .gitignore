@@ -21,3 +21,4 @@ exportToHtml
 .idea
 node_modules/
 .full-build
+.vscode/
