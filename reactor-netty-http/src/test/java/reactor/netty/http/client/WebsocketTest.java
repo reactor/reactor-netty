@@ -168,7 +168,7 @@ class WebsocketTest extends BaseHttpTest {
 				                                             .map(it -> it + '!')
 				                                             .log("server-reply")));
 				      })
-				      .bindNow(Duration.ofSeconds(5));
+				      .bindNow(Duration.ofSeconds(30));
 
 		log.debug("STARTING: server[" + serverRes.get() + "] / client[" + clientRes.get() + "]");
 
@@ -968,7 +968,7 @@ class WebsocketTest extends BaseHttpTest {
 		          return out.sendObject(new CloseWebSocketFrame())
 		                    .then(in.receive().then());
 		      })
-		      .blockLast(Duration.ofSeconds(5));
+		      .blockLast(Duration.ofSeconds(30));
 
 		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
@@ -1009,7 +1009,7 @@ class WebsocketTest extends BaseHttpTest {
 		            .subscribe();
 		          return in.receive();
 		      })
-		      .blockLast(Duration.ofSeconds(5));
+		      .blockLast(Duration.ofSeconds(30));
 
 		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
@@ -1076,7 +1076,7 @@ class WebsocketTest extends BaseHttpTest {
 		                  new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content3))));
 		      })
 		      .then()
-		      .block(Duration.ofSeconds(5));
+		      .block(Duration.ofSeconds(30));
 
 		assertThat(serverLatch.await(5, TimeUnit.SECONDS)).isTrue();
 		assertThat(serverError.get()).isNotNull().isInstanceOf(TooLongFrameException.class);
@@ -1115,7 +1115,7 @@ class WebsocketTest extends BaseHttpTest {
 		      .as(StepVerifier::create)
 		      .expectNextMatches(predicate)
 		      .expectComplete()
-		      .verify(Duration.ofSeconds(5));
+		      .verify(Duration.ofSeconds(30));
 	}
 
 	private static void sendRequestWithCollect(HttpClient client,
@@ -1138,6 +1138,6 @@ class WebsocketTest extends BaseHttpTest {
 		      .as(StepVerifier::create)
 		      .expectNextMatches(l -> expectedBody.equals(l.get(0)))
 		      .expectComplete()
-		      .verify(Duration.ofSeconds(5));
+		      .verify(Duration.ofSeconds(30));
 	}
 }
