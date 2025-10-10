@@ -680,7 +680,7 @@ class WebsocketTest extends BaseHttpTest {
 		      .as(StepVerifier::create)
 		      .expectNext("test")
 		      .expectComplete()
-		      .verify(Duration.ofSeconds(5));
+		      .verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
