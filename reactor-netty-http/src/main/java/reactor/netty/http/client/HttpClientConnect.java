@@ -222,12 +222,16 @@ class HttpClientConnect extends HttpClient {
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
 						configCopied = true;
-						_config = new HttpClientConfig(config);
+						_config = new HttpClientConfig(_config);
 						_config.sslProvider = HttpClientSecure.defaultSslProvider(_config);
 					}
 
 					if (_config.checkProtocol(HttpClientConfig.h2c)) {
 						if (_config.protocols.length > 1) {
+							if (!configCopied) {
+								configCopied = true;
+								_config = new HttpClientConfig(_config);
+							}
 							removeIncompatibleProtocol(_config, HttpProtocol.H2C);
 						}
 						else {
@@ -242,12 +246,16 @@ class HttpClientConnect extends HttpClient {
 				else {
 					if (_config.sslProvider != null) {
 						configCopied = true;
-						_config = new HttpClientConfig(config);
+						_config = new HttpClientConfig(_config);
 						_config.sslProvider = null;
 					}
 
 					if (_config.checkProtocol(HttpClientConfig.h2)) {
 						if (_config.protocols.length > 1) {
+							if (!configCopied) {
+								configCopied = true;
+								_config = new HttpClientConfig(_config);
+							}
 							removeIncompatibleProtocol(_config, HttpProtocol.H2);
 						}
 						else {
@@ -268,7 +276,7 @@ class HttpClientConnect extends HttpClient {
 					if (proxyProviderSupplier != null) {
 						if (!configCopied) {
 							configCopied = true;
-							_config = new HttpClientConfig(config);
+							_config = new HttpClientConfig(_config);
 						}
 						ProxyProvider proxyProvider = proxyProviderSupplier.get();
 						_config.proxyProvider(proxyProvider);
