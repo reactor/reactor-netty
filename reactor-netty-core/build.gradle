@@ -267,7 +267,6 @@ task japicmp(type: JapicmpTask) {
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 
 	methodExcludes = [
-			'reactor.netty.transport.ProxyProvider$Builder#httpHeaders(java.util.function.Consumer, java.util.function.Function)'
 	]
 
 	classExcludes = [

@@ -284,9 +284,7 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.Http3SettingsSpec$Builder#tokenHandler(io.netty.handler.codec.quic.QuicTokenHandler)',
 			'reactor.netty.http.Http3SettingsSpec$Builder#tokenHandler(io.netty.incubator.codec.quic.QuicTokenHandler)',
 			'reactor.netty.http.Http3SettingsSpec#tokenHandler()',
-			'reactor.netty.http.Http3SslContextSpec#configure(java.util.function.Consumer)',
-			'reactor.netty.http.Http2SettingsSpec$Builder#maxDecodedRstFramesPerWindow(int, int)',
-			'reactor.netty.http.Http2SettingsSpec$Builder#maxEncodedRstFramesPerWindow(int, int)'
+			'reactor.netty.http.Http3SslContextSpec#configure(java.util.function.Consumer)'
 	]
 }
 
