@@ -35,7 +35,6 @@ ext {
 					"!javax.annotation",
 					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.2,5)\"",
 					"io.netty.channel.uring;resolution:=optional;version=\"[4.2,5)\"",
-					"io.netty.incubator.channel.uring;resolution:=optional",
 					"io.micrometer.*;resolution:=optional",
 					"*"
 			].join(","),
@@ -86,7 +85,6 @@ dependencies {
 		//so that the main code compiles
 		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
@@ -111,7 +109,6 @@ dependencies {
 		//classic build to be distributed
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion"

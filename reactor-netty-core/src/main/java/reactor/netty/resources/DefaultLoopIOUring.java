@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,19 @@ package reactor.netty.resources;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.incubator.channel.uring.IOUring;
-import io.netty.incubator.channel.uring.IOUringDatagramChannel;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
-import io.netty.incubator.channel.uring.IOUringServerSocketChannel;
-import io.netty.incubator.channel.uring.IOUringSocketChannel;
+import io.netty.channel.uring.IoUring;
+import io.netty.channel.uring.IoUringDatagramChannel;
+import io.netty.channel.uring.IoUringIoHandle;
+import io.netty.channel.uring.IoUringIoHandler;
+import io.netty.channel.uring.IoUringServerSocketChannel;
+import io.netty.channel.uring.IoUringSocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -41,13 +43,13 @@ final class DefaultLoopIOUring implements DefaultLoop {
 	@SuppressWarnings("unchecked")
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return (CHANNEL) new IOUringSocketChannel();
+			return (CHANNEL) new IoUringSocketChannel();
 		}
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (CHANNEL) new IOUringServerSocketChannel();
+			return (CHANNEL) new IoUringServerSocketChannel();
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return (CHANNEL) new IOUringDatagramChannel();
+			return (CHANNEL) new IoUringDatagramChannel();
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -56,13 +58,13 @@ final class DefaultLoopIOUring implements DefaultLoop {
 	@SuppressWarnings("unchecked")
 	public <CHANNEL extends Channel> Class<? extends CHANNEL> getChannelClass(Class<CHANNEL> channelClass) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return (Class<? extends CHANNEL>) IOUringSocketChannel.class;
+			return (Class<? extends CHANNEL>) IoUringSocketChannel.class;
 		}
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (Class<? extends CHANNEL>) IOUringServerSocketChannel.class;
+			return (Class<? extends CHANNEL>) IoUringServerSocketChannel.class;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return (Class<? extends CHANNEL>) IOUringDatagramChannel.class;
+			return (Class<? extends CHANNEL>) IoUringDatagramChannel.class;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -74,7 +76,7 @@ final class DefaultLoopIOUring implements DefaultLoop {
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new IOUringEventLoopGroup(threads, factory);
+		return new MultiThreadIoEventLoopGroup(threads, factory, IoUringIoHandler.newFactory());
 	}
 
 	@Override
@@ -82,7 +84,7 @@ final class DefaultLoopIOUring implements DefaultLoop {
 		if (group instanceof ColocatedEventLoopGroup) {
 			group = ((ColocatedEventLoopGroup) group).get();
 		}
-		return group instanceof IOUringEventLoopGroup;
+		return group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isCompatible(IoUringIoHandle.class);
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopIOUring.class);
@@ -92,8 +94,8 @@ final class DefaultLoopIOUring implements DefaultLoop {
 	static {
 		boolean ioUringCheck = false;
 		try {
-			Class.forName("io.netty.incubator.channel.uring.IOUring");
-			ioUringCheck = IOUring.isAvailable();
+			Class.forName("io.netty.channel.uring.IoUring");
+			ioUringCheck = IoUring.isAvailable();
 		}
 		catch (ClassNotFoundException cnfe) {
 			// noop
