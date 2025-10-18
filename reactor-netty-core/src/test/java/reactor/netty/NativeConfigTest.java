@@ -29,14 +29,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.reflections.scanners.Scanners.SubTypes;
 
 class NativeConfigTest {
 
 	@Test
 	void testChannelHandler() throws Exception {
-		assumeThat(!System.getProperty("java.version").startsWith("17")).isTrue();
 		Set<Config> classes = findAllClassesUsingReflection("reactor.netty", ChannelHandler.class);
 
 		try (InputStream is = getClass()
