@@ -25,7 +25,7 @@ apply plugin: 'biz.aQute.bnd.builder'
 apply plugin: 'me.champeau.mrjar'
 
 multiRelease {
-	targetVersions 8, 17
+	targetVersions 8, 11, 17
 }
 
 ext {
@@ -35,7 +35,6 @@ ext {
 					"!javax.annotation",
 					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.2,5)\"",
 					"io.netty.channel.uring;resolution:=optional;version=\"[4.2,5)\"",
-					"io.netty.incubator.channel.uring;resolution:=optional",
 					"io.micrometer.*;resolution:=optional",
 					"*"
 			].join(","),
@@ -54,6 +53,8 @@ sourceSets {
 }
 
 configurations {
+	java11CompileOnly.extendsFrom(compileOnly)
+	java11Implementation.extendsFrom(implementation)
 	java17CompileOnly.extendsFrom(compileOnly)
 	java17Implementation.extendsFrom(implementation)
 	shaded
@@ -86,7 +87,6 @@ dependencies {
 		//so that the main code compiles
 		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
@@ -111,7 +111,6 @@ dependencies {
 		//classic build to be distributed
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion"
@@ -299,6 +298,10 @@ shadowJar {
 	archiveClassifier.set('')
 
 	dependsOn(project.tasks.jar)
+
+	into('META-INF/versions/11') {
+		from sourceSets.java11.output
+	}
 
 	into('META-INF/versions/17') {
 		from sourceSets.java17.output

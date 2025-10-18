@@ -209,11 +209,22 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
+	@SuppressWarnings("StringSplitter")
 	void testIoUringIsAvailable() {
 		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
-		boolean isJava17 = System.getProperty("java.version").startsWith("17");
-		assumeThat(isTransportIoUring && isJava17).isTrue();
+		boolean isJava11plus = Integer.parseInt(System.getProperty("java.version").split("\\.")[1]) >= 11;
+		assumeThat(isTransportIoUring && isJava11plus).isTrue();
 		assertThat(IoUring.isAvailable()).isTrue();
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	@SuppressWarnings("StringSplitter")
+	void testIoUringNotAvailableOnJava8() {
+		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
+		boolean isNotJava11Plus = Integer.parseInt(System.getProperty("java.version").split("\\.")[1]) < 11;
+		assumeThat(isTransportIoUring && isNotJava11Plus).isTrue();
+		assertThat(IoUring.isAvailable()).isFalse();
 	}
 
 	@Test
