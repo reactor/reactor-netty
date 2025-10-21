@@ -17,7 +17,6 @@ package reactor.netty;
 
 import org.jspecify.annotations.Nullable;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -39,13 +38,6 @@ public class ChannelBindException extends RuntimeException {
 	 */
 	public static ChannelBindException fail(SocketAddress bindAddress, @Nullable Throwable cause) {
 		Objects.requireNonNull(bindAddress, "bindAddress");
-		if (cause instanceof java.net.BindException ||
-				// With epoll/kqueue transport it is
-				// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-				(cause instanceof IOException && cause.getMessage() != null &&
-						cause.getMessage().contains("bind(..)"))) {
-			cause = null;
-		}
 		if (!(bindAddress instanceof InetSocketAddress)) {
 			return new ChannelBindException(bindAddress.toString(), cause);
 		}
