@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package reactor.netty;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -39,13 +38,6 @@ public class ChannelBindException extends RuntimeException {
 	 */
 	public static ChannelBindException fail(SocketAddress bindAddress, @Nullable Throwable cause) {
 		Objects.requireNonNull(bindAddress, "bindAddress");
-		if (cause instanceof java.net.BindException ||
-				// With epoll/kqueue transport it is
-				// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-				(cause instanceof IOException && cause.getMessage() != null &&
-						cause.getMessage().contains("bind(..)"))) {
-			cause = null;
-		}
 		if (!(bindAddress instanceof InetSocketAddress)) {
 			return new ChannelBindException(bindAddress.toString(), cause);
 		}
