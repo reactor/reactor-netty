@@ -211,9 +211,18 @@ class DefaultLoopResourcesTest {
 	@EnabledOnOs(OS.LINUX)
 	void testIoUringIsAvailable() {
 		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
-		boolean isJava17 = System.getProperty("java.version").startsWith("17");
-		assumeThat(isTransportIoUring && isJava17).isTrue();
+		boolean isJava11plus = getJavaVersion() >= 11;
+		assumeThat(isTransportIoUring && isJava11plus).isTrue();
 		assertThat(IoUring.isAvailable()).isTrue();
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	void testIoUringIncubatorIsAvailableOnJava8() {
+		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
+		boolean isNotJava11Plus = getJavaVersion() < 11;
+		assumeThat(isTransportIoUring && isNotJava11Plus).isTrue();
+		assertThat(io.netty.incubator.channel.uring.IOUring.isAvailable()).isTrue();
 	}
 
 	@Test
@@ -221,5 +230,10 @@ class DefaultLoopResourcesTest {
 	void testKQueueIsAvailable() {
 		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
 		assertThat(KQueue.isAvailable()).isTrue();
+	}
+
+	@SuppressWarnings("StringSplitter")
+	private static int getJavaVersion() {
+		return Integer.parseInt(System.getProperty("java.version").split("\\.")[1]);
 	}
 }
