@@ -789,6 +789,41 @@ include::{examples-dir}/idle/timeout/Application.java[lines=18..35]
 ----
 <1> Configures the default idle timeout to 1 second.
 
+=== HTTP/2 Connection Health Check
+For `HTTP/2 connections`, it's recommended to configure `PING` frames for connection maintenance and health monitoring.
+The `HttpServer` uses `PING` frames to detect unresponsive clients when `idleTimeout` is configured.
+
+Benefits of using `PING` frames:
+
+- Actively probes connection liveness when idle
+- Detects unresponsive clients through timely health checks
+- Closes stale connections automatically
+- Prevents resource exhaustion from dead connections
+
+[NOTE]
+====
+`HTTP/2` `PING` frame-based health checks require `idleTimeout` to be configured as a prerequisite.
+Without idle timeout configuration, PING frames will not be sent and connections may remain open indefinitely,
+preventing proper detection of inactive or unresponsive connections.
+
+The idle timeout and PING settings work together:
+
+1. Connection becomes idle (no activity for `idleTimeout`)
+2. A PING frame is sent to check if the client is responsive
+3. If no ACK within `pingAckTimeout`, retry based on `pingAckDropThreshold`
+4. If all attempts fail, the connection is closed
+====
+
+To enable `PING` frames for `HTTP/2` connections, configure the `HttpServer` as follows:
+
+{examples-link}/liveness/Application.java
+----
+include::{examples-dir}/liveness/Application.java[lines=26..50]
+----
+<1> Configure `idleTimeout` to enable PING-based health checks. When a connection is idle for this duration, a PING frame will be sent.
+<2> Configure `pingAckTimeout` - the maximum time to wait for each PING ACK response. If no ACK is received within this timeout, another PING is sent (up to the threshold).
+<3> Configure `pingAckDropThreshold` - the maximum number of PING frames to send before closing the connection. For example, `2` means send up to 2 PING frames (if first fails, try once more) before closing.
+
 [[http-server-ssl-tls-timeout]]
 === SSL/TLS Timeout
 `HttpServer` supports the SSL/TLS functionality provided by Netty.
