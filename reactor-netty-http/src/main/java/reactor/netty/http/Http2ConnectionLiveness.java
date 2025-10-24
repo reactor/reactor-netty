@@ -169,8 +169,8 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 							"Will wait timeout and retry based on threshold."), lastSentPingData, pingAttempts);
 				}
 			}
-			
-			// Schedule timeout check - whether send succeeded or failed, 
+
+			// Schedule timeout check - whether send succeeded or failed,
 			// wait the configured timeout before retry/close decision
 			pingScheduler = invokeNextSchedule();
 		}
