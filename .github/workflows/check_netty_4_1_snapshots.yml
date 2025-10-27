@@ -48,4 +48,3 @@ jobs:
         run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
       - name: GraalVM smoke tests against Netty 4.2
         run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
-
