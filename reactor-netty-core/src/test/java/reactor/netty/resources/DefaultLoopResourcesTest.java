@@ -221,7 +221,7 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
-	@EnabledOnJre(value = JRE.JAVA_8)
+	@EnabledOnJre(JRE.JAVA_8)
 	void testIoUringIncubatorIsAvailableOnJava8() {
 		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
 		assumeThat(isTransportIoUring).isTrue();
