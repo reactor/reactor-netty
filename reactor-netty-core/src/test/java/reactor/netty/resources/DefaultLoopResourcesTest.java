@@ -26,7 +26,10 @@ import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.uring.IoUring;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.condition.OS;
 import reactor.core.publisher.Mono;
 import reactor.netty.tcp.TcpClient;
@@ -209,19 +212,19 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
+	@EnabledForJreRange(min = JRE.JAVA_11)
 	void testIoUringIsAvailable() {
 		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
-		boolean isJava11plus = getJavaVersion() >= 11;
-		assumeThat(isTransportIoUring && isJava11plus).isTrue();
+		assumeThat(isTransportIoUring).isTrue();
 		assertThat(IoUring.isAvailable()).isTrue();
 	}
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
+	@EnabledOnJre(JRE.JAVA_8)
 	void testIoUringIncubatorIsAvailableOnJava8() {
 		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
-		boolean isNotJava11Plus = getJavaVersion() < 11;
-		assumeThat(isTransportIoUring && isNotJava11Plus).isTrue();
+		assumeThat(isTransportIoUring).isTrue();
 		assertThat(io.netty.incubator.channel.uring.IOUring.isAvailable()).isTrue();
 	}
 
@@ -230,10 +233,5 @@ class DefaultLoopResourcesTest {
 	void testKQueueIsAvailable() {
 		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
 		assertThat(KQueue.isAvailable()).isTrue();
-	}
-
-	@SuppressWarnings("StringSplitter")
-	private static int getJavaVersion() {
-		return Integer.parseInt(System.getProperty("java.version").split("\\.")[1]);
 	}
 }
