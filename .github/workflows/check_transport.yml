@@ -77,7 +77,7 @@ jobs:
       - name: Build and test IO_Uring on Java 11
         if: ${{ startsWith(matrix.transport, 'io_uring') }}
         # Add -PtestToolchain=11
-        run: ./gradlew clean check -x :reactor-netty-core:test -x :reactor-netty-core:java17Test -x :reactor-netty-core:shadedJarTest --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
+        run: ./gradlew clean check -x :reactor-netty-core:test -x :reactor-netty-core:java17Test -x :reactor-netty-core:shadedJarTest :reactor-netty-graalvm-smoke-tests:test --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
       - name: Build and test UDS with NIO on Java 17
         if: ${{ ! startsWith(matrix.os, 'windows') }}
         run: ./gradlew reactor-netty-http:test --tests reactor.netty.http.server.HttpServerTests.testHttpServerWithDomainSockets_HTTP11Post -PtestToolchain=17 --no-daemon -x spotlessCheck -PforceTransport=nio

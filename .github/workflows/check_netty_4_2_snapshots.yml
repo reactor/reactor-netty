@@ -45,7 +45,7 @@ jobs:
       - name: Build and test IO_Uring on Java 11
         if: ${{ startsWith(matrix.transport, 'io_uring') }}
         # Add -PtestToolchain=11
-        run: ./gradlew clean check -x :reactor-netty-core:test -x :reactor-netty-core:java17Test -x :reactor-netty-core:shadedJarTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
+        run: ./gradlew clean check -x :reactor-netty-core:test -x :reactor-netty-core:java17Test -x :reactor-netty-core:shadedJarTest :reactor-netty-graalvm-smoke-tests:test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
       - name: GraalVM smoke tests
         if: ${{ ! startsWith(matrix.transport, 'io_uring') }}
         run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
