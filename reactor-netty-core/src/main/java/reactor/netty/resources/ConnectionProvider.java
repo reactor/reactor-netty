@@ -605,18 +605,23 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} the maximum number of registered
-		 * requests for acquire to keep in a pending queue
-		 * When invoked with -1 the pending queue will not have upper limit.
+		 * requests for acquire to keep in a pending queue.
+		 * <ul>
+		 * <li>When invoked with {@code -1} the pending queue will not have an upper limit.</li>
+		 * <li>When invoked with {@code 0} the pending queue will not be used and any acquire attempt
+		 * will fail immediately when no idle connection is available (fail-fast).</li>
+		 * <li>When invoked with a positive value, that many acquire requests can be queued.</li>
+		 * </ul>
 		 * Default to {@code 2 * max connections}.
 		 *
 		 * @param pendingAcquireMaxCount the maximum number of registered requests for acquire to keep
 		 * in a pending queue
 		 * @return {@literal this}
-		 * @throws IllegalArgumentException if pendingAcquireMaxCount is negative
+		 * @throws IllegalArgumentException if pendingAcquireMaxCount is negative (except {@code -1} for unbounded)
 		 */
 		public final SPEC pendingAcquireMaxCount(int pendingAcquireMaxCount) {
-			if (pendingAcquireMaxCount != -1 && pendingAcquireMaxCount <= 0) {
-				throw new IllegalArgumentException("Pending acquire max count must be strictly positive");
+			if (pendingAcquireMaxCount != -1 && pendingAcquireMaxCount < 0) {
+				throw new IllegalArgumentException("Pending acquire max count must be non-negative, or -1 for unbounded");
 			}
 			this.pendingAcquireMaxCount = pendingAcquireMaxCount;
 			return get();
