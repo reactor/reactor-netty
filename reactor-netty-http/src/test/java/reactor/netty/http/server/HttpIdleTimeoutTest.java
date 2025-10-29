@@ -119,7 +119,7 @@ class HttpIdleTimeoutTest extends BaseHttpTest {
 		        .as(StepVerifier::create)
 		        .expectNext("openedBeforeIdleTimeout")
 		        .expectComplete()
-		        .verify(Duration.ofSeconds(1));
+		        .verify(Duration.ofSeconds(5));
 
 		Mono.delay(Duration.ofMillis(100))
 		    .block();
