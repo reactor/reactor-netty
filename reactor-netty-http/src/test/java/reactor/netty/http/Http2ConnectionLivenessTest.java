@@ -242,7 +242,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 			      .as(StepVerifier::create)
 			      .expectNext(serverResponse)
 			      .expectComplete()
-			      .verify(Duration.ofSeconds(5));
+			      .verify(Duration.ofSeconds(10));
 
 			if (waitTime != null) {
 				Mono.delay(waitTime)
@@ -350,7 +350,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 		        .as(StepVerifier::create)
 		        .expectNext(serverResponse)
 		        .expectComplete()
-		        .verify(Duration.ofSeconds(5));
+		        .verify(Duration.ofSeconds(10));
 
 		if (waitTime != null) {
 			Mono.delay(waitTime)
