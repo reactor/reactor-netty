@@ -92,7 +92,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 		testServer(clientCtx, clientHandler, clientProtocols, 2, serverCtx,
 				builder -> builder.pingAckTimeout(Duration.ofMillis(100))
 				                  .pingAckDropThreshold(2),
-				serverProtocols, "serverPingAckFrameWithinThreshold", Duration.ofMillis(600));
+				serverProtocols, "serverPingAckFrameWithinThreshold", Duration.ofMillis(550));
 	}
 
 	@ParameterizedTest
@@ -109,7 +109,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 				builder -> builder.pingAckTimeout(Duration.ofMillis(100))
 				                  .pingAckDropThreshold(2),
 				clientProtocols, Duration.ZERO, serverCtx, serverHandler, serverProtocols, 2,
-				"clientPingAckFrameWithinThreshold", Duration.ofMillis(600));
+				"clientPingAckFrameWithinThreshold", Duration.ofMillis(550));
 	}
 
 	@ParameterizedTest
@@ -118,7 +118,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
 		testServer(clientCtx, new Http2PingFrameHandler(), clientProtocols, 1, serverCtx,
 				builder -> builder.pingAckTimeout(Duration.ofMillis(100)),
-				serverProtocols, "serverAckPingFrameWithinTimeout", Duration.ofMillis(500));
+				serverProtocols, "serverAckPingFrameWithinTimeout", Duration.ofMillis(450));
 	}
 
 	@ParameterizedTest
@@ -127,7 +127,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
 		testClient(clientCtx, builder -> builder.pingAckTimeout(Duration.ofMillis(100)),
 				clientProtocols, Duration.ZERO, serverCtx, new Http2PingFrameHandler(), serverProtocols, 1,
-				"clientAckPingFrameWithinTimeout", Duration.ofMillis(500));
+				"clientAckPingFrameWithinTimeout", Duration.ofMillis(450));
 	}
 
 	@ParameterizedTest
@@ -249,7 +249,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 				    .block();
 
 				assertThat(connectedClientChannel.get()).isNotNull();
-				assertThat(connectedClientChannel.get().parent().isOpen()).isEqualTo(true);
+				assertThat(connectedClientChannel.get().parent().isActive()).isEqualTo(true);
 			}
 			else {
 				assertThat(connectedClientChannelClosed.await(5, TimeUnit.SECONDS)).isTrue();
@@ -357,7 +357,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 			    .block();
 
 			assertThat(connectedServerChannel.get()).isNotNull();
-			assertThat(connectedServerChannel.get().parent().isOpen()).isEqualTo(true);
+			assertThat(connectedServerChannel.get().parent().isActive()).isEqualTo(true);
 		}
 		else {
 			assertThat(connectedServerChannelClosed.await(5, TimeUnit.SECONDS)).isTrue();
