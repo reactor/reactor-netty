@@ -19,6 +19,8 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -46,6 +48,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -64,6 +68,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -89,6 +95,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -114,6 +122,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -191,6 +201,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isEqualTo(16384);
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -216,6 +228,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(123);
 		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -241,6 +255,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -259,6 +275,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isEqualTo(123);
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -277,6 +295,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isEqualTo(456);
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -285,6 +305,51 @@ class Http2SettingsSpecTests {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxStreams(-1))
 				.withMessageContaining("maxStreams must be positive");
+	}
+
+	@Test
+	void pingAckDropThreshold() {
+		builder.pingAckDropThreshold(1);
+		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
+		assertThat(spec.headerTableSize()).isNull();
+		assertThat(spec.initialWindowSize()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxFrameSize()).isNull();
+		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isNull();
+		assertThat(spec.pushEnabled()).isNull();
+	}
+
+	@Test
+	public void pingAckDropThresholdBadValues() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.pingAckDropThreshold(-1))
+				.withMessageContaining("pingAckDropThreshold must be positive");
+	}
+
+	@Test
+	void pingAckTimeout() {
+		builder.pingAckTimeout(Duration.ofMillis(100));
+		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.connectProtocolEnabled()).isNull();
+		assertThat(spec.headerTableSize()).isNull();
+		assertThat(spec.initialWindowSize()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxFrameSize()).isNull();
+		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.maxStreams()).isNull();
+		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
+		assertThat(spec.pingAckTimeout()).isEqualTo(Duration.ofMillis(100));
+		assertThat(spec.pushEnabled()).isNull();
+	}
+
+	@Test
+	public void pingAckTimeoutBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.pingAckTimeout(null));
 	}
 
 	/*

@@ -51,6 +51,8 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.HttpConnectionLiveness;
+import reactor.netty.http.IdleTimeoutHandler;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
@@ -155,7 +157,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
-		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout, HttpConnectionLiveness.CLOSE);
 
 		ctx.fireChannelActive();
 	}
@@ -546,7 +548,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			ctx.executor().execute(this);
 		}
 		else {
-			IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+			IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout, HttpConnectionLiveness.CLOSE);
 			ctx.read();
 		}
 	}

@@ -144,6 +144,7 @@ dependencies {
 	testImplementation "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
 	testImplementation "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
+	testImplementation "io.projectreactor.addons:reactor-extra:$reactorAddonsVersion"
 	testImplementation "org.assertj:assertj-core:$assertJVersion"
 	testImplementation "org.awaitility:awaitility:$awaitilityVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"

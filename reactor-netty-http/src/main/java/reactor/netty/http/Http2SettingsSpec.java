@@ -19,6 +19,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Settings;
 import reactor.util.annotation.Nullable;
 
+import java.time.Duration;
 import java.util.Objects;
 
 /**
@@ -123,6 +124,101 @@ public final class Http2SettingsSpec {
 		 * @since 1.0.33
 		 */
 		Builder maxStreams(long maxStreams);
+
+		/**
+		 * Sets the maximum number of PING frame transmission attempts before closing the connection.
+		 *
+		 * <p>
+		 * This method configures how many PING frames will be sent without receiving an ACK
+		 * before considering the connection as unresponsive and closing it.
+		 * Each PING waits for {@link #pingAckTimeout(Duration)} before either receiving an ACK
+		 * (which resets the health check) or timing out and sending the next PING.
+		 * </p>
+		 *
+		 * <p>
+		 * <strong>Example with {@code pingAckDropThreshold=1}:</strong>
+		 * <ol>
+		 *   <li>Connection becomes idle</li>
+		 *   <li>First PING frame is sent</li>
+		 *   <li>Wait up to {@code pingAckTimeout} for ACK</li>
+		 *   <li>If no ACK received, connection is closed (1 attempt limit reached)</li>
+		 * </ol>
+		 * </p>
+		 *
+		 * <p>
+		 * <strong>Example with {@code pingAckDropThreshold=2}:</strong>
+		 * <ol>
+		 *   <li>Connection becomes idle</li>
+		 *   <li>First PING frame is sent</li>
+		 *   <li>Wait up to {@code pingAckTimeout} for ACK</li>
+		 *   <li>If no ACK received, second PING frame is sent</li>
+		 *   <li>Wait up to {@code pingAckTimeout} for ACK</li>
+		 *   <li>If no ACK received, connection is closed (2 attempt limit reached)</li>
+		 * </ol>
+		 * </p>
+		 *
+		 * <p>
+		 * A lower threshold detects connection failures more quickly but may lead
+		 * to premature disconnections if network latency is high. A higher threshold
+		 * tolerates more packet loss or delays but increases the time to detect truly dead connections.
+		 * </p>
+		 *
+		 * <p>
+		 * The default {@code pingAckDropThreshold} is {@code 1}, meaning only one PING frame
+		 * will be sent. If no ACK is received within {@code pingAckTimeout}, the connection closes immediately.
+		 * </p>
+		 *
+		 * @param pingAckDropThreshold the maximum number of PING transmission attempts without receiving ACK.
+		 * Must be a positive integer (minimum 1). Default is 1.
+		 * @return {@code this}
+		 * @since 1.2.12
+		 */
+		default Builder pingAckDropThreshold(int pingAckDropThreshold) {
+			return this;
+		}
+
+		/**
+		 * Sets the timeout for receiving an ACK response to HTTP/2 PING frames.
+		 *
+		 * <p>
+		 * This method configures how long to wait for a PING ACK response before
+		 * either retrying or closing the connection (based on {@link #pingAckDropThreshold(int)}).
+		 * This timeout is used in conjunction with the idle timeout to detect unresponsive connections.
+		 * </p>
+		 *
+		 * <p>
+		 * When a connection becomes idle (no reads/writes for the configured idle timeout duration),
+		 * a PING frame is sent to check if the peer is still responsive. If no ACK is received
+		 * within the {@code pingAckTimeout} duration, another PING attempt may be made
+		 * (depending on {@code pingAckDropThreshold}). If all attempts fail, the connection is closed.
+		 * </p>
+		 *
+		 * <p>
+		 * <strong>Important:</strong> This setting only takes effect when used together with:
+		 * <ul>
+		 *   <li>For client: {@code ConnectionProvider} with {@code maxIdleTime} configured</li>
+		 *   <li>For server: {@code HttpServer} with {@code idleTimeout} configured</li>
+		 * </ul>
+		 * Without an idle timeout, PING frames will not be sent.
+		 * </p>
+		 *
+		 * <p>
+		 * The timeout should be chosen based on your network conditions and requirements:
+		 * <ul>
+		 *   <li>Too short: May cause false positives and premature connection closures due to temporary delays</li>
+		 *   <li>Too long: Delays detection of truly unresponsive connections</li>
+		 * </ul>
+		 * Consider your expected network latency, load patterns, and tolerance for stale connections.
+		 * </p>
+		 *
+		 * @param pingAckTimeout the timeout duration to wait for a PING ACK response.
+		 * Must be a positive value.
+		 * @return {@code this}
+		 * @since 1.2.12
+		 */
+		default Builder pingAckTimeout(Duration pingAckTimeout) {
+			return this;
+		}
 
 		/**
 		 * Sets the {@code SETTINGS_ENABLE_PUSH} value.
@@ -260,6 +356,27 @@ public final class Http2SettingsSpec {
 	}
 
 	/**
+	 * Returns the configured {@code pingAckDropThreshold} value.
+	 *
+	 * @return the configured {@code pingAckDropThreshold} value
+	 * @since 1.2.12
+	 */
+	public Integer pingAckDropThreshold() {
+		return pingAckDropThreshold;
+	}
+
+	/**
+	 * Returns the configured {@code pingAckTimeout} value or null.
+	 *
+	 * @return the configured {@code pingAckTimeout} value or null
+	 * @since 1.2.12
+	 */
+	@Nullable
+	public Duration pingAckTimeout() {
+		return pingAckTimeout;
+	}
+
+	/**
 	 * Returns the configured {@code SETTINGS_ENABLE_PUSH} value or null.
 	 *
 	 * @return the configured {@code SETTINGS_ENABLE_PUSH} value or null
@@ -289,6 +406,8 @@ public final class Http2SettingsSpec {
 				Objects.equals(maxFrameSize, that.maxFrameSize) &&
 				maxHeaderListSize.equals(that.maxHeaderListSize) &&
 				Objects.equals(maxStreams, that.maxStreams) &&
+				pingAckDropThreshold.equals(that.pingAckDropThreshold) &&
+				Objects.equals(pingAckTimeout, that.pingAckTimeout) &&
 				Objects.equals(pushEnabled, that.pushEnabled);
 	}
 
@@ -306,6 +425,8 @@ public final class Http2SettingsSpec {
 		result = 31 * result + (maxFrameSize == null ? 0 : maxFrameSize);
 		result = 31 * result + (maxHeaderListSize == null ? 0 : Long.hashCode(maxHeaderListSize));
 		result = 31 * result + (maxStreams == null ? 0 : Long.hashCode(maxStreams));
+		result = 31 * result + pingAckDropThreshold;
+		result = 31 * result + (pingAckTimeout == null ? 0 : Objects.hashCode(pingAckTimeout));
 		result = 31 * result + (pushEnabled == null ? 0 : Boolean.hashCode(pushEnabled));
 		return result;
 	}
@@ -321,6 +442,8 @@ public final class Http2SettingsSpec {
 	final Integer maxFrameSize;
 	final Long maxHeaderListSize;
 	final Long maxStreams;
+	final Integer pingAckDropThreshold;
+	final Duration pingAckTimeout;
 	final Boolean pushEnabled;
 
 	Http2SettingsSpec(Build build) {
@@ -342,16 +465,22 @@ public final class Http2SettingsSpec {
 		maxFrameSize = settings.maxFrameSize();
 		maxHeaderListSize = settings.maxHeaderListSize();
 		maxStreams = build.maxStreams;
+		pingAckDropThreshold = build.pingAckDropThreshold;
+		pingAckTimeout = build.pingAckTimeout;
 		pushEnabled = settings.pushEnabled();
 	}
 
 	static final class Build implements Builder {
+		static final int DEFAULT_PING_ACK_DROP_THRESHOLD = 1;
+
 		Boolean connectProtocolEnabled;
 		Integer maxDecodedRstFramesPerWindow;
 		Integer maxDecodedRstFramesSecondsPerWindow;
 		Integer maxEncodedRstFramesPerWindow;
 		Integer maxEncodedRstFramesSecondsPerWindow;
 		Long maxStreams;
+		Integer pingAckDropThreshold = Integer.valueOf(DEFAULT_PING_ACK_DROP_THRESHOLD);
+		Duration pingAckTimeout;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
 
 		@Override
@@ -427,6 +556,25 @@ public final class Http2SettingsSpec {
 				throw new IllegalArgumentException("maxStreams must be positive");
 			}
 			this.maxStreams = Long.valueOf(maxStreams);
+			return this;
+		}
+
+		@Override
+		public Builder pingAckDropThreshold(int pingAckDropThreshold) {
+			if (pingAckDropThreshold < 1) {
+				throw new IllegalArgumentException("pingAckDropThreshold must be positive");
+			}
+			this.pingAckDropThreshold = Integer.valueOf(pingAckDropThreshold);
+			return this;
+		}
+
+		@Override
+		public Builder pingAckTimeout(Duration pingAckTimeout) {
+			Objects.requireNonNull(pingAckTimeout, "pingAckTimeout");
+			if (pingAckTimeout.isNegative() || pingAckTimeout.isZero()) {
+				throw new IllegalArgumentException("pingAckTimeout must be positive");
+			}
+			this.pingAckTimeout = pingAckTimeout;
 			return this;
 		}
 
