@@ -651,6 +651,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			return allocationStrategy;
 		}
 
+		public @Nullable BiPredicate<Connection, ConnectionMetadata> evictionPredicate() {
+			return evictionPredicate;
+		}
+
 		public long maxIdleTime() {
 			return this.maxIdleTime;
 		}

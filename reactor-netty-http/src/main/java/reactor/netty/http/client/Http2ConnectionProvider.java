@@ -38,6 +38,11 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.Http2ConnectionLiveness;
+import reactor.netty.http.Http2SettingsSpec;
+import reactor.netty.http.IdleTimeoutHandler;
+import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
+import reactor.netty.internal.shaded.reactor.pool.decorators.GracefulShutdownInstrumentedPool;
 import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.PooledConnectionProvider;
@@ -63,6 +68,7 @@ import static reactor.netty.ReactorNetty.getChannelContext;
 import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 import static reactor.netty.http.client.HttpClientState.UPGRADE_REJECTED;
+import static reactor.netty.http.client.HttpClientState.UPGRADE_SUCCESSFUL;
 
 /**
  * An HTTP/2 implementation for pooled {@link ConnectionProvider}.
@@ -124,12 +130,16 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		SocketAddress proxyAddress = ((ClientTransportConfig<?>) config).proxyProvider() != null ?
 				((ClientTransportConfig<?>) config).proxyProvider().getProxyAddress() : null;
 		Function<String, String> uriTagValue = null;
+		Http2SettingsSpec http2SettingsSpec = null;
 		if (config instanceof HttpClientConfig) {
-			acceptGzip = ((HttpClientConfig) config).acceptGzip;
-			uriTagValue = ((HttpClientConfig) config).uriTagValue;
+			HttpClientConfig httpClientConfig = (HttpClientConfig) config;
+			acceptGzip = httpClientConfig.acceptGzip;
+			uriTagValue = httpClientConfig.uriTagValue;
+			http2SettingsSpec = httpClientConfig.http2Settings;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, proxyAddress, remoteAddress, sink, currentContext, uriTagValue);
+				acceptGzip, http2SettingsSpec, metricsRecorder, pendingAcquireTimeout, pool, proxyAddress, remoteAddress,
+				sink, currentContext, uriTagValue);
 	}
 
 	@Override
@@ -256,6 +266,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
 		final boolean acceptGzip;
+		final @Nullable Http2SettingsSpec http2SettingsSpec;
 		final @Nullable ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
@@ -279,6 +290,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				ConnectionObserver obs,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
+				@Nullable Http2SettingsSpec http2SettingsSpec,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
@@ -292,6 +304,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.acceptGzip = acceptGzip;
+			this.http2SettingsSpec = http2SettingsSpec;
 			this.metricsRecorder = metricsRecorder;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
@@ -308,6 +321,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.obs = parent.obs;
 			this.opsFactory = parent.opsFactory;
 			this.acceptGzip = parent.acceptGzip;
+			this.http2SettingsSpec = parent.http2SettingsSpec;
 			this.metricsRecorder = parent.metricsRecorder;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
@@ -375,6 +389,16 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				return;
 			}
 
+			Http2Pool http2Pool = http2Pool();
+			if (http2Pool.evictionPredicate != null) {
+				ChannelHandlerContext frameCodec = http2PooledRef(pooledRef).slot.http2FrameCodecCtx();
+				if (frameCodec != null) {
+					IdleTimeoutHandler.addIdleTimeoutHandler(channel.pipeline(), Duration.ofMillis(http2Pool.maxIdleTime),
+							new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
+									http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+				}
+			}
+
 			if (getChannelContext(channel) != null) {
 				setChannelContext(channel, null);
 			}
@@ -385,6 +409,17 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == UPGRADE_REJECTED) {
 				invalidate(connection.channel().attr(OWNER).get());
+			}
+			else if (newState == UPGRADE_SUCCESSFUL) {
+				Http2Pool http2Pool = http2Pool();
+				if (http2Pool.evictionPredicate != null) {
+					ChannelHandlerContext frameCodec = http2PooledRef(pooledRef).slot.http2FrameCodecCtx();
+					if (frameCodec != null) {
+						IdleTimeoutHandler.addIdleTimeoutHandler(connection.channel().pipeline(), Duration.ofMillis(http2Pool.maxIdleTime),
+								new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
+										http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+					}
+				}
 			}
 
 			obs.onStateChange(connection, newState);
@@ -482,6 +517,13 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				}
 			}
 			return false;
+		}
+
+		Http2Pool http2Pool() {
+			if (pool instanceof GracefulShutdownInstrumentedPool) {
+				return (Http2Pool) ((GracefulShutdownInstrumentedPool<Connection>) pool).getOriginalPool();
+			}
+			return (Http2Pool) pool;
 		}
 
 		boolean notHttp2() {
@@ -594,18 +636,30 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				PoolFactory<Connection> poolFactory,
 				SocketAddress remoteAddress,
 				@Nullable AddressResolverGroup<?> resolver) {
-			this.parent = parent;
 			this.config = (HttpClientConfig) config;
+			Function<PoolConfig<Connection>, InstrumentedPool<Connection>> poolConfigFunction;
+			Http2SettingsSpec http2SettingsSpec = this.config.http2SettingsSpec();
+			if (poolFactory.evictionPredicate() == null && poolFactory.maxIdleTime() != -1 &&
+					http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null) {
+				Http11EvictionPredicate http11EvictionPredicate =
+						new Http11EvictionPredicate(poolFactory.maxIdleTime(), poolFactory.maxLifeTime());
+				Http2EvictionPredicate http2EvictionPredicate = new Http2EvictionPredicate(poolFactory.maxLifeTime());
+				this.parent = parent.mutate().evictionPredicate(http11EvictionPredicate).build();
+				poolConfigFunction = poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy(),
+						http2EvictionPredicate, poolFactory.maxIdleTime());
+			}
+			else {
+				this.parent = parent;
+				poolConfigFunction = poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy());
+			}
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
 			this.pool = id == null ?
-					poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
-							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy())) :
+					poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE, poolConfigFunction) :
 					poolFactory.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
 							// Deliberately suppress "NullAway"
 							// With id != null, this means name != null
-							new MicrometerPoolMetricsRecorder(id, name, remoteAddress),
-							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy()));
+							new MicrometerPoolMetricsRecorder(id, name, remoteAddress), poolConfigFunction);
 		}
 
 		Publisher<Connection> connectChannel() {
@@ -617,5 +671,41 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				(connection, metadata) -> false;
 
 		static final Function<Connection, Publisher<Void>> DEFAULT_DESTROY_HANDLER = connection -> Mono.empty();
+
+		static final class Http11EvictionPredicate implements BiPredicate<Connection, ConnectionMetadata> {
+			final long maxIdleTime;
+			final long maxLifeTime;
+
+			Http11EvictionPredicate(long maxIdleTime, long maxLifeTime) {
+				this.maxIdleTime = maxIdleTime;
+				this.maxLifeTime = maxLifeTime;
+			}
+
+			@Override
+			public boolean test(Connection connection, ConnectionMetadata meta) {
+				ConnectionObserver owner = connection.channel().attr(OWNER).get();
+				boolean isNotHttp2 = true;
+				if (owner instanceof DisposableAcquire) {
+					Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(((DisposableAcquire) owner).pooledRef);
+					ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
+					isNotHttp2 = frameCodec == null;
+				}
+				return (isNotHttp2 && maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
+						|| (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime);
+			}
+		}
+
+		static final class Http2EvictionPredicate implements BiPredicate<Connection, PooledRefMetadata> {
+			final long maxLifeTime;
+
+			Http2EvictionPredicate(long maxLifeTime) {
+				this.maxLifeTime = maxLifeTime;
+			}
+
+			@Override
+			public boolean test(Connection connection, PooledRefMetadata meta) {
+				return maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime;
+			}
+		}
 	}
 }

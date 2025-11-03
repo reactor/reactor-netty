@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import io.netty.channel.Channel;
@@ -157,12 +158,19 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	final Long maxConcurrentStreams;
 	final int minConnections;
 	final PoolConfig<Connection> poolConfig;
+	final @Nullable BiPredicate<Connection, PooledRefMetadata> evictionPredicate;
+	final long maxIdleTime;
 
 	long lastInteractionTimestamp;
 
 	@Nullable Disposable evictionTask;
 
 	Http2Pool(PoolConfig<Connection> poolConfig, ConnectionProvider.@Nullable AllocationStrategy<?> allocationStrategy) {
+		this(poolConfig, allocationStrategy, null, -1);
+	}
+
+	Http2Pool(PoolConfig<Connection> poolConfig, ConnectionProvider.@Nullable AllocationStrategy<?> allocationStrategy,
+			@Nullable BiPredicate<Connection, PooledRefMetadata> evictionPredicate, long maxIdleTime) {
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();
@@ -171,6 +179,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		this.minConnections = allocationStrategy == null ? 0 : allocationStrategy.permitMinimum();
 		this.pending = new ConcurrentLinkedDeque<>();
 		this.poolConfig = poolConfig;
+		this.evictionPredicate = evictionPredicate;
+		this.maxIdleTime = maxIdleTime;
 
 		recordInteractionTimestamp();
 		scheduleEviction();
@@ -615,7 +625,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	boolean testEvictionPredicate(Slot slot) {
-		return poolConfig.evictionPredicate().test(slot.connection, slot);
+		return evictionPredicate == null ?
+				poolConfig.evictionPredicate().test(slot.connection, slot) :
+				evictionPredicate.test(slot.connection, slot);
 	}
 
 	static void pendingAcquireLimitReached(Borrower borrower, int maxPending) {
