@@ -25,7 +25,9 @@ import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2PingFrame;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,7 +42,6 @@ import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.test.StepVerifier;
-import reactor.util.annotation.Nullable;
 
 import java.lang.reflect.Field;
 import java.time.Duration;
@@ -69,20 +70,20 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 
 	static Http2SslContextSpec clientCtx2;
 	static Http2SslContextSpec serverCtx2;
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
-		ssc = new SelfSignedCertificate();
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 		clientCtx2 = Http2SslContextSpec.forClient()
 		                                .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-		serverCtx2 = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		serverCtx2 = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 	}
 
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void serverPingAckFrameWithinThreshold(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		Http2PingFrameHandler clientHandler = new Http2PingFrameHandler((ctx, frame, receivedPingTimes) -> {
 			if (receivedPingTimes.size() % 2 == 0) {
 				ctx.writeAndFlush(new DefaultHttp2PingFrame(frame.content(), true))
@@ -98,7 +99,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void clientPingAckFrameWithinThreshold(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		Http2PingFrameHandler serverHandler = new Http2PingFrameHandler((ctx, frame, receivedPingTimes) -> {
 			if (receivedPingTimes.size() % 2 == 0) {
 				ctx.writeAndFlush(new DefaultHttp2PingFrame(frame.content(), true))
@@ -115,7 +116,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void serverAckPingFrameWithinTimeout(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		testServer(clientCtx, new Http2PingFrameHandler(), clientProtocols, 1, serverCtx,
 				builder -> builder.pingAckTimeout(Duration.ofMillis(100)),
 				serverProtocols, "serverAckPingFrameWithinTimeout", Duration.ofMillis(450));
@@ -124,7 +125,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void clientAckPingFrameWithinTimeout(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		testClient(clientCtx, builder -> builder.pingAckTimeout(Duration.ofMillis(100)),
 				clientProtocols, Duration.ZERO, serverCtx, new Http2PingFrameHandler(), serverProtocols, 1,
 				"clientAckPingFrameWithinTimeout", Duration.ofMillis(450));
@@ -133,7 +134,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void serverCloseConnectionIfPingFrameDelayed(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		Http2PingFrameHandler clientHandler = new Http2PingFrameHandler((ctx, frame, receivedPingTimes) -> {});
 		testServer(clientCtx, clientHandler, clientProtocols, 1, serverCtx,
 				builder -> builder.pingAckTimeout(Duration.ofMillis(100)),
@@ -149,7 +150,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void clientCloseConnectionIfPingFrameDelayed(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		Http2PingFrameHandler serverHandler = new Http2PingFrameHandler((ctx, frame, receivedPingTimes) -> {});
 		testClient(clientCtx, builder -> builder.pingAckTimeout(Duration.ofMillis(100)),
 				clientProtocols, Duration.ZERO, serverCtx, serverHandler, serverProtocols, 1,
@@ -166,7 +167,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void serverCloseConnectionWithoutPingCheckWhenNotConfigured(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		testServer(clientCtx, new Http2PingFrameHandler(), clientProtocols, 0, serverCtx, null,
 				serverProtocols, "serverCloseConnectionWithoutPingCheckWhenNotConfigured", null);
 	}
@@ -174,7 +175,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("http2CompatibleProtocols")
 	void clientCloseConnectionWithoutPingCheckWhenNotConfigured(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) throws Exception {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		testClient(clientCtx, null,
 				clientProtocols, Duration.ofMillis(300), serverCtx, new Http2PingFrameHandler(), serverProtocols, 0,
 				"clientCloseConnectionWithoutPingCheckWhenNotConfigured", null);
@@ -182,11 +183,11 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 
 	@SuppressWarnings("deprecation")
 	void testClient(
-			@Nullable SslProvider.ProtocolSslContextSpec clientCtx,
+			SslProvider.@Nullable ProtocolSslContextSpec clientCtx,
 			@Nullable Consumer<Http2SettingsSpec.Builder> clientHttp2Settings,
 			HttpProtocol[] clientProtocols,
 			Duration evictionInBackground,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx,
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx,
 			Http2PingFrameHandler serverHandler,
 			HttpProtocol[] serverProtocols,
 			int serverReceivedPingTimes,
@@ -265,11 +266,11 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 
 	@SuppressWarnings("deprecation")
 	void testServer(
-			@Nullable SslProvider.ProtocolSslContextSpec clientCtx,
+			SslProvider.@Nullable ProtocolSslContextSpec clientCtx,
 			Http2PingFrameHandler clientHandler,
 			HttpProtocol[] clientProtocols,
 			int clientReceivedPingTimes,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx,
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx,
 			@Nullable Consumer<Http2SettingsSpec.Builder> serverHttp2Settings,
 			HttpProtocol[] serverProtocols,
 			String serverResponse,
@@ -405,7 +406,7 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 
 		private final List<LocalDateTime> receivedPingTimes = new ArrayList<>();
 
-		private final Consumer3<ChannelHandlerContext, Http2PingFrame, List<LocalDateTime>> consumer;
+		private final @Nullable Consumer3<ChannelHandlerContext, Http2PingFrame, List<LocalDateTime>> consumer;
 
 		private Http2PingFrameHandler() {
 			this(null);
