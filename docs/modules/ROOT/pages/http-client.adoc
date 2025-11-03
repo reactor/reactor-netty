@@ -680,6 +680,41 @@ include::{examples-dir}/channeloptions/Application.java[lines=18..54]
 <4> Configures the time between individual `keepalive` probes to 1 minute.
 <5> Configures the maximum number of TCP `keepalive` probes to 8.
 
+=== HTTP/2 Connection Health Check
+For `HTTP/2 connections`, it's recommended to configure `PING` frames for connection maintenance and health monitoring.
+The `HttpClient` uses `PING` frames to detect unresponsive connections when `maxIdleTime` on the connection pool is configured.
+
+Benefits of using `PING` frames:
+
+- Actively probes connection liveness when idle
+- Detects unresponsive connections through timely health checks
+- Closes stale connections automatically
+- Maintains reliable connection pool state
+
+[NOTE]
+====
+`HTTP/2` `PING` frame-based health checks require `maxIdleTime` on the connection pool to be configured as a prerequisite.
+Without idle timeout configuration, PING frames will not be sent and connections may remain open indefinitely,
+preventing proper detection of inactive or unresponsive connections.
+
+The idle timeout and PING settings work together:
+
+1. Connection becomes idle (no activity for `maxIdleTime`)
+2. A PING frame is sent to check if the peer is responsive
+3. If no ACK within `pingAckTimeout`, retry based on `pingAckDropThreshold`
+4. If all attempts fail, the connection is closed
+====
+
+To enable `PING` frames for `HTTP/2` connections, configure the `HttpClient` as follows:
+
+{examples-link}/liveness/Application.java
+----
+include::{examples-dir}/liveness/Application.java[lines=27..52]
+----
+<1> Configure `maxIdleTime` to enable PING-based health checks. When a connection is idle for this duration, a PING frame will be sent.
+<2> Configure `pingAckTimeout` - the maximum time to wait for each PING ACK response. If no ACK is received within this timeout, another PING is sent (up to the threshold).
+<3> Configure `pingAckDropThreshold` - the maximum number of PING frames to send before closing the connection. For example, `2` means send up to 2 PING frames (if first fails, try once more) before closing.
+
 [[ssl-tls-timeout]]
 ==== SSL/TLS Timeout
 `HttpClient` supports the SSL/TLS functionality provided by Netty.

@@ -260,9 +260,9 @@
 	},
 	{
 		"condition": {
-			"typeReachable": "reactor.netty.http.server.IdleTimeoutHandler"
+			"typeReachable": "reactor.netty.http.IdleTimeoutHandler"
 		},
-		"name": "reactor.netty.http.server.IdleTimeoutHandler",
+		"name": "reactor.netty.http.IdleTimeoutHandler",
 		"queryAllPublicMethods": true
 	},
 	{

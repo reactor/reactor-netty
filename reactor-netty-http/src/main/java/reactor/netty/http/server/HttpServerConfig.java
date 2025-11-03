@@ -65,10 +65,13 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbstractChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.Http2ConnectionLiveness;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.Http3SettingsSpec;
+import reactor.netty.http.HttpConnectionLiveness;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
+import reactor.netty.http.IdleTimeoutHandler;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
@@ -728,7 +731,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		                  cookieDecoder, cookieEncoder, errorLogEnabled, errorLog, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener,
 		                  mapHandle, methodTagValue, metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue)));
 
-		IdleTimeoutHandler.addIdleTimeoutHandler(p, idleTimeout);
+		IdleTimeoutHandler.addIdleTimeoutHandler(p, idleTimeout,
+				http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null ?
+						new Http2ConnectionLiveness(http2FrameCodec, http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()) :
+						HttpConnectionLiveness.CLOSE);
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
@@ -780,10 +786,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressionOptions,
 				compressPredicate, cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, enableGracefulShutdown,
-				errorLogEnabled, errorLog, formDecoderProvider, forwardedHeaderHandler, http2SettingsSpec, httpMessageLogFactory, listener, mapHandle,
+				errorLogEnabled, errorLog, formDecoderProvider, forwardedHeaderHandler, idleTimeout, http2SettingsSpec, httpMessageLogFactory, listener, mapHandle,
 				methodTagValue, metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue, decoder.validateHeaders());
 
-		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader, http2SettingsSpec != null ? http2SettingsSpec.maxStreams() : null);
+		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader, http2SettingsSpec != null ? http2SettingsSpec.maxStreams() : null, idleTimeout, http2SettingsSpec);
 
 		HttpServerUpgradeHandler httpServerUpgradeHandler = readTimeout == null && requestTimeout == null ?
 				new HttpServerUpgradeHandler(httpServerCodec, upgrader, decoder.h2cMaxContentLength()) :
@@ -999,12 +1005,14 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final boolean addHttp2FrameCodec;
 		final boolean removeMetricsHandler;
 		final Long maxStreams;
+		final Duration idleTimeout;
+		final Http2SettingsSpec http2SettingsSpec;
 
 		/**
 		 * Used when full H2 preface is received.
 		 */
-		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, @Nullable Long maxStreams) {
-			this(upgrader, true, true, maxStreams);
+		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, @Nullable Long maxStreams, @Nullable Duration idleTimeout, @Nullable Http2SettingsSpec http2SettingsSpec) {
+			this(upgrader, true, true, maxStreams, idleTimeout, http2SettingsSpec);
 		}
 
 		/**
@@ -1012,11 +1020,13 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		 * is added by {@link Http2ServerUpgradeCodec}
 		 */
 		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, boolean addHttp2FrameCodec, boolean removeMetricsHandler,
-				@Nullable Long maxStreams) {
+				@Nullable Long maxStreams, @Nullable Duration idleTimeout, @Nullable Http2SettingsSpec http2SettingsSpec) {
 			this.upgrader = upgrader;
 			this.addHttp2FrameCodec = addHttp2FrameCodec;
 			this.removeMetricsHandler = removeMetricsHandler;
 			this.maxStreams = maxStreams;
+			this.idleTimeout = idleTimeout;
+			this.http2SettingsSpec = http2SettingsSpec;
 		}
 
 		@Override
@@ -1053,6 +1063,14 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			}
 			pipeline.remove(NettyPipeline.HttpTrafficHandler);
 			pipeline.remove(NettyPipeline.ReactiveBridge);
+
+			if (idleTimeout != null) {
+				IdleTimeoutHandler.removeIdleTimeoutHandler(pipeline);
+				IdleTimeoutHandler.addIdleTimeoutHandler(pipeline, idleTimeout,
+						http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null ?
+								new Http2ConnectionLiveness(upgrader.http2FrameCodec, http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()) :
+								HttpConnectionLiveness.CLOSE);
+			}
 		}
 	}
 
@@ -1162,6 +1180,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Duration                                                readTimeout;
 		final Duration                                                requestTimeout;
 		final Function<String, String>                                uriTagValue;
+		final Duration idleTimeout;
+		final Http2SettingsSpec http2SettingsSpec;
 
 		Http11OrH2CleartextCodec(
 				boolean accessLogEnabled,
@@ -1176,6 +1196,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<ErrorLogArgProvider, ErrorLog> errorLog,
 				HttpServerFormDecoderProvider formDecoderProvider,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+				@Nullable Duration idleTimeout,
 				@Nullable Http2SettingsSpec http2SettingsSpec,
 				HttpMessageLogFactory httpMessageLogFactory,
 				ConnectionObserver listener,
@@ -1242,6 +1263,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.readTimeout = readTimeout;
 			this.requestTimeout = requestTimeout;
 			this.uriTagValue = uriTagValue;
+			this.idleTimeout = idleTimeout;
+			this.http2SettingsSpec = http2SettingsSpec;
 		}
 
 		/**
@@ -1259,7 +1282,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		@Nullable
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false, false, maxStreams));
+				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false, false, maxStreams, idleTimeout, http2SettingsSpec));
 			}
 			else {
 				return null;
@@ -1379,7 +1402,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				// When the server is configured with HTTP/1.1 and H2 and HTTP/1.1 is negotiated,
 				// when channelActive event happens, this HttpTrafficHandler is still not in the pipeline,
 				// and will not be able to add IdleTimeoutHandler. So in this use case add IdleTimeoutHandler here.
-				IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+				IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout, HttpConnectionLiveness.CLOSE);
 				return;
 			}
 
