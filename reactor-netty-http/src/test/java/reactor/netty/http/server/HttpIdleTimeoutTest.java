@@ -18,7 +18,9 @@ package reactor.netty.http.server;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,7 +33,6 @@ import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.tcp.SslProvider;
 import reactor.test.StepVerifier;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -45,24 +46,24 @@ class HttpIdleTimeoutTest extends BaseHttpTest {
 	static Http11SslContextSpec clientCtx11;
 	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec serverCtx11;
-	static SelfSignedCertificate ssc;
+	static X509Bundle ssc;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
-		ssc = new SelfSignedCertificate();
+		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
 		clientCtx2 = Http2SslContextSpec.forClient()
 		                                .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		clientCtx11 = Http11SslContextSpec.forClient()
 		                                  .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-		serverCtx2 = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
-		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		serverCtx2 = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		serverCtx11 = Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 	}
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	@SuppressWarnings("deprecation")
 	void closedAfterIdleTimeout(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) {
 		AtomicReference<Channel> channel = new AtomicReference<>();
 		disposableServer =
 				(serverCtx == null ? createServer() : createServer().secure(spec -> spec.sslContext(serverCtx)))
@@ -97,7 +98,7 @@ class HttpIdleTimeoutTest extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	@SuppressWarnings("deprecation")
 	void openedBeforeIdleTimeout(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) {
 		AtomicReference<Channel> channel = new AtomicReference<>();
 		disposableServer =
 				(serverCtx == null ? createServer() : createServer().secure(spec -> spec.sslContext(serverCtx)))
