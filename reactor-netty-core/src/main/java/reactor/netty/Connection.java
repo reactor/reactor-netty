@@ -330,7 +330,7 @@ public interface Connection extends DisposableChannel {
 	}
 
 	/**
-	 * Bind a new {@link Connection} reference or null to the channel
+	 * Bind a new {@link Connection} reference to the channel
 	 * attributes only if this instance is currently bound.
 	 *
 	 * @param connection a new connection reference
@@ -338,7 +338,7 @@ public interface Connection extends DisposableChannel {
 	 * @return true if bound
 	 * @see #bind
 	 */
-	default boolean rebind(@Nullable Connection connection) {
+	default boolean rebind(Connection connection) {
 		return channel().attr(ReactorNetty.CONNECTION)
 		                .compareAndSet(this, connection);
 	}
