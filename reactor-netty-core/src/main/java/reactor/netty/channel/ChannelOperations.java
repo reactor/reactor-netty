@@ -698,8 +698,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	static final OnSetup EMPTY_SETUP = (c, l, msg) -> null;
 
 	@SuppressWarnings("rawtypes")
-	static final AtomicReferenceFieldUpdater<ChannelOperations, Subscription>
-			OUTBOUND_CLOSE = AtomicReferenceFieldUpdater.newUpdater(ChannelOperations.class,
+	static final AtomicReferenceFieldUpdater<ChannelOperations, @Nullable Subscription>
+			OUTBOUND_CLOSE = AtomicReferenceFieldUpdater.<ChannelOperations, @Nullable Subscription>newUpdater(ChannelOperations.class,
 			Subscription.class,
 			"outboundSubscription");
 

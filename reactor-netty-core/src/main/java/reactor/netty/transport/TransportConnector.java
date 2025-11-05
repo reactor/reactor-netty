@@ -676,7 +676,7 @@ public final class TransportConnector {
 
 		static final Object SUCCESS = new Object();
 		static final AtomicReferenceFieldUpdater<MonoChannelPromise, @Nullable Object> RESULT_UPDATER =
-				AtomicReferenceFieldUpdater.newUpdater(MonoChannelPromise.class, Object.class, "result");
+				AtomicReferenceFieldUpdater.<MonoChannelPromise, @Nullable Object>newUpdater(MonoChannelPromise.class, Object.class, "result");
 		volatile @Nullable Object result;
 	}
 
