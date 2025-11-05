@@ -115,10 +115,14 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		assert ctx.channel().parent() instanceof QuicChannel;
 		QuicChannel parent = (QuicChannel) ctx.channel().parent();
 		if (remoteAddress == null) {
+			// Deliberately suppress "NullAway"
+			// This is null if none is assigned yet, or assigned anymore,
+			// at this point (channelRead) it cannot be null.
 			remoteAddress = parent.remoteSocketAddress();
 		}
 		if (msg instanceof HttpRequest) {
@@ -131,6 +135,9 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 				connectionInfo = ConnectionInfo.from(
 						request,
 						true,
+						// Deliberately suppress "NullAway"
+						// This is null if none is assigned yet, or assigned anymore,
+						// at this point (channelRead) it cannot be null.
 						parent.localSocketAddress(),
 						remoteAddress,
 						forwardedHeaderHandler);

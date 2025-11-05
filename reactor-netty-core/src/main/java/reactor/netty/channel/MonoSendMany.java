@@ -640,10 +640,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
-		@SuppressWarnings("NullAway")
+		@Nullable
 		public Throwable cause() {
-			// Deliberately suppress "NullAway"
-			// The super method is not annotated
 			return null;
 		}
 
@@ -796,8 +794,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		static final AtomicIntegerFieldUpdater<SendManyInner>                 WIP          =
 				AtomicIntegerFieldUpdater.newUpdater(SendManyInner.class, "wip");
 		@SuppressWarnings("rawtypes")
-		static final AtomicReferenceFieldUpdater<SendManyInner, Subscription> SUBSCRIPTION =
-				AtomicReferenceFieldUpdater.newUpdater(SendManyInner.class, Subscription.class, "s");
+		static final AtomicReferenceFieldUpdater<SendManyInner, @Nullable Subscription> SUBSCRIPTION =
+				AtomicReferenceFieldUpdater.<SendManyInner, @Nullable Subscription>newUpdater(SendManyInner.class, Subscription.class, "s");
 
 		final class AsyncFlush implements Runnable {
 			@Override

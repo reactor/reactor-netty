@@ -119,7 +119,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	volatile @Nullable ConcurrentLinkedQueue<Slot> connections;
 	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<Http2Pool, @Nullable ConcurrentLinkedQueue> CONNECTIONS =
-			AtomicReferenceFieldUpdater.newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
+			AtomicReferenceFieldUpdater.<Http2Pool, @Nullable ConcurrentLinkedQueue>newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
 
 	volatile int idleSize;
 	private static final AtomicIntegerFieldUpdater<Http2Pool> IDLE_SIZE =

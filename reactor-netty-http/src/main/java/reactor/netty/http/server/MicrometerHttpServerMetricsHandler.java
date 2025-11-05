@@ -217,7 +217,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		@Override
 		public @Nullable Timer getTimer() {
-			return recorder.getResponseTimeTimer(getName(), path, method, status);
+			return recorder.getResponseTimeTimer(recorder.name() + RESPONSE_TIME, path, method, status);
 		}
 
 		@Override

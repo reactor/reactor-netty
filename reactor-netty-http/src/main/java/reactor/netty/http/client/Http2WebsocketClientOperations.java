@@ -91,7 +91,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "NullAway"})
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			FullHttpResponse response = (FullHttpResponse) msg;
@@ -131,6 +131,8 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 				}
 			}
 			else {
+				// Deliberately suppress "NullAway"
+				// redirecting != null in this case
 				listener().onUncaughtException(this, redirecting);
 			}
 		}

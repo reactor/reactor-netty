@@ -108,7 +108,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		@Override
 		public @Nullable Timer getTimer() {
-			return recorder.getResolveAddressTimer(getName(), netPeerName + ':' + netPeerPort, status);
+			return recorder.getResolveAddressTimer(recorder.name() + ADDRESS_RESOLVER, netPeerName + ':' + netPeerPort, status);
 		}
 
 		@Override

@@ -95,8 +95,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		final MicrometerChannelMetricsRecorder recorder;
 
 		// remote address and status are not known beforehand
-		@Nullable String netPeerName;
-		@Nullable String netPeerPort;
+		String netPeerName = UNKNOWN;
+		String netPeerPort = UNKNOWN;
 		String status = UNKNOWN;
 		@Nullable ContextView parentContextView;
 
@@ -112,7 +112,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public @Nullable Timer getTimer() {
-			return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
+			return recorder.getConnectTimer(recorder.name() + CONNECT_TIME, netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 
 		@Override
@@ -243,8 +243,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		boolean listenerAdded;
 
 		// remote address and status are not known beforehand
-		@Nullable String netPeerName;
-		@Nullable String netPeerPort;
+		String netPeerName = UNKNOWN;
+		String netPeerPort = UNKNOWN;
 		String status = UNKNOWN;
 		@Nullable ContextView parentContextView;
 
@@ -347,7 +347,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public @Nullable Timer getTimer() {
-			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
+			return recorder.getTlsHandshakeTimer(recorder.name() + TLS_HANDSHAKE_TIME, netPeerName + ':' + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 
 		private void addListener(ChannelHandlerContext ctx) {

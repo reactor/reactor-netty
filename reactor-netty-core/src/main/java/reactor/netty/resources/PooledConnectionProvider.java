@@ -188,6 +188,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				}
 			}
 
+			// Deliberately suppress "NullAway"
+			// The pool is either taken from the map or created
 			Mono<PooledRef<T>> mono = pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout));
 			if (eventLoop != null) {
 				mono = mono.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop));
@@ -207,6 +209,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public final Mono<Void> disposeLater() {
 		return Mono.defer(() -> {
 			List<Mono<Void>> pools;
@@ -219,6 +222,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			                        PoolFactory<T> poolFactory = poolFactory(remoteAddress);
 			                        if (pool instanceof GracefulShutdownInstrumentedPool) {
 			                            return ((GracefulShutdownInstrumentedPool<T>) pool)
+			                                    // Deliberately suppress "NullAway"
+			                                    // This method is invoked when disposeTimeout != null
 			                                    .disposeGracefully(disposeTimeout)
 			                                    .then(deRegisterDefaultMetrics(id, pool.config().metricsRecorder(), poolFactory.registrar, remoteAddress))
 			                                    .onErrorResume(t -> {
@@ -420,12 +425,15 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		}
 	}
 
+	@SuppressWarnings("NullAway")
 	final void disposeInactivePoolsInBackground() {
 		if (!channelPools.isEmpty()) {
 			List<Map.Entry<PoolKey, InstrumentedPool<T>>> toDispose;
 
 			toDispose = channelPools.entrySet()
 			                        .stream()
+			                        // Deliberately suppress "NullAway"
+			                        // This method is invoked when poolInactivity != null
 			                        .filter(p -> p.getValue().metrics().isInactiveForMoreThan(poolInactivity))
 			                        .collect(Collectors.toList());
 

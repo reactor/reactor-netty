@@ -612,7 +612,7 @@ public final class ReactorNetty {
 	ReactorNetty() {
 	}
 
-	static final class ScalarMap<T, V> implements Callable<V> {
+	static final class ScalarMap<T, V> implements Callable<@Nullable V> {
 
 		final Callable<T>                      source;
 		final Function<? super T, ? extends V> mapper;
@@ -624,8 +624,9 @@ public final class ReactorNetty {
 		}
 
 		@Override
-		public V call() throws Exception {
+		public @Nullable V call() throws Exception {
 			T called = source.call();
+			// The API does not expect null, but let's handle it
 			if (called == null) {
 				return null;
 			}

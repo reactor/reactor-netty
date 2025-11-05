@@ -476,11 +476,9 @@ public final class TransportConnector {
 		}
 
 		@Override
-		@SuppressWarnings("NullAway")
+		@Nullable
 		public Throwable cause() {
 			Object result = this.result;
-			// Deliberately suppress "NullAway"
-			// The super method is not annotated
 			return result == SUCCESS ? null : (Throwable) result;
 		}
 
