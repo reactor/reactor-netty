@@ -84,7 +84,7 @@ dependencies {
 		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion"
 	}
 	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
-	compileOnly "io.netty:netty-codec-http3:$nettyVersion"
+	api "io.netty:netty-codec-http3:$nettyVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
@@ -205,7 +205,6 @@ dependencies {
 	http3TestImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 	http3TestImplementation "org.assertj:assertj-core:$assertJVersion"
 	http3TestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-	http3TestImplementation "io.netty:netty-codec-http3:$nettyVersion"
 	http3TestImplementation "io.netty:netty-codec-native-quic:$nettyVersion$os_suffix"
 	http3TestImplementation "io.netty:netty-pkitesting:$nettyVersion"
 	http3TestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
