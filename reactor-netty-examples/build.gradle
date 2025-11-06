@@ -27,7 +27,6 @@ dependencies {
 	api "io.zipkin.reporter2:zipkin-sender-urlconnection:$zipkinSenderVersion"
 
 	api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-	api "io.netty:netty-codec-http3:$nettyVersion"
 	api "io.netty:netty-pkitesting:$nettyVersion"
 
 	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
