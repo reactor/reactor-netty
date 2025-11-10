@@ -749,6 +749,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			else if (pipeline.get(NettyPipeline.H2ToHttp11Codec) != null) {
 					baseName = NettyPipeline.H2ToHttp11Codec;
 			}
+			else if (pipeline.get(NettyPipeline.H3ToHttp11Codec) != null) {
+				baseName = NettyPipeline.H3ToHttp11Codec;
+			}
 			else {
 				ChannelHandler httpClientCodec = pipeline.get(HttpClientCodec.class);
 				if (httpClientCodec != null) {
