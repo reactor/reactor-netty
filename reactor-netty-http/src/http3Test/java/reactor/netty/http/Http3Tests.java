@@ -796,7 +796,8 @@ class Http3Tests {
 		AtomicBoolean onResponse = new AtomicBoolean();
 		AtomicBoolean onDisconnected = new AtomicBoolean();
 		AtomicLong timeout = new AtomicLong();
-		Predicate<Connection> handlerAvailable = conn -> conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null;
+		Predicate<Connection> handlerAvailable =
+				conn -> conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null;
 		HttpClient localClient =
 				client.doOnRequest((req, conn) -> onRequest.set(handlerAvailable.test(conn)))
 				      .doOnResponse((req, conn) -> {
