@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.incubator.codec.http3.Http3DataFrame;
 import io.netty.incubator.codec.http3.Http3HeadersFrame;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
@@ -48,6 +49,7 @@ import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
+import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
@@ -82,10 +84,13 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
@@ -771,6 +776,67 @@ class Http3Tests {
 		        .expectNextMatches(t -> t.getT1().equals(t.getT2()) && "HTTP/3.0".equals(t.getT1()))
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testResponseTimeout() throws Exception {
+		disposableServer =
+				createServer().handle((req, res) -> res.sendString(Mono.just("testResponseTimeout")))
+				              .bindNow();
+
+		HttpClient client = createClient(disposableServer.port()).responseTimeout(Duration.ofMillis(100));
+		doTestResponseTimeout(client, 100);
+
+		client = client.doOnRequest((req, conn) -> req.responseTimeout(Duration.ofMillis(200)));
+		doTestResponseTimeout(client, 200);
+	}
+
+	private static void doTestResponseTimeout(HttpClient client, long expectedTimeout) throws Exception {
+		AtomicBoolean onRequest = new AtomicBoolean();
+		AtomicBoolean onResponse = new AtomicBoolean();
+		AtomicBoolean onDisconnected = new AtomicBoolean();
+		AtomicLong timeout = new AtomicLong();
+		Predicate<Connection> handlerAvailable =
+				conn -> conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null;
+		HttpClient localClient =
+				client.doOnRequest((req, conn) -> onRequest.set(handlerAvailable.test(conn)))
+				      .doOnResponse((req, conn) -> {
+				          if (handlerAvailable.test(conn)) {
+				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler);
+				              onResponse.set(true);
+				              timeout.set(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
+				          }
+				      })
+				      .doOnDisconnected(conn -> onDisconnected.set(conn.channel().isActive() && handlerAvailable.test(conn)));
+
+		Mono<String> response =
+				localClient.get()
+				           .uri("/")
+				           .responseContent()
+				           .aggregate()
+				           .asString();
+
+		StepVerifier.create(response)
+		            .expectNext("testResponseTimeout")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(onRequest.get()).isFalse();
+		assertThat(onResponse.get()).isTrue();
+		assertThat(onDisconnected.get()).isFalse();
+		assertThat(timeout.get()).isEqualTo(expectedTimeout);
+
+		Thread.sleep(expectedTimeout + 50);
+
+		StepVerifier.create(response)
+		            .expectNext("testResponseTimeout")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(onRequest.get()).isFalse();
+		assertThat(onResponse.get()).isTrue();
+		assertThat(onDisconnected.get()).isFalse();
+		assertThat(timeout.get()).isEqualTo(expectedTimeout);
 	}
 
 	@Test
