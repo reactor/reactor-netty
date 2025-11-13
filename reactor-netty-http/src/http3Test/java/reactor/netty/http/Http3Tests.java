@@ -1216,6 +1216,19 @@ class Http3Tests {
 		        .verify(Duration.ofSeconds(5));
 	}
 
+	@Test
+	void httpClientSmokeTest() {
+		createClient(443)
+		        .host("projectreactor.io")
+		        .get()
+		        .uri("/")
+		        .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http3-stream-id", "null")))
+		        .as(StepVerifier::create)
+		        .expectNextMatches(s -> !"null".equals(s))
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
+	}
+
 	static HttpClient createClient(int port) {
 		return createClient(null, port);
 	}
