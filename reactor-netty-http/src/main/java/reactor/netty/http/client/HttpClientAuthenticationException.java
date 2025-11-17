@@ -16,14 +16,21 @@
 package reactor.netty.http.client;
 
 /**
- * Exception thrown when SPNEGO authentication fails.
+ * Exception thrown to trigger HTTP authentication retry.
+ * <p>
+ * This exception is used internally by the generic HTTP authentication framework
+ * to signal that the current request requires authentication and should be retried.
+ * The framework will invoke the configured authenticator before retrying the request.
+ * </p>
  *
- * @author raccoonback
+ * @author Oliver Ko
  * @since 1.3.0
  */
-public class SpnegoAuthenticationException extends RuntimeException {
+final class HttpClientAuthenticationException extends RuntimeException {
 
-	public SpnegoAuthenticationException(String message, Throwable cause) {
-		super(message, cause);
+	private static final long serialVersionUID = 1L;
+
+	HttpClientAuthenticationException() {
+		super("HTTP authentication required, triggering retry");
 	}
 }

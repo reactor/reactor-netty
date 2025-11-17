@@ -3809,6 +3809,232 @@ class HttpClientTest extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(5));
 	}
 
+	@Test
+	void testHttpAuthentication() {
+		AtomicInteger requestCount = new AtomicInteger(0);
+		AtomicBoolean authHeaderAdded = new AtomicBoolean(false);
+
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> {
+				              requestCount.incrementAndGet();
+				              String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
+
+				              // First request should already have auth header
+				              assertThat(authHeader).isEqualTo("Bearer test-token");
+				              return res.status(HttpResponseStatus.OK)
+				                        .sendString(Mono.just("Authenticated!"));
+				          })
+				          .bindNow();
+
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .doOnRequest((req, conn) -> {
+				              authHeaderAdded.set(true);
+				              req.requestHeaders().set(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+				          });
+
+		String response = client.get()
+		                        .uri("/protected")
+		                        .responseContent()
+		                        .aggregate()
+		                        .asString()
+		                        .block(Duration.ofSeconds(5));
+
+		assertThat(response).isEqualTo("Authenticated!");
+		assertThat(requestCount.get()).isEqualTo(1);
+		assertThat(authHeaderAdded.get()).isTrue();
+	}
+
+	@Test
+	void testHttpAuthenticationNoRetryWhenPredicateDoesNotMatch() {
+		AtomicInteger requestCount = new AtomicInteger(0);
+		AtomicBoolean authenticatorCalled = new AtomicBoolean(false);
+
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> {
+				              requestCount.incrementAndGet();
+				              // Always return 403 Forbidden
+				              return res.status(HttpResponseStatus.FORBIDDEN).send();
+				          })
+				          .bindNow();
+
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .httpAuthentication(
+				                  // Only retry on 401, not 403
+				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
+				                  (req, addr) -> {
+				                      authenticatorCalled.set(true);
+				                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+				                      return Mono.empty();
+				                  }
+				          );
+
+		client.get()
+		      .uri("/protected")
+		      .responseSingle((res, content) -> Mono.just(res.status()))
+		      .as(StepVerifier::create)
+		      .expectNext(HttpResponseStatus.FORBIDDEN)
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+
+		// Should only make one request since predicate doesn't match
+		assertThat(requestCount.get()).isEqualTo(1);
+		assertThat(authenticatorCalled.get()).isFalse();
+	}
+
+	@Test
+	void testHttpAuthenticationWithMonoAuthenticator() {
+		AtomicInteger requestCount = new AtomicInteger(0);
+		AtomicInteger authCallCount = new AtomicInteger(0);
+
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> {
+				              int count = requestCount.incrementAndGet();
+				              String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
+
+				              if (count == 1) {
+				                  assertThat(authHeader).isNull();
+				                  return res.status(HttpResponseStatus.UNAUTHORIZED).send();
+				              }
+				              else {
+				                  assertThat(authHeader).startsWith("Bearer async-token-");
+				                  return res.status(HttpResponseStatus.OK)
+				                            .sendString(Mono.just("Success"));
+				              }
+				          })
+				          .bindNow();
+
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .httpAuthentication(
+				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
+				                  (req, addr) -> {
+				                      int callNum = authCallCount.incrementAndGet();
+				                      // Simulate async token generation
+				                      return Mono.delay(Duration.ofMillis(100))
+				                                 .then(Mono.fromRunnable(() ->
+				                                         req.header(HttpHeaderNames.AUTHORIZATION,
+				                                                   "Bearer async-token-" + callNum)));
+				                  }
+				          );
+
+		String response = client.get()
+		                        .uri("/api/resource")
+		                        .responseContent()
+		                        .aggregate()
+		                        .asString()
+		                        .block(Duration.ofSeconds(5));
+
+		assertThat(response).isEqualTo("Success");
+		assertThat(requestCount.get()).isEqualTo(2);
+		assertThat(authCallCount.get()).isEqualTo(1);
+	}
+
+	@Test
+	void testHttpAuthenticationMultipleRequests() {
+		AtomicInteger requestCount = new AtomicInteger(0);
+
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> {
+				              requestCount.incrementAndGet();
+				              String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
+
+				              if (authHeader == null || !authHeader.equals("Bearer valid-token")) {
+				                  return res.status(HttpResponseStatus.UNAUTHORIZED).send();
+				              }
+				              else {
+				                  return res.status(HttpResponseStatus.OK)
+				                            .sendString(Mono.just("OK"));
+				              }
+				          })
+				          .bindNow();
+
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .httpAuthentication(
+				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
+				                  (req, addr) -> {
+				                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer valid-token");
+				                      return Mono.empty();
+				                  }
+				          );
+
+		// Make multiple requests
+		for (int i = 0; i < 3; i++) {
+			String response = client.get()
+			                        .uri("/resource")
+			                        .responseContent()
+			                        .aggregate()
+			                        .asString()
+			                        .block(Duration.ofSeconds(5));
+			assertThat(response).isEqualTo("OK");
+		}
+
+		// Each request should trigger auth flow (1 initial + 1 retry) = 6 total
+		assertThat(requestCount.get()).isEqualTo(6);
+	}
+
+	@Test
+	void testHttpAuthenticationWithCustomStatusCode() {
+		AtomicInteger requestCount = new AtomicInteger(0);
+
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> {
+				              int count = requestCount.incrementAndGet();
+				              String authHeader = req.requestHeaders().get("WWW-Authenticate");
+
+				              if (count == 1) {
+				                  assertThat(authHeader).isNull();
+				                  // Return custom status code 407 (Proxy Authentication Required)
+				                  return res.status(HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED).send();
+				              }
+				              else {
+				                  assertThat(authHeader).isEqualTo("Negotiate custom-token");
+				                  return res.status(HttpResponseStatus.OK)
+				                            .sendString(Mono.just("Authorized"));
+				              }
+				          })
+				          .bindNow();
+
+
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .httpAuthentication(
+				                  // Retry on 407 instead of 401
+				                  (req, res) -> res.status() == HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED,
+				                  (req, addr) -> {
+									  req.header("WWW-Authenticate", "Negotiate custom-token");
+				                      return Mono.empty();
+				                  }
+				          );
+
+		String response = client.get()
+		                        .uri("/proxy-protected")
+		                        .responseContent()
+		                        .aggregate()
+		                        .asString()
+		                        .block(Duration.ofSeconds(5));
+
+		assertThat(response).isEqualTo("Authorized");
+		assertThat(requestCount.get()).isEqualTo(2);
+	}
+
 	private static final class EchoAction implements Publisher<HttpContent>, Consumer<HttpContent> {
 		private final Publisher<HttpContent> sender;
 		private volatile FluxSink<HttpContent> emitter;

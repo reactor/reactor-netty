@@ -458,13 +458,14 @@ class HttpClientConnect extends HttpClient {
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == HttpClientState.RESPONSE_RECEIVED) {
 				HttpClientOperations operations = connection.as(HttpClientOperations.class);
-				if (operations != null && handler.spnegoAuthProvider != null) {
-					if (shouldRetryWithSpnego(operations)) {
-						retryWithSpnego(operations);
+				if (operations != null && handler.authenticationPredicate != null) {
+					if (handler.authenticationPredicate.test(operations, operations)) {
+						if (log.isDebugEnabled()) {
+							log.debug(format(operations.channel(), "Authentication predicate matched, triggering retry"));
+						}
+						sink.error(new HttpClientAuthenticationException());
 						return;
 					}
-
-					handler.spnegoAuthProvider.resetRetryCount();
 				}
 
 				sink.success(connection);
@@ -479,42 +480,6 @@ class HttpClientConnect extends HttpClient {
 				Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations) connection)))
 				    .subscribe(connection.disposeSubscriber());
 			}
-		}
-
-		/**
-		 * Determines if the current HTTP response requires a SPNEGO authentication retry.
-		 *
-		 * @param operations the HTTP client operations containing the response status and headers
-		 * @return {@code true} if SPNEGO re-authentication should be attempted, {@code false} otherwise
-		 */
-		private boolean shouldRetryWithSpnego(HttpClientOperations operations) {
-			int statusCode = operations.status().code();
-			HttpHeaders headers = operations.responseHeaders();
-
-			return handler.spnegoAuthProvider.isUnauthorized(statusCode, headers)
-				&& handler.spnegoAuthProvider.canRetry();
-		}
-
-		/**
-		 * Triggers a SPNEGO authentication retry by throwing a {@link SpnegoRetryException}.
-		 * <p>
-		 * The exception-based approach ensures that a completely new {@link HttpClientOperations}
-		 * instance is created, avoiding the "Status and headers already sent" error that would
-		 * occur if trying to reuse the existing connection.
-		 * </p>
-		 *
-		 * @param operations the current HTTP client operations that received the 401 response
-		 * @throws SpnegoRetryException always thrown to trigger the retry mechanism
-		 */
-		private void retryWithSpnego(HttpClientOperations operations) {
-			handler.spnegoAuthProvider.invalidateTokenHeader();
-			handler.spnegoAuthProvider.incrementRetryCount();
-
-			if (log.isDebugEnabled()) {
-				log.debug(format(operations.channel(), "Triggering SPNEGO re-authentication"));
-			}
-
-			sink.error(new SpnegoRetryException());
 		}
 	}
 
@@ -545,8 +510,10 @@ class HttpClientConnect extends HttpClient {
 		volatile Supplier<String> @Nullable []  redirectedFrom;
 		volatile boolean                        shouldRetry;
 		volatile @Nullable HttpHeaders          previousRequestHeaders;
+		volatile boolean                        authenticationAttempted;
 
-		SpnegoAuthProvider spnegoAuthProvider;
+		@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> authenticationPredicate;
+		@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
@@ -585,7 +552,8 @@ class HttpClientConnect extends HttpClient {
 				this.fromURI = this.toURI = uriEndpointFactory.createUriEndpoint(configuration.uri, configuration.websocketClientSpec != null);
 			}
 			this.resourceUrl = toURI.toExternalForm();
-			this.spnegoAuthProvider = configuration.spnegoAuthProvider;
+			this.authenticationPredicate = configuration.authenticationPredicate;
+			this.authenticator = configuration.authenticator;
 		}
 
 		@Override
@@ -600,8 +568,8 @@ class HttpClientConnect extends HttpClient {
 
 		@SuppressWarnings("ReferenceEquality")
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
-			if (spnegoAuthProvider != null) {
-				return spnegoAuthProvider.apply(ch, ch.address())
+			if (authenticator != null && authenticationAttempted) {
+				return authenticator.apply(ch, ch.address())
 					.then(
 							Mono.defer(
 									() -> Mono.from(requestWithBodyInternal(ch))
@@ -791,7 +759,9 @@ class HttpClientConnect extends HttpClient {
 				redirect(re.location);
 				return true;
 			}
-			if (throwable instanceof SpnegoRetryException) {
+			if (throwable instanceof HttpClientAuthenticationException) {
+				// Set flag to trigger authenticator on retry
+				authenticationAttempted = true;
 				return true;
 			}
 			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {

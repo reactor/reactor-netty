@@ -778,143 +778,105 @@ include::{examples-dir}/resolver/Application.java[lines=18..39]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
 
-[[http-client-spnego]]
-== SPNEGO Authentication
-Reactor Netty HttpClient supports SPNEGO (Kerberos) authentication, which is widely used in enterprise environments.
-SPNEGO (Simple and Protected GSSAPI Negotiation Mechanism) provides secure authentication over HTTP using Kerberos.
+[[http-authentication]]
+== HTTP Authentication
+Reactor Netty `HttpClient` provides a flexible HTTP authentication framework that allows you to implement
+custom authentication mechanisms such as SPNEGO/Negotiate, OAuth, Bearer tokens, or any other HTTP-based authentication scheme.
 
-==== How It Works
-SPNEGO authentication follows this HTTP authentication flow:
+The {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiPredicate-java.util.function.BiFunction-[`httpAuthentication`]
+method accepts two parameters:
+
+* A predicate that determines when authentication should be applied (typically by checking the HTTP status code and headers)
+* An authenticator function that applies authentication credentials to the request
+
+This approach gives you complete control over the authentication flow while Reactor Netty handles the retry mechanism.
+
+=== How It Works
+
+The typical HTTP authentication flow works as follows:
 
 . The client sends an HTTP request to a protected resource.
-. The server responds with `401 Unauthorized` and a `WWW-Authenticate: Negotiate` header.
-. The client generates a SPNEGO token based on its Kerberos ticket, and resends the request with an `Authorization: Negotiate <base64-encoded-token>` header.
-. The server validates the token and, if authentication is successful, returns 200 OK.
+. The server responds with an authentication challenge (e.g., `401 Unauthorized` with a `WWW-Authenticate` header).
+. The authenticator function is invoked to add authentication credentials to the request.
+. The request is retried with the authentication credentials.
+. If authentication is successful, the server returns the requested resource.
 
-If further negotiation is required, the server may return another 401 with additional data in the `WWW-Authenticate` header.
+=== Token-Based Authentication Example
 
-==== JAAS-based Authenticator
-{examples-link}/spnego/jaas/Application.java
+The following example demonstrates how to implement Bearer token authentication:
+
+{examples-link}/authentication/token/Application.java
+[%unbreakable]
 ----
-include::{examples-dir}/spnego/jaas/Application.java[lines=18..45]
+include::{examples-dir}/authentication/token/Application.java[lines=18..52]
 ----
-<1> Configures the `jaas.conf`. A JAAS configuration file in Java for integrating with authentication backends such as Kerberos.
-<2> Configures the `krb5.conf`. krb5.conf is a Kerberos client configuration file used to define how the client locates and communicates with the Kerberos Key Distribution Center (KDC) for authentication.
-<3> Configures the SPNEGO jaas.conf. A JVM system property that enables detailed debug logging for Kerberos operations in Java.
-<4> `JaasAuthenticator` performs Kerberos authentication using a JAAS configuration (jaas.conf).
-<5> `SpnegoAuthProvider.Builder` supports the following configuration methods. Please refer to <<spnegoauthprovider-config>>.
-<6> `SpnegoAuthProvider`  generates a SPNEGO token from the Kerberos ticket. It automatically adds the `Authorization: Negotiate ...` header to HTTP requests. If the server responds with `401 Unauthorized` and includes `WWW-Authenticate: Negotiate`, the client will automatically reauthenticate and retry the request once.
+<1> The predicate checks if the response status is `401 Unauthorized`.
+<2> The authenticator adds the `Authorization` header with a Bearer token.
 
-===== Example JAAS Configuration
-Specify the path to your JAAS configuration file using the `java.security.auth.login.config` system property.
+=== SPNEGO/Negotiate Authentication Example
 
-.`jaas.conf`
-[jaas,conf]
+For SPNEGO (Kerberos) authentication, you can implement a custom authenticator using Java's GSS-API:
+
+{examples-link}/authentication/spnego/Application.java
+[%unbreakable]
 ----
-KerberosLogin {
-    com.sun.security.auth.module.Krb5LoginModule required
-    client=true
-    useKeyTab=true
-    keyTab="/path/to/test.keytab"
-    principal="test@EXAMPLE.COM"
-    doNotPrompt=true
-    debug=true;
-};
+include::{examples-dir}/authentication/spnego/Application.java[lines=18..69]
 ----
+<1> The predicate checks for `401 Unauthorized` with `WWW-Authenticate: Negotiate` header.
+<2> The authenticator generates a SPNEGO token using GSS-API and adds it to the `Authorization` header.
 
-===== Example Kerberos Configuration
-Specify Kerberos realm and KDC information using the `java.security.krb5.conf` system property.
+NOTE: For SPNEGO authentication, you need to configure Kerberos settings (e.g., `krb5.conf`) and JAAS configuration
+(e.g., `jaas.conf`) appropriately. Set the system properties `java.security.krb5.conf` and `java.security.auth.login.config`
+to point to your configuration files.
 
-.`krb5.conf`
-[krb5,conf]
+=== Custom Authentication Scenarios
+
+The `httpAuthentication` method is flexible enough to support various authentication scenarios:
+
+==== OAuth 2.0 Authentication
+[source,java]
 ----
-[libdefaults]
-    default_realm = EXAMPLE.COM
-[realms]
-    EXAMPLE.COM = {
-        kdc = kdc.example.com
-    }
-[domain_realms]
-    .example.com = EXAMPLE.COM
-    example.com = EXAMPLE.COM
-----
-
-===== Configuration Example
-[jvm option]
-----
--Djava.security.auth.login.config=/path/to/login.conf
--Djava.security.krb5.conf=/path/to/krb5.conf
-----
-
-==== GSSCredential-based Authenticator
-For scenarios where you already have a `GSSCredential` available or want to avoid JAAS configuration, you can use `GssCredentialAuthenticator`:
-
-{examples-link}/spnego/gsscredential/Application.java
-----
-include::{examples-dir}/spnego/gsscredential/Application.java[lines=18..46]
-----
-<1> Obtain the `GSSCredential` through other means.
-<2> Configure the GSSCredential-based authenticator for SPNEGO authentication.
-
-This approach is useful when:
-- You want to reuse existing credentials
-- You need more control over credential management
-- JAAS configuration is not available or preferred
-
-==== Custom Authenticator Implementation
-For advanced scenarios where the provided authenticators don't meet your specific requirements, you can implement the `SpnegoAuthenticator` interface directly:
-
-----
-import org.ietf.jgss.GSSContext;
-import reactor.netty.http.client.SpnegoAuthenticator;
-import reactor.netty.http.client.SpnegoAuthProvider;
-
-public class CustomSpnegoAuthenticator implements SpnegoAuthenticator {
-
-    @Override
-    public GSSContext createContext(String serviceName, String remoteHost) throws Exception {
-        // Your custom authentication logic here
-        // This method should return a configured GSSContext
-        // for the specified service and remote host
-        // serviceName: e.g., "HTTP", "LDAP"
-        // remoteHost: target server hostname
-
-        return null; // Replace with actual GSSContext creation logic
-    }
-}
-
-// Usage with advanced configuration
 HttpClient client = HttpClient.create()
-	.spnego(
-		SpnegoAuthProvider.builder(new CustomSpnegoAuthenticator())
-			.serviceName("HTTP")  // Custom service name
-			.unauthorizedStatusCode(401)  // Custom status code
-			.resolveCanonicalHostname(true)  // Use canonical hostname
-			.build()
-	);
+    .httpAuthentication(
+        (req, res) -> res.status().code() == 401,
+        (req, addr) -> {
+            return fetchOAuthToken() // <1>
+                .doOnNext(token ->
+                    req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token))
+                .then();
+        }
+    );
 ----
+<1> Asynchronously fetch an OAuth token and add it to the request.
 
-This approach is useful when you need:
-- Custom credential acquisition logic
-- Integration with third-party authentication systems
-- Special handling for token caching or refresh
-- Environment-specific authentication flows
+==== Basic Authentication
+{examples-link}/authentication/basic/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/authentication/basic/Application.java[lines=18..46]
+----
+<1> The predicate checks if the response status is `401 Unauthorized`.
+<2> The authenticator adds Basic authentication credentials to the `Authorization` header.
 
-[[spnegoauthprovider-config]]
-==== SpnegoAuthProvider Configuration Options
-The `SpnegoAuthProvider.Builder` supports the following configuration Options:
+==== Proxy Authentication
+[source,java]
+----
+HttpClient client = HttpClient.create()
+    .httpAuthentication(
+        (req, res) -> res.status().code() == 407, // <1>
+        (req, addr) -> {
+            String proxyCredentials = generateProxyCredentials();
+            req.header("Proxy-Authorization", "Bearer " + proxyCredentials);
+            return Mono.empty();
+        }
+    );
+----
+<1> Check for `407 Proxy Authentication Required` status code.
 
-[width="100%",options="header"]
-|=======
-| Method | Default | Description | Example
-| `serviceName(String)` | "HTTP" | Service name for constructing service principal names (serviceName/hostname) | "HTTP", "LDAP"
-| `unauthorizedStatusCode(int)` | 401 | HTTP status code that triggers authentication retry | 401, 407
-| `resolveCanonicalHostname(boolean)` | false | Whether to use canonical hostname resolution via reverse DNS lookup | true for FQDN requirements
-|=======
+=== Important Notes
 
-==== Notes
-- SPNEGO authentication is fully supported on Java 1.6 and above.
-- If authentication fails, check the server logs and client exception messages, and verify your Kerberos environment settings (realm, KDC, ticket, etc.).
-- `JaasAuthenticator` performs authentication through JAAS login configuration.
-- `GssCredentialAuthenticator` uses pre-existing `GSSCredential` objects, bypassing JAAS configuration.
-- For custom scenarios, implement the `SpnegoAuthenticator` interface to provide your own authentication logic.
+* The authenticator function is invoked only when the predicate returns `true`.
+* The authenticator receives the request and remote address, allowing you to customize authentication based on the target server.
+* The authenticator returns a `Mono<Void>` which allows for asynchronous credential retrieval.
+* Authentication is retried only once per request. If authentication fails after retry, the error is propagated to the caller.
+* For security reasons, ensure that sensitive credentials are not logged or exposed in error messages.

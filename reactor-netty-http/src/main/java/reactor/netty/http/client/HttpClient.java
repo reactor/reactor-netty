@@ -1697,16 +1697,46 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Configure SPNEGO authentication for the HTTP client.
+	 * Configure HTTP authentication for the client with custom authentication logic.
+	 * <p>
+	 * This method provides a generic authentication framework that allows users to implement
+	 * their own authentication mechanisms (e.g., Negotiate/SPNEGO, OAuth, Bearer tokens, custom schemes).
+	 * The framework handles when to apply authentication, while users control how to generate
+	 * and attach authentication credentials.
+	 * </p>
 	 *
-	 * @param spnegoAuthProvider the SPNEGO authentication provider
+	 * <p>Example - Token-based Authentication:</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient client = HttpClient.create()
+	 *     .httpAuthentication(
+	 *         // Retry on 401 Unauthorized responses
+	 *         (req, res) -> res.status().code() == 401,
+	 *         // Add authentication header before request
+	 *         (req, addr) -> {
+	 *             String token = generateAuthToken(addr);
+	 *             req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
+	 *             return Mono.empty();
+	 *         }
+	 *     );
+	 * }
+	 * </pre>
+	 *
+	 * @param predicate determines when authentication should be applied, receives the request
+	 *                  and response to decide if authentication is needed (e.g., check for 401 status)
+	 * @param authenticator applies authentication to the request, receives the request and remote address,
+	 *                      returns a Mono that completes when authentication is applied
 	 * @return a new {@link HttpClient}
 	 * @since 1.3.0
 	 */
-	public final HttpClient spnego(SpnegoAuthProvider spnegoAuthProvider) {
-		Objects.requireNonNull(spnegoAuthProvider, "spnegoAuthProvider");
+	public final HttpClient httpAuthentication(
+			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
+		Objects.requireNonNull(predicate, "predicate");
+		Objects.requireNonNull(authenticator, "authenticator");
 		HttpClient dup = duplicate();
-		dup.configuration().spnegoAuthProvider = spnegoAuthProvider;
+		dup.configuration().authenticationPredicate = predicate;
+		dup.configuration().authenticator = authenticator;
 		return dup;
 	}
 
