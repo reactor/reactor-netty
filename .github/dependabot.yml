@@ -36,7 +36,7 @@ updates:
   # Versions > 6.13 require JDK11+
   - dependency-name: com.diffplug.spotless
     versions:
-    - "[6.14.a, 8]"
+    - "[6.14.a, 9]"
   # Versions > 6 require JDK17+
   - dependency-name: biz.aQute.bnd.builder
     versions:
