@@ -30,6 +30,12 @@ final class HttpClientAuthenticationException extends RuntimeException {
 
 	private static final long serialVersionUID = 1L;
 
+	@Override
+	public synchronized Throwable fillInStackTrace() {
+		// omit stacktrace for this exception
+		return this;
+	}
+
 	HttpClientAuthenticationException() {
 		super("HTTP authentication required, triggering retry");
 	}
