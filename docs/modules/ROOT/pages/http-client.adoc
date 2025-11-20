@@ -783,11 +783,12 @@ include::{examples-dir}/resolver/Application.java[lines=18..39]
 Reactor Netty `HttpClient` provides a flexible HTTP authentication framework that allows you to implement
 custom authentication mechanisms such as SPNEGO/Negotiate, OAuth, Bearer tokens, or any other HTTP-based authentication scheme.
 
-The {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiPredicate-java.util.function.BiFunction-[`httpAuthentication`]
-method accepts two parameters:
+The framework provides two APIs for HTTP authentication:
 
-* A predicate that determines when authentication should be applied (typically by checking the HTTP status code and headers)
-* An authenticator function that applies authentication credentials to the request
+* {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiFunction-[`httpAuthentication(BiFunction)`] -
+Automatically retries requests when the server returns `401 Unauthorized`.
+* {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthenticationWhen-java.util.function.BiPredicate-java.util.function.BiFunction-[`httpAuthenticationWhen(BiPredicate, BiFunction)`] -
+Allows custom retry conditions based on request and response.
 
 This approach gives you complete control over the authentication flow while Reactor Netty handles the retry mechanism.
 
@@ -801,19 +802,39 @@ The typical HTTP authentication flow works as follows:
 . The request is retried with the authentication credentials.
 . If authentication is successful, the server returns the requested resource.
 
-=== Token-Based Authentication Example
+=== Simple Authentication with httpAuthentication
+
+For most authentication scenarios where you want to retry on `401 Unauthorized` responses, use the simpler
+{javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiFunction-[`httpAuthentication(BiFunction)`] method.
+
+==== Token-Based Authentication Example
 
 The following example demonstrates how to implement Bearer token authentication:
 
 {examples-link}/authentication/token/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/token/Application.java[lines=18..52]
+include::{examples-dir}/authentication/token/Application.java[lines=18..51]
 ----
-<1> The predicate checks if the response status is `401 Unauthorized`.
+<1> Automatically retries on `401 Unauthorized` responses.
 <2> The authenticator adds the `Authorization` header with a Bearer token.
 
-=== SPNEGO/Negotiate Authentication Example
+==== Basic Authentication Example
+
+{examples-link}/authentication/basic/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/authentication/basic/Application.java[lines=18..45]
+----
+<1> Automatically retries on `401 Unauthorized` responses.
+<2> The authenticator adds Basic authentication credentials to the `Authorization` header.
+
+=== Custom Authentication with httpAuthenticationWhen
+
+When you need custom retry conditions (e.g., checking specific headers or status codes other than 401),
+use the {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthenticationWhen-java.util.function.BiPredicate-java.util.function.BiFunction-[`httpAuthenticationWhen(BiPredicate, BiFunction)`] method.
+
+==== SPNEGO/Negotiate Authentication Example
 
 For SPNEGO (Kerberos) authentication, you can implement a custom authenticator using Java's GSS-API:
 
@@ -822,7 +843,7 @@ For SPNEGO (Kerberos) authentication, you can implement a custom authenticator u
 ----
 include::{examples-dir}/authentication/spnego/Application.java[lines=18..69]
 ----
-<1> The predicate checks for `401 Unauthorized` with `WWW-Authenticate: Negotiate` header.
+<1> Custom predicate checks for `401 Unauthorized` with `WWW-Authenticate: Negotiate` header.
 <2> The authenticator generates a SPNEGO token using GSS-API and adds it to the `Authorization` header.
 
 NOTE: For SPNEGO authentication, you need to configure Kerberos settings (e.g., `krb5.conf`) and JAAS configuration
@@ -831,14 +852,13 @@ to point to your configuration files.
 
 === Custom Authentication Scenarios
 
-The `httpAuthentication` method is flexible enough to support various authentication scenarios:
+The authentication framework is flexible enough to support various authentication scenarios:
 
 ==== OAuth 2.0 Authentication
 [source,java]
 ----
 HttpClient client = HttpClient.create()
     .httpAuthentication(
-        (req, res) -> res.status().code() == 401,
         (req, addr) -> {
             return fetchOAuthToken() // <1>
                 .doOnNext(token ->
@@ -849,20 +869,11 @@ HttpClient client = HttpClient.create()
 ----
 <1> Asynchronously fetch an OAuth token and add it to the request.
 
-==== Basic Authentication
-{examples-link}/authentication/basic/Application.java
-[%unbreakable]
-----
-include::{examples-dir}/authentication/basic/Application.java[lines=18..46]
-----
-<1> The predicate checks if the response status is `401 Unauthorized`.
-<2> The authenticator adds Basic authentication credentials to the `Authorization` header.
-
 ==== Proxy Authentication
 [source,java]
 ----
 HttpClient client = HttpClient.create()
-    .httpAuthentication(
+    .httpAuthenticationWhen(
         (req, res) -> res.status().code() == 407, // <1>
         (req, addr) -> {
             String proxyCredentials = generateProxyCredentials();
@@ -871,11 +882,11 @@ HttpClient client = HttpClient.create()
         }
     );
 ----
-<1> Check for `407 Proxy Authentication Required` status code.
+<1> Custom predicate checks for `407 Proxy Authentication Required` status code.
 
 === Important Notes
 
-* The authenticator function is invoked only when the predicate returns `true`.
+* The authenticator function is invoked only when authentication is needed (on `401` for `httpAuthentication`, or when the predicate returns `true` for `httpAuthenticationWhen`).
 * The authenticator receives the request and remote address, allowing you to customize authentication based on the target server.
 * The authenticator returns a `Mono<Void>` which allows for asynchronous credential retrieval.
 * Authentication is retried only once per request. If authentication fails after retry, the error is propagated to the caller.

@@ -32,7 +32,7 @@ public class Application {
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-				          .httpAuthentication(
+				          .httpAuthenticationWhen(
 				              (req, res) -> res.status().code() == 401 && // <1>
 				                            res.responseHeaders().contains("WWW-Authenticate", "Negotiate", true),
 				              (req, addr) -> { // <2>
