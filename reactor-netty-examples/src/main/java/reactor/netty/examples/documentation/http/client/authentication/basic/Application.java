@@ -27,7 +27,7 @@ public class Application {
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-				          .httpAuthentication( // <1>
+				          .httpAuthentication(// <1>
 				              (req, addr) -> { // <2>
 				                  String credentials = "username:password";
 				                  String encodedCredentials = Base64.getEncoder()
