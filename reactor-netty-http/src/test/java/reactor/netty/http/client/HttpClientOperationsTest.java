@@ -197,6 +197,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 		ops1.retrying = true;
 		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"),
 				HttpResponseStatus.MOVED_PERMANENTLY);
+		ops1.authenticating = new HttpClientAuthenticationException();
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 
@@ -204,6 +205,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 		assertThat(ops1.started).isSameAs(ops2.started);
 		assertThat(ops1.retrying).isSameAs(ops2.retrying);
 		assertThat(ops1.redirecting).isSameAs(ops2.redirecting);
+		assertThat(ops1.authenticating).isSameAs(ops2.authenticating);
 		assertThat(ops1.redirectedFrom).isSameAs(ops2.redirectedFrom);
 		assertThat(ops1.isSecure).isSameAs(ops2.isSecure);
 		assertThat(ops1.nettyRequest).isSameAs(ops2.nettyRequest);
@@ -535,6 +537,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 		assertThat(req.isSecure).isSameAs(res.isSecure);
 		assertThat(req.nettyRequest).isSameAs(res.nettyRequest);
 		assertThat(req.followRedirectPredicate).isSameAs(res.followRedirectPredicate);
+		assertThat(req.authenticationPredicate).isSameAs(res.authenticationPredicate);
 		assertThat(req.requestHeaders).isSameAs(res.requestHeaders);
 		assertThat(req.cookieEncoder).isSameAs(res.cookieEncoder);
 		assertThat(req.cookieDecoder).isSameAs(res.cookieDecoder);
@@ -555,6 +558,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 			else {
 				assertThat(req.redirecting).isSameAs(res.redirecting);
 			}
+			assertThat(req.authenticating).isSameAs(res.authenticating);
 			assertThat(req.responseState).isNotSameAs(res.responseState);
 			assertThat(req.version).isNotSameAs(res.version);
 		}
@@ -563,9 +567,80 @@ class HttpClientOperationsTest extends BaseHttpTest {
 			assertThat(req.asShortText()).isSameAs(res.asShortText());
 			assertThat(req.started).isSameAs(res.started);
 			assertThat(req.redirecting).isSameAs(res.redirecting);
+			assertThat(req.authenticating).isSameAs(res.authenticating);
 			assertThat(req.responseState).isSameAs(res.responseState);
 			assertThat(req.version).isSameAs(res.version);
 		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testConstructorWithProvidedAuthentication(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		ConnectionProvider provider = ConnectionProvider.create("testConstructorWithProvidedReplacement_4", 1);
+		try {
+			HttpServer server = serverCtx == null ?
+					createServer().protocol(serverProtocols) :
+					createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx));
+
+			disposableServer =
+					server.route(r -> r.get("/protected", (req, res) -> {
+					                      String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
+					                      if (authHeader == null || !authHeader.equals("Bearer test-token")) {
+					                          return res.status(HttpResponseStatus.UNAUTHORIZED).send();
+					                      }
+					                      return res.sendString(Mono.just("testConstructorWithProvidedReplacement_4"));
+					                  }))
+					      .bindNow();
+
+			HttpClient client = clientCtx == null ?
+					createClient(disposableServer.port()).protocol(clientProtocols) :
+					createClient(disposableServer.port()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx));
+
+			AtomicReference<@Nullable HttpClientRequest> request = new AtomicReference<>();
+			AtomicReference<@Nullable HttpClientResponse> response = new AtomicReference<>();
+			AtomicReference<@Nullable Channel> requestChannel = new AtomicReference<>();
+			AtomicReference<@Nullable Channel> responseChannel = new AtomicReference<>();
+			AtomicReference<@Nullable ConnectionObserver> requestListener = new AtomicReference<>();
+			AtomicReference<@Nullable ConnectionObserver> responseListener = new AtomicReference<>();
+			String result = httpAuthentication(client, request, response, requestChannel, responseChannel,
+					requestListener, responseListener);
+			assertThat(result).isNotNull().isEqualTo("testConstructorWithProvidedReplacement_4");
+			assertThat(requestListener.get()).isSameAs(responseListener.get());
+			checkRequest(request.get(), response.get(), requestChannel.get(), responseChannel.get(), false, false);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	private static String httpAuthentication(HttpClient originalClient, AtomicReference<@Nullable HttpClientRequest> request,
+			AtomicReference<@Nullable HttpClientResponse> response, AtomicReference<@Nullable Channel> requestChannel,
+			AtomicReference<@Nullable Channel> responseChannel, AtomicReference<@Nullable ConnectionObserver> requestListener,
+			AtomicReference<@Nullable ConnectionObserver> responseListener) {
+		HttpClient client = originalClient.httpAuthentication((req, addr) -> {
+			req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+			return Mono.empty();
+		});
+		return client.doAfterRequest((req, conn) -> {
+		                 if (request.get() == null) {
+		                     requestChannel.set(conn.channel());
+		                     requestListener.set(((HttpClientOperations) req).listener());
+		                     request.set(req);
+		                 }
+		             })
+		             .doAfterResponseSuccess((res, conn) -> {
+		                 if (response.get() == null) {
+		                     responseChannel.set(conn.channel());
+		                     responseListener.set(((HttpClientOperations) res).listener());
+		                     response.set(res);
+		                 }
+		             })
+		             .get()
+		             .uri("/protected")
+		             .responseSingle((res, bytes) -> bytes.asString())
+		             .block(Duration.ofSeconds(5));
 	}
 
 	static Stream<Arguments> httpCompatibleProtocols() {
