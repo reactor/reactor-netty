@@ -576,8 +576,8 @@ class HttpClientOperationsTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testConstructorWithProvidedAuthentication(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		ConnectionProvider provider = ConnectionProvider.create("testConstructorWithProvidedReplacement_4", 1);
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) {
+		ConnectionProvider provider = ConnectionProvider.create("testConstructorWithProvidedAuthentication", 1);
 		try {
 			HttpServer server = serverCtx == null ?
 					createServer().protocol(serverProtocols) :
@@ -589,7 +589,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 					                      if (authHeader == null || !authHeader.equals("Bearer test-token")) {
 					                          return res.status(HttpResponseStatus.UNAUTHORIZED).send();
 					                      }
-					                      return res.sendString(Mono.just("testConstructorWithProvidedReplacement_4"));
+					                      return res.sendString(Mono.just("testConstructorWithProvidedAuthentication"));
 					                  }))
 					      .bindNow();
 
@@ -605,7 +605,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 			AtomicReference<@Nullable ConnectionObserver> responseListener = new AtomicReference<>();
 			String result = httpAuthentication(client, request, response, requestChannel, responseChannel,
 					requestListener, responseListener);
-			assertThat(result).isNotNull().isEqualTo("testConstructorWithProvidedReplacement_4");
+			assertThat(result).isNotNull().isEqualTo("testConstructorWithProvidedAuthentication");
 			assertThat(requestListener.get()).isSameAs(responseListener.get());
 			checkRequest(request.get(), response.get(), requestChannel.get(), responseChannel.get(), false, false);
 		}
@@ -624,18 +624,14 @@ class HttpClientOperationsTest extends BaseHttpTest {
 			return Mono.empty();
 		});
 		return client.doAfterRequest((req, conn) -> {
-		                 if (request.get() == null) {
-		                     requestChannel.set(conn.channel());
-		                     requestListener.set(((HttpClientOperations) req).listener());
-		                     request.set(req);
-		                 }
+		                 requestChannel.set(conn.channel());
+		                 requestListener.set(((HttpClientOperations) req).listener());
+		                 request.set(req);
 		             })
-		             .doAfterResponseSuccess((res, conn) -> {
-		                 if (response.get() == null) {
-		                     responseChannel.set(conn.channel());
-		                     responseListener.set(((HttpClientOperations) res).listener());
-		                     response.set(res);
-		                 }
+		             .doOnResponse((res, conn) -> {
+		                 responseChannel.set(conn.channel());
+		                 responseListener.set(((HttpClientOperations) res).listener());
+		                 response.set(res);
 		             })
 		             .get()
 		             .uri("/protected")
