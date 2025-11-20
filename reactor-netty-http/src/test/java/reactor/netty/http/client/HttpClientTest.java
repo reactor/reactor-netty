@@ -3866,7 +3866,7 @@ class HttpClientTest extends BaseHttpTest {
 		HttpClient client =
 				HttpClient.create()
 				          .port(disposableServer.port())
-				          .httpAuthentication(
+				          .httpAuthenticationWhen(
 				                  // Only retry on 401, not 403
 				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
 				                  (req, addr) -> {
@@ -3916,7 +3916,7 @@ class HttpClientTest extends BaseHttpTest {
 		HttpClient client =
 				HttpClient.create()
 				          .port(disposableServer.port())
-				          .httpAuthentication(
+				          .httpAuthenticationWhen(
 				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
 				                  (req, addr) -> {
 				                      int callNum = authCallCount.incrementAndGet();
@@ -3964,7 +3964,7 @@ class HttpClientTest extends BaseHttpTest {
 		HttpClient client =
 				HttpClient.create()
 				          .port(disposableServer.port())
-				          .httpAuthentication(
+				          .httpAuthenticationWhen(
 				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
 				                  (req, addr) -> {
 				                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer valid-token");
@@ -4015,7 +4015,7 @@ class HttpClientTest extends BaseHttpTest {
 		HttpClient client =
 				HttpClient.create()
 				          .port(disposableServer.port())
-				          .httpAuthentication(
+				          .httpAuthenticationWhen(
 				                  // Retry on 407 instead of 401
 				                  (req, res) -> res.status() == HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED,
 				                  (req, addr) -> {

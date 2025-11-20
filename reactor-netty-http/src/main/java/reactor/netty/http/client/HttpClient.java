@@ -1697,12 +1697,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Configure HTTP authentication for the client with custom authentication logic.
+	 * Configure HTTP authentication that retries on 401 Unauthorized responses.
 	 * <p>
 	 * This method provides a generic authentication framework that allows users to implement
 	 * their own authentication mechanisms (e.g., Negotiate/SPNEGO, OAuth, Bearer tokens, custom schemes).
-	 * The framework handles when to apply authentication, while users control how to generate
-	 * and attach authentication credentials.
+	 * The framework automatically retries requests when a 401 Unauthorized response is received.
 	 * </p>
 	 *
 	 * <p>Example - Token-based Authentication:</p>
@@ -1710,8 +1709,43 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * {@code
 	 * HttpClient client = HttpClient.create()
 	 *     .httpAuthentication(
-	 *         // Retry on 401 Unauthorized responses
-	 *         (req, res) -> res.status().code() == 401,
+	 *         // Add authentication header before request
+	 *         (req, addr) -> {
+	 *             String token = generateAuthToken(addr);
+	 *             req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
+	 *             return Mono.empty();
+	 *         }
+	 *     );
+	 * }
+	 * </pre>
+	 *
+	 * @param authenticator applies authentication to the request, receives the request and remote address,
+	 *                      returns a Mono that completes when authentication is applied
+	 * @return a new {@link HttpClient}
+	 * @since 1.3.0
+	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
+	 */
+	public final HttpClient httpAuthentication(
+			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
+		return httpAuthenticationWhen(HttpClientConfig.AUTHENTICATION_PREDICATE, authenticator);
+	}
+
+	/**
+	 * Configure HTTP authentication for the client with custom authentication logic and retry predicate.
+	 * <p>
+	 * This method provides a generic authentication framework that allows users to implement
+	 * their own authentication mechanisms (e.g., Negotiate/SPNEGO, OAuth, Bearer tokens, custom schemes).
+	 * The framework handles when to apply authentication based on the provided predicate, while users
+	 * control how to generate and attach authentication credentials.
+	 * </p>
+	 *
+	 * <p>Example - Token-based Authentication with custom retry logic:</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient client = HttpClient.create()
+	 *     .httpAuthenticationWhen(
+	 *         // Custom retry predicate (e.g., retry on 401 or 403)
+	 *         (req, res) -> res.status().code() == 401 || res.status().code() == 403,
 	 *         // Add authentication header before request
 	 *         (req, addr) -> {
 	 *             String token = generateAuthToken(addr);
@@ -1729,7 +1763,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 1.3.0
 	 */
-	public final HttpClient httpAuthentication(
+	public final HttpClient httpAuthenticationWhen(
 			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
 			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
 		Objects.requireNonNull(predicate, "predicate");
