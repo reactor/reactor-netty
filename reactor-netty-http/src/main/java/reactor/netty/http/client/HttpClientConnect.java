@@ -457,17 +457,6 @@ class HttpClientConnect extends HttpClient {
 		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == HttpClientState.RESPONSE_RECEIVED) {
-				HttpClientOperations operations = connection.as(HttpClientOperations.class);
-				if (operations != null && handler.authenticationPredicate != null) {
-					if (handler.authenticationPredicate.test(operations, operations)) {
-						if (log.isDebugEnabled()) {
-							log.debug(format(operations.channel(), "Authentication predicate matched, triggering retry"));
-						}
-						sink.error(new HttpClientAuthenticationException());
-						return;
-					}
-				}
-
 				sink.success(connection);
 				return;
 			}

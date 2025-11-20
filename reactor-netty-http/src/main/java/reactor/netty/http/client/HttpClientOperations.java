@@ -128,8 +128,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	boolean retrying;
 	boolean is100Continue;
 	@Nullable RedirectClientException redirecting;
+	@Nullable HttpClientAuthenticationException authenticating;
 
 	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
+	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> authenticationPredicate;
 	@Nullable Consumer<HttpClientRequest> redirectRequestConsumer;
 	@Nullable HttpHeaders previousRequestHeaders;
 	@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
@@ -142,6 +144,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.started = replaced.started;
 		this.retrying = replaced.retrying;
 		this.redirecting = replaced.redirecting;
+		this.authenticating = replaced.authenticating;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.redirectRequestConsumer = replaced.redirectRequestConsumer;
 		this.previousRequestHeaders = replaced.previousRequestHeaders;
@@ -150,6 +153,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
 		this.followRedirectPredicate = replaced.followRedirectPredicate;
+		this.authenticationPredicate = replaced.authenticationPredicate;
 		this.requestHeaders = replaced.requestHeaders;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
@@ -171,6 +175,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.started = replaced.started;
 		this.retrying = replaced.retrying;
 		this.redirecting = replaced.redirecting;
+		this.authenticating = replaced.authenticating;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.redirectRequestConsumer = replaced.redirectRequestConsumer;
 		this.previousRequestHeaders = replaced.previousRequestHeaders;
@@ -179,6 +184,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
 		this.followRedirectPredicate = replaced.followRedirectPredicate;
+		this.authenticationPredicate = replaced.authenticationPredicate;
 		this.requestHeaders = replaced.requestHeaders;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
@@ -339,6 +345,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.followRedirectPredicate = predicate;
 	}
 
+	void authenticationPredicate(@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
+		this.authenticationPredicate = predicate;
+	}
+
 	void redirectRequestConsumer(@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		this.redirectRequestConsumer = redirectRequestConsumer;
 	}
@@ -400,6 +410,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected void afterInboundComplete() {
 		if (redirecting != null) {
 			listener().onUncaughtException(this, redirecting);
+		}
+		else if (authenticating != null) {
+			listener().onUncaughtException(this, authenticating);
 		}
 		else {
 			listener().onStateChange(this, HttpClientState.RESPONSE_COMPLETED);
@@ -837,7 +850,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 			}
 
-			if (notRedirected(response)) {
+			if (notRedirected(response) && notAuthenticated()) {
 				try {
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
@@ -848,7 +861,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				}
 			}
 			else {
-				// when redirecting no need of manual reading
+				// when redirecting or authenticating no need of manual reading
 				channel().config().setAutoRead(true);
 			}
 
@@ -903,7 +916,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (lastHttpContent != LastHttpContent.EMPTY_LAST_CONTENT) {
 				// When there is HTTP/2 response with INBOUND HEADERS(endStream=false) followed by INBOUND DATA(endStream=true length=0),
 				// Netty sends LastHttpContent with empty buffer instead of EMPTY_LAST_CONTENT
-				if (redirecting != null || lastHttpContent.content().readableBytes() == 0) {
+				if (redirecting != null || authenticating != null || lastHttpContent.content().readableBytes() == 0) {
 					lastHttpContent.release();
 				}
 				else {
@@ -911,7 +924,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				}
 			}
 
-			if (redirecting == null) {
+			if (redirecting == null && authenticating == null) {
 				// EmitResult is ignored as it is guaranteed that there will be only one emission of LastHttpContent
 				// Whether there are subscribers or the subscriber cancels is not of interest
 				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
@@ -941,9 +954,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return;
 		}
 
-		if (redirecting != null) {
+		if (redirecting != null || authenticating != null) {
 			ReferenceCountUtil.release(msg);
-			// when redirecting auto-read is set to true, no need of manual reading
+			// when redirecting or authenticating auto-read is set to true, no need of manual reading
 			return;
 		}
 		super.onInboundNext(ctx, msg);
@@ -971,6 +984,20 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received redirect location: {}"),
 						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
+			}
+			return false;
+		}
+		return true;
+	}
+
+	@SuppressWarnings("NullAway")
+	final boolean notAuthenticated() {
+		// Deliberately suppress "NullAway"
+		// authenticationPredicate is checked for null before calling this method
+		if (authenticationPredicate != null && authenticationPredicate.test(this, this)) {
+			authenticating = new HttpClientAuthenticationException();
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Authentication predicate matched, triggering retry"));
 			}
 			return false;
 		}
