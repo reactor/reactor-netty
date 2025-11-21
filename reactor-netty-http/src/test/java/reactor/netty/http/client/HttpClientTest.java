@@ -3868,7 +3868,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .port(disposableServer.port())
 				          .httpAuthenticationWhen(
 				                  // Only retry on 401, not 403
-				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
+				                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
 				                  (req, addr) -> {
 				                      authenticatorCalled.set(true);
 				                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
@@ -3917,7 +3917,7 @@ class HttpClientTest extends BaseHttpTest {
 				HttpClient.create()
 				          .port(disposableServer.port())
 				          .httpAuthenticationWhen(
-				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
+				                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
 				                  (req, addr) -> {
 				                      int callNum = authCallCount.incrementAndGet();
 				                      // Simulate async token generation
@@ -3965,7 +3965,7 @@ class HttpClientTest extends BaseHttpTest {
 				HttpClient.create()
 				          .port(disposableServer.port())
 				          .httpAuthenticationWhen(
-				                  (req, res) -> res.status() == HttpResponseStatus.UNAUTHORIZED,
+				                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
 				                  (req, addr) -> {
 				                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer valid-token");
 				                      return Mono.empty();
@@ -4017,7 +4017,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .port(disposableServer.port())
 				          .httpAuthenticationWhen(
 				                  // Retry on 407 instead of 401
-				                  (req, res) -> res.status() == HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED,
+				                  (req, res) -> res.status().equals(HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED),
 				                  (req, addr) -> {
 									  req.header("WWW-Authenticate", "Negotiate custom-token");
 				                      return Mono.empty();

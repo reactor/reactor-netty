@@ -581,7 +581,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 		try {
 			HttpServer server = serverCtx == null ?
 					createServer().protocol(serverProtocols) :
-					createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx));
+					createServer().protocol(serverProtocols).secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx));
 
 			disposableServer =
 					server.route(r -> r.get("/protected", (req, res) -> {
@@ -595,7 +595,7 @@ class HttpClientOperationsTest extends BaseHttpTest {
 
 			HttpClient client = clientCtx == null ?
 					createClient(disposableServer.port()).protocol(clientProtocols) :
-					createClient(disposableServer.port()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx));
+					createClient(disposableServer.port()).protocol(clientProtocols).secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx));
 
 			AtomicReference<@Nullable HttpClientRequest> request = new AtomicReference<>();
 			AtomicReference<@Nullable HttpClientResponse> response = new AtomicReference<>();
