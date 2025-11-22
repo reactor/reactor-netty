@@ -785,10 +785,10 @@ custom authentication mechanisms such as SPNEGO/Negotiate, OAuth, Bearer tokens,
 
 The framework provides two APIs for HTTP authentication:
 
-* {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiFunction-[`httpAuthentication(BiFunction)`] -
-Automatically retries requests when the server returns `401 Unauthorized`.
+* {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiPredicate-java.util.function.BiConsumer-[`httpAuthentication(BiPredicate, BiConsumer)`] -
+For authentication where credentials can be computed immediately without delay. The predicate determines when to retry with authentication.
 * {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthenticationWhen-java.util.function.BiPredicate-java.util.function.BiFunction-[`httpAuthenticationWhen(BiPredicate, BiFunction)`] -
-Allows custom retry conditions based on request and response.
+For authentication where credentials need to be fetched from external sources or require delayed computation. Returns a `Mono<Void>` to support deferred credential retrieval.
 
 This approach gives you complete control over the authentication flow while Reactor Netty handles the retry mechanism.
 
@@ -802,10 +802,11 @@ The typical HTTP authentication flow works as follows:
 . The request is retried with the authentication credentials.
 . If authentication is successful, the server returns the requested resource.
 
-=== Simple Authentication with httpAuthentication
+=== Immediate Authentication with httpAuthentication
 
-For most authentication scenarios where you want to retry on `401 Unauthorized` responses, use the simpler
-{javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiFunction-[`httpAuthentication(BiFunction)`] method.
+For authentication scenarios where credentials can be computed immediately without needing to fetch them from external sources,
+use {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiPredicate-java.util.function.BiConsumer-[`httpAuthentication(BiPredicate, BiConsumer)`].
+This method requires both a predicate to determine when to retry and a consumer to add authentication headers.
 
 ==== Token-Based Authentication Example
 
@@ -816,7 +817,7 @@ The following example demonstrates how to implement Bearer token authentication:
 ----
 include::{examples-dir}/authentication/token/Application.java[lines=18..51]
 ----
-<1> Automatically retries on `401 Unauthorized` responses.
+<1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds the `Authorization` header with a Bearer token.
 
 ==== Basic Authentication Example
@@ -826,7 +827,7 @@ include::{examples-dir}/authentication/token/Application.java[lines=18..51]
 ----
 include::{examples-dir}/authentication/basic/Application.java[lines=18..45]
 ----
-<1> Automatically retries on `401 Unauthorized` responses.
+<1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds Basic authentication credentials to the `Authorization` header.
 
 === Custom Authentication with httpAuthenticationWhen
@@ -858,16 +859,18 @@ The authentication framework is flexible enough to support various authenticatio
 [source,java]
 ----
 HttpClient client = HttpClient.create()
-    .httpAuthentication(
+    .httpAuthenticationWhen(
+        (req, res) -> res.status().code() == 401, // <1>
         (req, addr) -> {
-            return fetchOAuthToken() // <1>
+            return fetchOAuthToken() // <2>
                 .doOnNext(token ->
                     req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token))
                 .then();
         }
     );
 ----
-<1> Asynchronously fetch an OAuth token and add it to the request.
+<1> Retry authentication on `401 Unauthorized` responses.
+<2> Asynchronously fetch an OAuth token and add it to the request.
 
 ==== Proxy Authentication
 [source,java]
@@ -886,8 +889,9 @@ HttpClient client = HttpClient.create()
 
 === Important Notes
 
-* The authenticator function is invoked only when authentication is needed (on `401` for `httpAuthentication`, or when the predicate returns `true` for `httpAuthenticationWhen`).
+* The authenticator function is invoked only when the predicate returns `true` (indicating authentication is needed).
+* For `httpAuthentication`, use a `BiConsumer` when credentials can be computed immediately without delay. No `Mono` is needed as headers are added directly.
+* For `httpAuthenticationWhen`, use a `BiFunction` that returns `Mono<Void>` when credentials need to be fetched from external sources or require delayed computation.
 * The authenticator receives the request and remote address, allowing you to customize authentication based on the target server.
-* The authenticator returns a `Mono<Void>` which allows for asynchronous credential retrieval.
 * Authentication is retried only once per request. If authentication fails after retry, the error is propagated to the caller.
 * For security reasons, ensure that sensitive credentials are not logged or exposed in error messages.

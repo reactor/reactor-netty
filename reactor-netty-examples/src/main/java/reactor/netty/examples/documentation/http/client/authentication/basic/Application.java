@@ -16,7 +16,6 @@
 package reactor.netty.examples.documentation.http.client.authentication.basic;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
-import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.nio.charset.StandardCharsets;
@@ -27,13 +26,13 @@ public class Application {
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-				          .httpAuthentication(// <1>
+				          .httpAuthentication(
+				              (req, res) -> res.status().code() == 401, // <1>
 				              (req, addr) -> { // <2>
 				                  String credentials = "username:password";
 				                  String encodedCredentials = Base64.getEncoder()
 				                      .encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 				                  req.header(HttpHeaderNames.AUTHORIZATION, "Basic " + encodedCredentials);
-				                  return Mono.empty();
 				              }
 				          );
 

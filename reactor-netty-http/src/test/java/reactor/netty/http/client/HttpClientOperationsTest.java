@@ -615,14 +615,15 @@ class HttpClientOperationsTest extends BaseHttpTest {
 		}
 	}
 
-	private static String httpAuthentication(HttpClient originalClient, AtomicReference<@Nullable HttpClientRequest> request,
+	private static @Nullable String httpAuthentication(HttpClient originalClient, AtomicReference<@Nullable HttpClientRequest> request,
 			AtomicReference<@Nullable HttpClientResponse> response, AtomicReference<@Nullable Channel> requestChannel,
 			AtomicReference<@Nullable Channel> responseChannel, AtomicReference<@Nullable ConnectionObserver> requestListener,
 			AtomicReference<@Nullable ConnectionObserver> responseListener) {
-		HttpClient client = originalClient.httpAuthentication((req, addr) -> {
-			req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
-			return Mono.empty();
-		});
+		HttpClient client = originalClient.httpAuthentication(
+				(req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
+				(req, addr) -> {
+					req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+				});
 		return client.doAfterRequest((req, conn) -> {
 		                 requestChannel.set(conn.channel());
 		                 requestListener.set(((HttpClientOperations) req).listener());

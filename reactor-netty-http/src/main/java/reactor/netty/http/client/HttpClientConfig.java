@@ -845,9 +845,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			                                               .codeAsText())
 			                                   .matches();
 
-	static final BiPredicate<HttpClientRequest, HttpClientResponse> AUTHENTICATION_PREDICATE =
-			(req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED);
-
 	static final int h3 = 0b1000;
 
 	static final int h2 = 0b010;

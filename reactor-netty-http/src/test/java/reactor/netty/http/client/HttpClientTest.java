@@ -3818,23 +3818,32 @@ class HttpClientTest extends BaseHttpTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) -> {
-				              requestCount.incrementAndGet();
+				              int count = requestCount.incrementAndGet();
 				              String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
 
-				              // First request should already have auth header
-				              assertThat(authHeader).isEqualTo("Bearer test-token");
-				              return res.status(HttpResponseStatus.OK)
-				                        .sendString(Mono.just("Authenticated!"));
+				              if (count == 1) {
+				                  // First request should not have auth header
+				                  assertThat(authHeader).isNull();
+				                  return res.status(HttpResponseStatus.UNAUTHORIZED).send();
+				              }
+				              else {
+				                  // Second request should have auth header
+				                  assertThat(authHeader).isEqualTo("Bearer test-token");
+				                  return res.status(HttpResponseStatus.OK)
+				                            .sendString(Mono.just("Authenticated!"));
+				              }
 				          })
 				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create()
 				          .port(disposableServer.port())
-				          .doOnRequest((req, conn) -> {
-				              authHeaderAdded.set(true);
-				              req.requestHeaders().set(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
-				          });
+				          .httpAuthentication(
+						          (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
+						          (req, addr) -> {
+									  authHeaderAdded.set(true);
+									  req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+								  });
 
 		String response = client.get()
 		                        .uri("/protected")
@@ -3844,7 +3853,7 @@ class HttpClientTest extends BaseHttpTest {
 		                        .block(Duration.ofSeconds(5));
 
 		assertThat(response).isEqualTo("Authenticated!");
-		assertThat(requestCount.get()).isEqualTo(1);
+		assertThat(requestCount.get()).isEqualTo(2);
 		assertThat(authHeaderAdded.get()).isTrue();
 	}
 

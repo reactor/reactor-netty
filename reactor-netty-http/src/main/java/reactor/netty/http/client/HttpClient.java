@@ -1697,61 +1697,69 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Configure HTTP authentication that retries on 401 Unauthorized responses.
+	 * Configure HTTP authentication with custom retry predicate.
 	 * <p>
-	 * This method provides a generic authentication framework that allows users to implement
-	 * their own authentication mechanisms (e.g., Negotiate/SPNEGO, OAuth, Bearer tokens, custom schemes).
-	 * The framework automatically retries requests when a 401 Unauthorized response is received.
-	 * </p>
-	 *
-	 * <p>Example - Token-based Authentication:</p>
-	 * <pre>
-	 * {@code
-	 * HttpClient client = HttpClient.create()
-	 *     .httpAuthentication(
-	 *         // Add authentication header before request
-	 *         (req, addr) -> {
-	 *             String token = generateAuthToken(addr);
-	 *             req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
-	 *             return Mono.empty();
-	 *         }
-	 *     );
-	 * }
-	 * </pre>
-	 *
-	 * @param authenticator applies authentication to the request, receives the request and remote address,
-	 *                      returns a Mono that completes when authentication is applied
-	 * @return a new {@link HttpClient}
-	 * @since 1.3.0
-	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
-	 */
-	public final HttpClient httpAuthentication(
-			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
-		return httpAuthenticationWhen(HttpClientConfig.AUTHENTICATION_PREDICATE, authenticator);
-	}
-
-	/**
-	 * Configure HTTP authentication for the client with custom authentication logic and retry predicate.
-	 * <p>
-	 * This method provides a generic authentication framework that allows users to implement
-	 * their own authentication mechanisms (e.g., Negotiate/SPNEGO, OAuth, Bearer tokens, custom schemes).
-	 * The framework handles when to apply authentication based on the provided predicate, while users
-	 * control how to generate and attach authentication credentials.
+	 * This method is for authentication where credentials can be computed immediately
+	 * without needing to fetch them from external sources. Use this when the token can be
+	 * calculated and added to headers without delay, with a custom condition for when
+	 * to retry with authentication.
 	 * </p>
 	 *
 	 * <p>Example - Token-based Authentication with custom retry logic:</p>
 	 * <pre>
 	 * {@code
 	 * HttpClient client = HttpClient.create()
-	 *     .httpAuthenticationWhen(
+	 *     .httpAuthentication(
 	 *         // Custom retry predicate (e.g., retry on 401 or 403)
 	 *         (req, res) -> res.status().code() == 401 || res.status().code() == 403,
 	 *         // Add authentication header before request
 	 *         (req, addr) -> {
 	 *             String token = generateAuthToken(addr);
 	 *             req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
-	 *             return Mono.empty();
 	 *         }
+	 *     );
+	 * }
+	 * </pre>
+	 *
+	 * @param predicate determines when authentication should be applied, receives the request
+	 *                  and response to decide if authentication is needed (e.g., check for 401 status)
+	 * @param authenticator applies authentication to the request, receives the request and remote address
+	 * @return a new {@link HttpClient}
+	 * @since 1.3.0
+	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
+	 */
+	public final HttpClient httpAuthentication(
+			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator) {
+		Objects.requireNonNull(predicate, "predicate");
+		Objects.requireNonNull(authenticator, "authenticator");
+		return httpAuthenticationWhen(
+				predicate,
+				(req, addr) -> {
+					authenticator.accept(req, addr);
+					return Mono.empty();
+				});
+	}
+
+	/**
+	 * Configure HTTP authentication for the client with custom authentication logic and retry predicate.
+	 * <p>
+	 * This method is for authentication where credentials need to be fetched from external sources
+	 * or require delayed computation (e.g., asking another service for a token).
+	 * </p>
+	 *
+	 * <p>Example - Deferred Token-based Authentication with custom retry logic:</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient client = HttpClient.create()
+	 *     .httpAuthenticationWhen(
+	 *         // Custom retry predicate (e.g., retry on 401 or 403)
+	 *         (req, res) -> res.status().code() == 401 || res.status().code() == 403,
+	 *         // Fetch token and add authentication header
+	 *         (req, addr) -> fetchTokenAsync(addr)
+	 *             .doOnNext(token ->
+	 *                 req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token))
+	 *             .then()
 	 *     );
 	 * }
 	 * </pre>

@@ -16,7 +16,6 @@
 package reactor.netty.examples.documentation.http.client.authentication.token;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
-import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.net.SocketAddress;
@@ -26,11 +25,11 @@ public class Application {
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-				          .httpAuthentication(// <1>
+				          .httpAuthentication(
+				              (req, res) -> res.status().code() == 401, // <1>
 				              (req, addr) -> { // <2>
 				                  String token = generateAuthToken(addr);
 				                  req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
-				                  return Mono.empty();
 				              }
 				          );
 
