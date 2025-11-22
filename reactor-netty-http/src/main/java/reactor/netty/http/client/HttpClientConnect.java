@@ -75,6 +75,7 @@ import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  */
 class HttpClientConnect extends HttpClient {
 
@@ -498,6 +499,10 @@ class HttpClientConnect extends HttpClient {
 		volatile Supplier<String> @Nullable []  redirectedFrom;
 		volatile boolean                        shouldRetry;
 		volatile @Nullable HttpHeaders          previousRequestHeaders;
+		volatile boolean                        authenticationAttempted;
+
+		@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> authenticationPredicate;
+		@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
@@ -536,6 +541,8 @@ class HttpClientConnect extends HttpClient {
 				this.fromURI = this.toURI = uriEndpointFactory.createUriEndpoint(configuration.uri, configuration.websocketClientSpec != null);
 			}
 			this.resourceUrl = toURI.toExternalForm();
+			this.authenticationPredicate = configuration.authenticationPredicate;
+			this.authenticator = configuration.authenticator;
 		}
 
 		@Override
@@ -582,6 +589,7 @@ class HttpClientConnect extends HttpClient {
 				}
 
 				ch.followRedirectPredicate(followRedirectPredicate);
+				ch.authenticationPredicate(authenticationPredicate);
 
 				if (!Objects.equals(method, HttpMethod.GET) &&
 						!Objects.equals(method, HttpMethod.HEAD) &&
@@ -591,6 +599,9 @@ class HttpClientConnect extends HttpClient {
 				}
 
 				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
+
+				Publisher<Void> result;
+
 				if (websocketClientSpec != null) {
 					// ReferenceEquality is deliberate
 					if (ch.version == H2) {
@@ -604,48 +615,57 @@ class HttpClientConnect extends HttpClient {
 									"[SETTINGS_ENABLE_CONNECT_PROTOCOL(0x8)=0] was received.");
 						}
 					}
-					Mono<Void> result =
+					Mono<Void> wsResult =
 							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec));
 					if (handler != null) {
-						result = result.thenEmpty(Mono.fromRunnable(() -> Flux.concat(handler.apply(ch, ch))));
+						wsResult = wsResult.thenEmpty(Mono.fromRunnable(() -> Flux.concat(handler.apply(ch, ch))));
 					}
-					return result;
-				}
-
-				Consumer<HttpClientRequest> consumer = null;
-				if (fromURI != null && !toURI.equals(fromURI)) {
-					if (handler instanceof RedirectSendHandler) {
-						headers.remove(HttpHeaderNames.EXPECT)
-						       .remove(HttpHeaderNames.COOKIE)
-						       .remove(HttpHeaderNames.AUTHORIZATION)
-						       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
-					}
-					else {
-						consumer = request ->
-						        request.requestHeaders()
-						               .remove(HttpHeaderNames.EXPECT)
-						               .remove(HttpHeaderNames.COOKIE)
-						               .remove(HttpHeaderNames.AUTHORIZATION)
-						               .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
-					}
-				}
-				if (this.redirectRequestConsumer != null) {
-					consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) : this.redirectRequestConsumer;
-				}
-
-				if (redirectRequestBiConsumer != null) {
-					ch.previousRequestHeaders = previousRequestHeaders;
-					ch.redirectRequestBiConsumer = redirectRequestBiConsumer;
-				}
-
-				ch.redirectRequestConsumer(consumer);
-				if (handler != null) {
-					Publisher<Void> publisher = handler.apply(ch, ch);
-					return ch.equals(publisher) ? ch.send() : publisher;
+					result = wsResult;
 				}
 				else {
-					return ch.send();
+					Consumer<HttpClientRequest> consumer = null;
+					if (fromURI != null && !toURI.equals(fromURI)) {
+						if (handler instanceof RedirectSendHandler) {
+							headers.remove(HttpHeaderNames.EXPECT)
+							       .remove(HttpHeaderNames.COOKIE)
+							       .remove(HttpHeaderNames.AUTHORIZATION)
+							       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
+						}
+						else {
+							consumer = request ->
+							        request.requestHeaders()
+							               .remove(HttpHeaderNames.EXPECT)
+							               .remove(HttpHeaderNames.COOKIE)
+							               .remove(HttpHeaderNames.AUTHORIZATION)
+							               .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
+						}
+					}
+					if (this.redirectRequestConsumer != null) {
+						consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) : this.redirectRequestConsumer;
+					}
+
+					if (redirectRequestBiConsumer != null) {
+						ch.previousRequestHeaders = previousRequestHeaders;
+						ch.redirectRequestBiConsumer = redirectRequestBiConsumer;
+					}
+
+					ch.redirectRequestConsumer(consumer);
+					if (handler != null) {
+						Publisher<Void> publisher = handler.apply(ch, ch);
+						result = ch.equals(publisher) ? ch.send() : publisher;
+					}
+					else {
+						result = ch.send();
+					}
 				}
+
+				// Apply authenticator if needed (after REQUEST_PREPARED)
+				if (authenticator != null && authenticationAttempted) {
+					return authenticator.apply(ch, ch.address())
+							.then(Mono.defer(() -> Mono.from(result)));
+				}
+
+				return result;
 			}
 			catch (Throwable t) {
 				return Mono.error(t);
@@ -726,6 +746,11 @@ class HttpClientConnect extends HttpClient {
 					method = HttpMethod.GET;
 				}
 				redirect(re.location);
+				return true;
+			}
+			if (throwable instanceof HttpClientAuthenticationException) {
+				// Set flag to trigger authenticator on retry
+				authenticationAttempted = true;
 				return true;
 			}
 			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {

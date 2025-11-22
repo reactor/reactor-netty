@@ -1696,6 +1696,92 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return super.wiretap(enable);
 	}
 
+	/**
+	 * Configure HTTP authentication with custom retry predicate.
+	 * <p>
+	 * This method is for authentication where credentials can be computed immediately
+	 * without needing to fetch them from external sources. Use this when the token can be
+	 * calculated and added to headers without delay, with a custom condition for when
+	 * to retry with authentication.
+	 * </p>
+	 *
+	 * <p>Example - Token-based Authentication with custom retry logic:</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient client = HttpClient.create()
+	 *     .httpAuthentication(
+	 *         // Custom retry predicate (e.g., retry on 401 or 403)
+	 *         (req, res) -> res.status().code() == 401 || res.status().code() == 403,
+	 *         // Add authentication header before request
+	 *         (req, addr) -> {
+	 *             String token = generateAuthToken(addr);
+	 *             req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
+	 *         }
+	 *     );
+	 * }
+	 * </pre>
+	 *
+	 * @param predicate determines when authentication should be applied, receives the request
+	 *                  and response to decide if authentication is needed (e.g., check for 401 status)
+	 * @param authenticator applies authentication to the request, receives the request and remote address
+	 * @return a new {@link HttpClient}
+	 * @since 1.3.0
+	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
+	 */
+	public final HttpClient httpAuthentication(
+			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator) {
+		Objects.requireNonNull(predicate, "predicate");
+		Objects.requireNonNull(authenticator, "authenticator");
+		return httpAuthenticationWhen(
+				predicate,
+				(req, addr) -> {
+					authenticator.accept(req, addr);
+					return Mono.empty();
+				});
+	}
+
+	/**
+	 * Configure HTTP authentication for the client with custom authentication logic and retry predicate.
+	 * <p>
+	 * This method is for authentication where credentials need to be fetched from external sources
+	 * or require delayed computation (e.g., asking another service for a token).
+	 * </p>
+	 *
+	 * <p>Example - Deferred Token-based Authentication with custom retry logic:</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient client = HttpClient.create()
+	 *     .httpAuthenticationWhen(
+	 *         // Custom retry predicate (e.g., retry on 401 or 403)
+	 *         (req, res) -> res.status().code() == 401 || res.status().code() == 403,
+	 *         // Fetch token and add authentication header
+	 *         (req, addr) -> fetchTokenAsync(addr)
+	 *             .doOnNext(token ->
+	 *                 req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token))
+	 *             .then()
+	 *     );
+	 * }
+	 * </pre>
+	 *
+	 * @param predicate determines when authentication should be applied, receives the request
+	 *                  and response to decide if authentication is needed (e.g., check for 401 status)
+	 * @param authenticator applies authentication to the request, receives the request and remote address,
+	 *                      returns a Mono that completes when authentication is applied
+	 * @return a new {@link HttpClient}
+	 * @since 1.3.0
+	 */
+	public final HttpClient httpAuthenticationWhen(
+			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
+		Objects.requireNonNull(predicate, "predicate");
+		Objects.requireNonNull(authenticator, "authenticator");
+		HttpClient dup = duplicate();
+		dup.configuration().authenticationPredicate = predicate;
+		dup.configuration().authenticator = authenticator;
+		return dup;
+	}
+
 	static boolean isCompressing(HttpHeaders h) {
 		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true)
 				|| h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.BR, true);

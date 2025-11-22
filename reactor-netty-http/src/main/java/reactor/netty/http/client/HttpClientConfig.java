@@ -367,6 +367,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Nullable String uriStr;
 	@Nullable Function<String, String> uriTagValue;
 	@Nullable WebsocketClientSpec websocketClientSpec;
+	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> authenticationPredicate;
+	@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
 
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -419,6 +421,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.uriStr = parent.uriStr;
 		this.uriTagValue = parent.uriTagValue;
 		this.websocketClientSpec = parent.websocketClientSpec;
+		this.authenticationPredicate = parent.authenticationPredicate;
+		this.authenticator = parent.authenticator;
 	}
 
 	@Override
