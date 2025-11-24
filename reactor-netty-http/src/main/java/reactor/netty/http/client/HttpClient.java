@@ -1737,7 +1737,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
 	 */
 	public final HttpClient httpAuthentication(
-			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator) {
 		Objects.requireNonNull(predicate, "predicate");
 		Objects.requireNonNull(authenticator, "authenticator");
@@ -1791,7 +1791,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @see #httpAuthentication(BiPredicate, BiConsumer)
 	 */
 	public final HttpClient httpAuthenticationWhen(
-			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
 		Objects.requireNonNull(predicate, "predicate");
 		Objects.requireNonNull(authenticator, "authenticator");

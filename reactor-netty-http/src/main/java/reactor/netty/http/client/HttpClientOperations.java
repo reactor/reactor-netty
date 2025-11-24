@@ -132,7 +132,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Nullable HttpClientAuthenticationException authenticating;
 
 	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
-	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> authenticationPredicate;
+	@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
 	@Nullable Consumer<HttpClientRequest> redirectRequestConsumer;
 	@Nullable HttpHeaders previousRequestHeaders;
 	@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
@@ -346,7 +346,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.followRedirectPredicate = predicate;
 	}
 
-	void authenticationPredicate(@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
+	void authenticationPredicate(@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate) {
 		this.authenticationPredicate = predicate;
 	}
 

@@ -368,7 +368,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Nullable String uriStr;
 	@Nullable Function<String, String> uriTagValue;
 	@Nullable WebsocketClientSpec websocketClientSpec;
-	@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> authenticationPredicate;
+	@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
 	@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
 
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,

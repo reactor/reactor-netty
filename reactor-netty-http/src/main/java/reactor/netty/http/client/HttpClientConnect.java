@@ -501,7 +501,7 @@ class HttpClientConnect extends HttpClient {
 		volatile @Nullable HttpHeaders          previousRequestHeaders;
 		volatile boolean                        authenticationAttempted;
 
-		@Nullable BiPredicate<HttpClientRequest, HttpClientResponse> authenticationPredicate;
+		@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
 		@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
 
 		HttpClientHandler(HttpClientConfig configuration) {
