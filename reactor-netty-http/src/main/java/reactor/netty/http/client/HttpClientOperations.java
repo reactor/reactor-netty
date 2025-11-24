@@ -850,7 +850,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 			}
 
-			if (notRedirected(response) && notAuthenticated()) {
+			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
@@ -990,10 +990,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return true;
 	}
 
-	@SuppressWarnings("NullAway")
-	final boolean notAuthenticated() {
-		// Deliberately suppress "NullAway"
-		// authenticationPredicate is checked for null before calling this method
+	final boolean authenticationNotRequired() {
 		if (authenticationPredicate != null && authenticationPredicate.test(this, this)) {
 			authenticating = new HttpClientAuthenticationException();
 			if (log.isDebugEnabled()) {

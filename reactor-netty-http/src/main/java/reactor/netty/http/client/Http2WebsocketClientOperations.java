@@ -111,7 +111,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 
 			setNettyResponse(response);
 
-			if (notRedirected(response) && notAuthenticated()) {
+			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
 					HttpResponseStatus status = response.status();
 					if (!HttpResponseStatus.OK.equals(status)) {
@@ -132,13 +132,9 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			}
 			else {
 				if (redirecting != null) {
-					// Deliberately suppress "NullAway"
-					// redirecting != null in this case
 					listener().onUncaughtException(this, redirecting);
 				}
 				else if (authenticating != null) {
-					// Deliberately suppress "NullAway"
-					// authenticating != null in this case
 					listener().onUncaughtException(this, authenticating);
 				}
 			}

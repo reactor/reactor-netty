@@ -144,7 +144,7 @@ class WebsocketClientOperations extends HttpClientOperations
 
 			setNettyResponse(response);
 
-			if (notRedirected(response) && notAuthenticated()) {
+			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
 					handshakerHttp11.finishHandshake(channel(), response);
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
@@ -166,13 +166,9 @@ class WebsocketClientOperations extends HttpClientOperations
 				response.content()
 				        .release();
 				if (redirecting != null) {
-					// Deliberately suppress "NullAway"
-					// redirecting is initialized in notRedirected(response)
 					listener().onUncaughtException(this, redirecting);
 				}
 				else if (authenticating != null) {
-					// Deliberately suppress "NullAway"
-					// authenticating is initialized in notAuthenticated()
 					listener().onUncaughtException(this, authenticating);
 				}
 			}
