@@ -110,6 +110,7 @@ import static reactor.netty.http.internal.Http3.isHttp3Available;
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  */
 public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientConfig> {
 
@@ -1697,22 +1698,28 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Configure HTTP authentication with custom retry predicate.
+	 * Enables a mechanism for an automatic retry of the requests when HTTP authentication is expected:
 	 * <p>
-	 * This method is for authentication where credentials can be computed immediately
-	 * without needing to fetch them from external sources. Use this when the token can be
-	 * calculated and added to headers without delay, with a custom condition for when
-	 * to retry with authentication.
+	 * <ol>
+	 *     <li>The initial request is sent without authentication</li>
+	 *     <li>If the response matches the {@code predicate} (e.g., 401 Unauthorized), the request is retried</li>
+	 *     <li>Before retry, the {@code authenticator} adds credentials to the request</li>
+	 * </ol>
+	 * </p>
+	 * <p>
+	 * Use this method when authentication credentials can be computed synchronously (without I/O operations).
+	 * For async credential retrieval (e.g., fetching tokens from external services), use
+	 * {@link #httpAuthenticationWhen(BiPredicate, BiFunction)} instead.
 	 * </p>
 	 *
-	 * <p>Example - Token-based Authentication with custom retry logic:</p>
+	 * <p>Example - Bearer token authentication with custom retry logic:</p>
 	 * <pre>
 	 * {@code
 	 * HttpClient client = HttpClient.create()
 	 *     .httpAuthentication(
-	 *         // Custom retry predicate (e.g., retry on 401 or 403)
-	 *         (req, res) -> res.status().code() == 401 || res.status().code() == 403,
-	 *         // Add authentication header before request
+	 *         // Retry on 401 Unauthorized
+	 *         (req, res) -> res.status().code() == 401,
+	 *         // Add authentication header before retry
 	 *         (req, addr) -> {
 	 *             String token = generateAuthToken(addr);
 	 *             req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
@@ -1721,11 +1728,12 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * }
 	 * </pre>
 	 *
-	 * @param predicate determines when authentication should be applied, receives the request
-	 *                  and response to decide if authentication is needed (e.g., check for 401 status)
-	 * @param authenticator applies authentication to the request, receives the request and remote address
+	 * @param predicate determines whether to retry with authentication; receives the original request
+	 *                  and the response from the failed attempt (e.g., check for 401 Unauthorized status)
+	 * @param authenticator applies authentication credentials to the request before retry; receives
+	 *                      the request and remote address
 	 * @return a new {@link HttpClient}
-	 * @since 1.3.0
+	 * @since 1.3.1
 	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
 	 */
 	public final HttpClient httpAuthentication(
@@ -1742,21 +1750,30 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Configure HTTP authentication for the client with custom authentication logic and retry predicate.
+	 * Enables a mechanism for an automatic retry of the requests when HTTP authentication is expected,
+	 * with support for async credential retrieval:
 	 * <p>
-	 * This method is for authentication where credentials need to be fetched from external sources
-	 * or require delayed computation (e.g., asking another service for a token).
+	 * <ol>
+	 *     <li>The initial request is sent without authentication</li>
+	 *     <li>If the response matches the {@code predicate} (e.g., 401 Unauthorized), the request is retried</li>
+	 *     <li>Before retry, the {@code authenticator} asynchronously adds credentials to the request</li>
+	 * </ol>
+	 * </p>
+	 * <p>
+	 * Use this method when authentication credentials require async operations (e.g., fetching tokens
+	 * from external services, reading from databases, or performing I/O). For synchronous credential
+	 * computation, {@link #httpAuthentication(BiPredicate, BiConsumer)} provides a simpler API.
 	 * </p>
 	 *
-	 * <p>Example - Deferred Token-based Authentication with custom retry logic:</p>
+	 * <p>Example - Async token retrieval with custom retry logic:</p>
 	 * <pre>
 	 * {@code
 	 * HttpClient client = HttpClient.create()
 	 *     .httpAuthenticationWhen(
-	 *         // Custom retry predicate (e.g., retry on 401 or 403)
-	 *         (req, res) -> res.status().code() == 401 || res.status().code() == 403,
-	 *         // Fetch token and add authentication header
-	 *         (req, addr) -> fetchTokenAsync(addr)
+	 *         // Retry on 401 Unauthorized
+	 *         (req, res) -> res.status().code() == 401,
+	 *         // Fetch token asynchronously and add authentication header before retry
+	 *         (req, addr) -> tokenService.fetchToken(addr)
 	 *             .doOnNext(token ->
 	 *                 req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token))
 	 *             .then()
@@ -1764,12 +1781,14 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * }
 	 * </pre>
 	 *
-	 * @param predicate determines when authentication should be applied, receives the request
-	 *                  and response to decide if authentication is needed (e.g., check for 401 status)
-	 * @param authenticator applies authentication to the request, receives the request and remote address,
-	 *                      returns a Mono that completes when authentication is applied
+	 * @param predicate determines whether to retry with authentication; receives the original request
+	 *                  and the response from the failed attempt (e.g., check for 401 Unauthorized status)
+	 * @param authenticator applies authentication credentials to the request before retry; receives
+	 *                      the request and remote address, returns a {@link Mono} that completes when
+	 *                      authentication credentials have been applied
 	 * @return a new {@link HttpClient}
-	 * @since 1.3.0
+	 * @since 1.3.1
+	 * @see #httpAuthentication(BiPredicate, BiConsumer)
 	 */
 	public final HttpClient httpAuthenticationWhen(
 			BiPredicate<HttpClientRequest, HttpClientResponse> predicate,

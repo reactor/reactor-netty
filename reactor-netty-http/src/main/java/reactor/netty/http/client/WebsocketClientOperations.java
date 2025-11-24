@@ -59,6 +59,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Stephane Maldini
  * @author Simon Baslé
+ * @author raccoonback
  */
 class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {

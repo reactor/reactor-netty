@@ -16,15 +16,15 @@
 package reactor.netty.http.client;
 
 /**
- * Exception thrown to trigger HTTP authentication retry.
- * <p>
- * This exception is used internally by the generic HTTP authentication framework
- * to signal that the current request requires authentication and should be retried.
- * The framework will invoke the configured authenticator before retrying the request.
- * </p>
+ * This exception is used internally to signal that the current request requires HTTP authentication and should be retried.
+ * The {@code authenticator} configured via {@link HttpClient#httpAuthentication(java.util.function.BiPredicate, java.util.function.BiConsumer)}
+ * or {@link HttpClient#httpAuthenticationWhen(java.util.function.BiPredicate, java.util.function.BiFunction)}
+ * will be invoked before retrying the request.
  *
- * @author Oliver Ko
- * @since 1.3.0
+ * @author raccoonback
+ * @since 1.3.1
+ * @see HttpClient#httpAuthentication(java.util.function.BiPredicate, java.util.function.BiConsumer)
+ * @see HttpClient#httpAuthenticationWhen(java.util.function.BiPredicate, java.util.function.BiFunction)
  */
 final class HttpClientAuthenticationException extends RuntimeException {
 

@@ -108,6 +108,7 @@ import static reactor.netty.http.client.Http3Codec.newHttp3ClientConnectionHandl
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  */
 public final class HttpClientConfig extends ClientTransportConfig<HttpClientConfig> {
 
