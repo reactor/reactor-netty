@@ -119,6 +119,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final HttpVersion            version;
 
 	Supplier<String>[]           redirectedFrom = EMPTY_REDIRECTIONS;
+	int                          authenticationRetries;
+	int                          maxAuthenticationRetries;
 	@Nullable String             resourceUrl;
 	@Nullable String             path;
 	@Nullable Duration           responseTimeout;
@@ -147,6 +149,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.redirecting = replaced.redirecting;
 		this.authenticating = replaced.authenticating;
 		this.redirectedFrom = replaced.redirectedFrom;
+		this.authenticationRetries = replaced.authenticationRetries;
+		this.maxAuthenticationRetries = replaced.maxAuthenticationRetries;
 		this.redirectRequestConsumer = replaced.redirectRequestConsumer;
 		this.previousRequestHeaders = replaced.previousRequestHeaders;
 		this.redirectRequestBiConsumer = replaced.redirectRequestBiConsumer;
@@ -178,6 +182,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.redirecting = replaced.redirecting;
 		this.authenticating = replaced.authenticating;
 		this.redirectedFrom = replaced.redirectedFrom;
+		this.authenticationRetries = replaced.authenticationRetries;
+		this.maxAuthenticationRetries = replaced.maxAuthenticationRetries;
 		this.redirectRequestConsumer = replaced.redirectRequestConsumer;
 		this.previousRequestHeaders = replaced.previousRequestHeaders;
 		this.redirectRequestBiConsumer = replaced.redirectRequestBiConsumer;
@@ -992,10 +998,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	final boolean authenticationNotRequired() {
-		if (authenticationPredicate != null && authenticationPredicate.test(this, this)) {
+		if (authenticationPredicate != null && authenticationRetries < maxAuthenticationRetries &&
+				authenticationPredicate.test(this, this)) {
 			authenticating = new HttpClientAuthenticationException();
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel(), "Authentication predicate matched, triggering retry"));
+				log.debug(format(channel(), "Authentication predicate matched, triggering retry (attempt {} of {})"),
+						authenticationRetries + 1, maxAuthenticationRetries);
 			}
 			return false;
 		}

@@ -30,7 +30,8 @@ public class Application {
 				              (req, addr) -> { // <2>
 				                  String token = generateAuthToken(addr);
 				                  req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
-				              }
+				              },
+				              3 // <3>
 				          );
 
 		client.get()

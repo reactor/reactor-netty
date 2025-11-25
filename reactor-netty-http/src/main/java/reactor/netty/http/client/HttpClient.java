@@ -1707,6 +1707,10 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * </ol>
 	 * </p>
 	 * <p>
+	 * This method defaults to 1 maximum retry attempt. To configure a different maximum retry count,
+	 * use {@link #httpAuthentication(BiPredicate, BiConsumer, int)} instead.
+	 * </p>
+	 * <p>
 	 * Use this method when authentication credentials can be computed synchronously (without I/O operations).
 	 * For async credential retrieval (e.g., fetching tokens from external services), use
 	 * {@link #httpAuthenticationWhen(BiPredicate, BiFunction)} instead.
@@ -1734,19 +1738,72 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *                      the request and remote address
 	 * @return a new {@link HttpClient}
 	 * @since 1.3.1
+	 * @see #httpAuthentication(BiPredicate, BiConsumer, int)
 	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
 	 */
 	public final HttpClient httpAuthentication(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator) {
-		Objects.requireNonNull(predicate, "predicate");
-		Objects.requireNonNull(authenticator, "authenticator");
+		return httpAuthentication(predicate, authenticator, 1);
+	}
+
+	/**
+	 * Enables a mechanism for an automatic retry of the requests when HTTP authentication is expected,
+	 * with configurable maximum retry attempts:
+	 * <p>
+	 * <ol>
+	 *     <li>The initial request is sent without authentication</li>
+	 *     <li>If the response matches the {@code predicate} (e.g., 401 Unauthorized), the request is retried</li>
+	 *     <li>Before retry, the {@code authenticator} adds credentials to the request</li>
+	 *     <li>Retries continue until authentication succeeds or {@code maxRetries} is reached</li>
+	 * </ol>
+	 * </p>
+	 * <p>
+	 * Use this method when authentication credentials can be computed synchronously (without I/O operations).
+	 * For async credential retrieval (e.g., fetching tokens from external services), use
+	 * {@link #httpAuthenticationWhen(BiPredicate, BiFunction, int)} instead.
+	 * </p>
+	 *
+	 * <p>Example - Bearer token authentication with custom retry logic and maximum 2 retries:</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient client = HttpClient.create()
+	 *     .httpAuthentication(
+	 *         // Retry on 401 Unauthorized
+	 *         (req, res) -> res.status().code() == 401,
+	 *         // Add authentication header before retry
+	 *         (req, addr) -> {
+	 *             String token = generateAuthToken(addr);
+	 *             req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
+	 *         },
+	 *         2  // Maximum retry attempts
+	 *     );
+	 * }
+	 * </pre>
+	 *
+	 * @param predicate determines whether to retry with authentication; receives the original request
+	 *                  and the response from the failed attempt (e.g., check for 401 Unauthorized status)
+	 * @param authenticator applies authentication credentials to the request before retry; receives
+	 *                      the request and remote address
+	 * @param maxRetries the maximum number of retry attempts for authentication (must be positive)
+	 * @return a new {@link HttpClient}
+	 * @throws IllegalArgumentException if {@code maxRetries} is less than 1
+	 * @since 1.3.1
+	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction, int)
+	 */
+	public final HttpClient httpAuthentication(
+			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
+			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator,
+			int maxRetries
+	) {
 		return httpAuthenticationWhen(
 				predicate,
 				(req, addr) -> {
 					authenticator.accept(req, addr);
 					return Mono.empty();
-				});
+				},
+				maxRetries
+		);
 	}
 
 	/**
@@ -1758,6 +1815,10 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *     <li>If the response matches the {@code predicate} (e.g., 401 Unauthorized), the request is retried</li>
 	 *     <li>Before retry, the {@code authenticator} asynchronously adds credentials to the request</li>
 	 * </ol>
+	 * </p>
+	 * <p>
+	 * This method defaults to 1 maximum retry attempt. To configure a different maximum retry count,
+	 * use {@link #httpAuthenticationWhen(BiPredicate, BiFunction, int)} instead.
 	 * </p>
 	 * <p>
 	 * Use this method when authentication credentials require async operations (e.g., fetching tokens
@@ -1788,16 +1849,75 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *                      authentication credentials have been applied
 	 * @return a new {@link HttpClient}
 	 * @since 1.3.1
+	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction, int)
 	 * @see #httpAuthentication(BiPredicate, BiConsumer)
 	 */
 	public final HttpClient httpAuthenticationWhen(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
+		return httpAuthenticationWhen(predicate, authenticator, 1);
+	}
+
+	/**
+	 * Enables a mechanism for an automatic retry of the requests when HTTP authentication is expected,
+	 * with support for async credential retrieval and configurable maximum retry attempts:
+	 * <p>
+	 * <ol>
+	 *     <li>The initial request is sent without authentication</li>
+	 *     <li>If the response matches the {@code predicate} (e.g., 401 Unauthorized), the request is retried</li>
+	 *     <li>Before retry, the {@code authenticator} asynchronously adds credentials to the request</li>
+	 *     <li>Retries continue until authentication succeeds or {@code maxRetries} is reached</li>
+	 * </ol>
+	 * </p>
+	 * <p>
+	 * Use this method when authentication credentials require async operations (e.g., fetching tokens
+	 * from external services, reading from databases, or performing I/O). For synchronous credential
+	 * computation, {@link #httpAuthentication(BiPredicate, BiConsumer, int)} provides a simpler API.
+	 * </p>
+	 *
+	 * <p>Example - Async token retrieval with custom retry logic and maximum 2 retries:</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient client = HttpClient.create()
+	 *     .httpAuthenticationWhen(
+	 *         // Retry on 401 Unauthorized
+	 *         (req, res) -> res.status().code() == 401,
+	 *         // Fetch token asynchronously and add authentication header before retry
+	 *         (req, addr) -> tokenService.fetchToken(addr)
+	 *             .doOnNext(token ->
+	 *                 req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token))
+	 *             .then(),
+	 *         2  // Maximum retry attempts
+	 *     );
+	 * }
+	 * </pre>
+	 *
+	 * @param predicate determines whether to retry with authentication; receives the original request
+	 *                  and the response from the failed attempt (e.g., check for 401 Unauthorized status)
+	 * @param authenticator applies authentication credentials to the request before retry; receives
+	 *                      the request and remote address, returns a {@link Mono} that completes when
+	 *                      authentication credentials have been applied
+	 * @param maxRetries the maximum number of retry attempts for authentication (must be positive)
+	 * @return a new {@link HttpClient}
+	 * @throws IllegalArgumentException if {@code maxRetries} is less than 1
+	 * @since 1.3.1
+	 * @see #httpAuthentication(BiPredicate, BiConsumer, int)
+	 */
+	public final HttpClient httpAuthenticationWhen(
+			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
+			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator,
+			int maxRetries
+	) {
 		Objects.requireNonNull(predicate, "predicate");
 		Objects.requireNonNull(authenticator, "authenticator");
+		if (maxRetries < 1) {
+			throw new IllegalArgumentException("maxRetries must be at least 1, was: " + maxRetries);
+		}
+
 		HttpClient dup = duplicate();
 		dup.configuration().authenticationPredicate = predicate;
 		dup.configuration().authenticator = authenticator;
+		dup.configuration().maxAuthenticationRetries = maxRetries;
 		return dup;
 	}
 

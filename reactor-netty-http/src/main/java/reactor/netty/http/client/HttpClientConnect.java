@@ -499,10 +499,11 @@ class HttpClientConnect extends HttpClient {
 		volatile Supplier<String> @Nullable []  redirectedFrom;
 		volatile boolean                        shouldRetry;
 		volatile @Nullable HttpHeaders          previousRequestHeaders;
-		volatile boolean                        authenticationAttempted;
+		volatile int                     authenticationRetries;
 
 		@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
 		@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
+		int maxAuthenticationRetries;
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
@@ -543,6 +544,7 @@ class HttpClientConnect extends HttpClient {
 			this.resourceUrl = toURI.toExternalForm();
 			this.authenticationPredicate = configuration.authenticationPredicate;
 			this.authenticator = configuration.authenticator;
+			this.maxAuthenticationRetries = configuration.maxAuthenticationRetries;
 		}
 
 		@Override
@@ -660,7 +662,7 @@ class HttpClientConnect extends HttpClient {
 				}
 
 				// Apply authenticator if needed (after REQUEST_PREPARED)
-				if (authenticator != null && authenticationAttempted) {
+				if (authenticator != null && authenticationRetries > 0) {
 					return authenticator.apply(ch, ch.address())
 							.then(Mono.defer(() -> Mono.from(result)));
 				}
@@ -736,6 +738,8 @@ class HttpClientConnect extends HttpClient {
 			if (redirectedFrom != null) {
 				ops.redirectedFrom = redirectedFrom;
 			}
+			ops.authenticationRetries = this.authenticationRetries;
+			ops.maxAuthenticationRetries = this.maxAuthenticationRetries;
 		}
 
 		@Override
@@ -749,8 +753,12 @@ class HttpClientConnect extends HttpClient {
 				return true;
 			}
 			if (throwable instanceof HttpClientAuthenticationException) {
-				// Set flag to trigger authenticator on retry
-				authenticationAttempted = true;
+				// Check if we've exceeded the max retry limit
+				if (authenticationRetries >= maxAuthenticationRetries) {
+					return false;
+				}
+				// Increment retry counter to trigger authenticator on retry
+				authenticationRetries++;
 				return true;
 			}
 			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {

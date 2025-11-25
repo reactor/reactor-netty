@@ -58,7 +58,8 @@ public class Application {
 				                          "Failed to generate SPNEGO token", e));
 				                  }
 				                  return Mono.empty();
-				              }
+				              },
+				              2 // <3>
 				          );
 
 		client.get()

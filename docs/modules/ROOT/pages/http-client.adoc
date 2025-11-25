@@ -786,9 +786,13 @@ custom authentication mechanisms such as SPNEGO/Negotiate, OAuth, Bearer tokens,
 The framework provides two APIs for HTTP authentication:
 
 * {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiPredicate-java.util.function.BiConsumer-[`httpAuthentication(BiPredicate, BiConsumer)`] -
-For authentication where credentials can be computed immediately without delay. The predicate determines when to retry with authentication.
+For authentication where credentials can be computed immediately without delay. The predicate determines when to retry with authentication. Defaults to 1 maximum retry attempt.
+* {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiPredicate-java.util.function.BiConsumer-int-[`httpAuthentication(BiPredicate, BiConsumer, int maxRetries)`] -
+Same as above but allows configuring the maximum count of retry attempts.
 * {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthenticationWhen-java.util.function.BiPredicate-java.util.function.BiFunction-[`httpAuthenticationWhen(BiPredicate, BiFunction)`] -
-For authentication where credentials need to be fetched from external sources or require delayed computation. Returns a `Mono<Void>` to support deferred credential retrieval.
+For authentication where credentials need to be fetched from external sources or require delayed computation. Returns a `Mono<Void>` to support deferred credential retrieval. Defaults to 1 maximum retry attempt.
+* {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthenticationWhen-java.util.function.BiPredicate-java.util.function.BiFunction-int-[`httpAuthenticationWhen(BiPredicate, BiFunction, int maxRetries)`] -
+Same as above but allows configuring the maximum count of retry attempts.
 
 This approach gives you complete control over the authentication flow while Reactor Netty handles the retry mechanism.
 
@@ -810,7 +814,7 @@ This method requires both a predicate to determine when to retry and a consumer 
 
 ==== Token-Based Authentication Example
 
-The following example demonstrates how to implement Bearer token authentication:
+The following example demonstrates how to implement Bearer token authentication with configurable retry count:
 
 {examples-link}/authentication/token/Application.java
 [%unbreakable]
@@ -819,16 +823,18 @@ include::{examples-dir}/authentication/token/Application.java[lines=18..51]
 ----
 <1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds the `Authorization` header with a Bearer token.
+<3> Configures the maximum count of authentication retry attempts to 3.
 
 ==== Basic Authentication Example
 
 {examples-link}/authentication/basic/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/basic/Application.java[lines=18..45]
+include::{examples-dir}/authentication/basic/Application.java[lines=18..44]
 ----
 <1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds Basic authentication credentials to the `Authorization` header.
+<3> Uses the default maximum retry count of 1.
 
 === Custom Authentication with httpAuthenticationWhen
 
@@ -842,10 +848,11 @@ For SPNEGO (Kerberos) authentication, you can implement a custom authenticator u
 {examples-link}/authentication/spnego/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/spnego/Application.java[lines=18..69]
+include::{examples-dir}/authentication/spnego/Application.java[lines=18..70]
 ----
 <1> Custom predicate checks for `401 Unauthorized` with `WWW-Authenticate: Negotiate` header.
 <2> The authenticator generates a SPNEGO token using GSS-API and adds it to the `Authorization` header.
+<3> Configures the maximum count of authentication retry attempts to 2.
 
 NOTE: For SPNEGO authentication, you need to configure Kerberos settings (e.g., `krb5.conf`) and JAAS configuration
 (e.g., `jaas.conf`) appropriately. Set the system properties `java.security.krb5.conf` and `java.security.auth.login.config`
@@ -893,5 +900,5 @@ HttpClient client = HttpClient.create()
 * For `httpAuthentication`, use a `BiConsumer` when credentials can be computed immediately without delay. No `Mono` is needed as headers are added directly.
 * For `httpAuthenticationWhen`, use a `BiFunction` that returns `Mono<Void>` when credentials need to be fetched from external sources or require delayed computation.
 * The authenticator receives the request and remote address, allowing you to customize authentication based on the target server.
-* Authentication is retried only once per request. If authentication fails after retry, the error is propagated to the caller.
+* By default, authentication is retried once per request. You can configure the maximum count of retry attempts using the `maxRetries` parameter. If authentication fails after all retry attempts are exhausted, the error is propagated to the caller.
 * For security reasons, ensure that sensitive credentials are not logged or exposed in error messages.

@@ -33,7 +33,7 @@ public class Application {
 				                  String encodedCredentials = Base64.getEncoder()
 				                      .encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 				                  req.header(HttpHeaderNames.AUTHORIZATION, "Basic " + encodedCredentials);
-				              }
+				              } // <3>
 				          );
 
 		client.get()

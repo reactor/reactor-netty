@@ -370,6 +370,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Nullable WebsocketClientSpec websocketClientSpec;
 	@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
 	@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
+	int maxAuthenticationRetries;
 
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -424,6 +425,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.websocketClientSpec = parent.websocketClientSpec;
 		this.authenticationPredicate = parent.authenticationPredicate;
 		this.authenticator = parent.authenticator;
+		this.maxAuthenticationRetries = parent.maxAuthenticationRetries;
 	}
 
 	@Override
