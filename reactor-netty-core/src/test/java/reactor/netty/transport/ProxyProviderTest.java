@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.proxy.HttpProxyHandler;
@@ -314,7 +315,7 @@ class ProxyProviderTest {
 	@Test
 	void proxyFromSystemProperties_nullProxyProviderIfNoHostnamePropertySet() {
 		Properties properties = new Properties();
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNull();
 	}
@@ -324,11 +325,11 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("host");
+		assertThat(provider.get().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getHostString()).isEqualTo("host");
 	}
 
 	@Test
@@ -336,10 +337,10 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(80);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getPort()).isEqualTo(80);
 	}
 
 	@Test
@@ -348,10 +349,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.HTTP_PROXY_PORT, "8080");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(8080);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getPort()).isEqualTo(8080);
 	}
 
 	@Test
@@ -359,11 +360,11 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("host");
+		assertThat(provider.get().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getHostString()).isEqualTo("host");
 	}
 
 	@Test
@@ -371,10 +372,10 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(443);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getPort()).isEqualTo(443);
 	}
 
 	@Test
@@ -383,10 +384,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_PORT, "8443");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(8443);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getPort()).isEqualTo(8443);
 	}
 
 	@Test
@@ -394,10 +395,10 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
+		assertThat(provider.get().getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
 	}
 
 	@Test
@@ -405,10 +406,10 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
+		assertThat(provider.get().getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
 	}
 
 	@Test
@@ -417,10 +418,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "https");
 		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "http");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("https");
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getHostString()).isEqualTo("https");
 	}
 
 	@Test
@@ -429,10 +430,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "non-host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
+		assertThat(provider.get().getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
 	}
 
 	@Test
@@ -441,10 +442,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "non-host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
+		assertThat(provider.get().getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
 	}
 
 	@Test
@@ -453,10 +454,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "*.non-host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
+		assertThat(provider.get().getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
 	}
 
 	@Test
@@ -465,10 +466,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "*.non-host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
+		assertThat(provider.get().getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
 	}
 
 	@Test
@@ -478,10 +479,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTP_PROXY_USER, "user");
 		properties.setProperty(ProxyProvider.HTTP_PROXY_PASSWORD, "password");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 		assertThat(provider).isNotNull();
 
-		ProxyHandler handler = provider.newProxyHandler();
+		ProxyHandler handler = provider.get().newProxyHandler();
 		assertThat(handler.getClass()).isEqualTo(HttpProxyHandler.class);
 
 		HttpProxyHandler httpHandler = (HttpProxyHandler) handler;
@@ -496,10 +497,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_USER, "user");
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_PASSWORD, "password");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 		assertThat(provider).isNotNull();
 
-		ProxyHandler handler = provider.newProxyHandler();
+		ProxyHandler handler = provider.get().newProxyHandler();
 		assertThat(handler.getClass()).isEqualTo(HttpProxyHandler.class);
 
 		HttpProxyHandler httpHandler = (HttpProxyHandler) handler;
@@ -536,11 +537,11 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("host");
+		assertThat(provider.get().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getHostString()).isEqualTo("host");
 	}
 
 	@Test
@@ -549,10 +550,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.SOCKS_VERSION, "5");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+		assertThat(provider.get().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
 	}
 
 	@Test
@@ -561,10 +562,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.SOCKS_VERSION, "4");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
+		assertThat(provider.get().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
 	}
 
 	@Test
@@ -572,10 +573,10 @@ class ProxyProviderTest {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(1080);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getPort()).isEqualTo(1080);
 	}
 
 	@Test
@@ -584,10 +585,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_PORT, "2080");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(2080);
+		assertThat(((InetSocketAddress) provider.get().getSocketAddress().get()).getPort()).isEqualTo(2080);
 	}
 
 	@Test
@@ -597,10 +598,10 @@ class ProxyProviderTest {
 		properties.setProperty(ProxyProvider.SOCKS_USERNAME, "user");
 		properties.setProperty(ProxyProvider.SOCKS_PASSWORD, "pwd");
 
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		Supplier<ProxyProvider> provider = ProxyProvider.createFrom(properties);
 		assertThat(provider).isNotNull();
 
-		ProxyHandler handler = provider.newProxyHandler();
+		ProxyHandler handler = provider.get().newProxyHandler();
 		assertThat(handler.getClass()).isEqualTo(Socks5ProxyHandler.class);
 
 		Socks5ProxyHandler httpHandler = (Socks5ProxyHandler) handler;
