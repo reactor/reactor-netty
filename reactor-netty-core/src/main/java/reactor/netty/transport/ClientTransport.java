@@ -288,17 +288,6 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		return proxyWithProxyProviderSupplier(builder::build);
 	}
 
-	final T proxyWithProxyProvider(ProxyProvider proxy) {
-		T dup = duplicate();
-		CONF conf = dup.configuration();
-		conf.proxyProvider = proxy;
-		conf.proxyProviderSupplier = null;
-		if (conf.resolver == null) {
-			conf.resolver = NoopAddressResolverGroup.INSTANCE;
-		}
-		return dup;
-	}
-
 	final T proxyWithProxyProviderSupplier(Supplier<ProxyProvider> proxy) {
 		T dup = duplicate();
 		CONF conf = dup.configuration();
@@ -340,8 +329,8 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a new {@link ClientTransport} reference
 	 */
 	final T proxyWithSystemProperties(Properties properties) {
-		ProxyProvider proxy = ProxyProvider.createFrom(properties);
-		return proxy == null ? noProxy() : proxyWithProxyProvider(proxy);
+		Supplier<ProxyProvider> proxy = ProxyProvider.createFrom(properties);
+		return proxy == null ? noProxy() : proxyWithProxyProviderSupplier(proxy);
 	}
 
 	/**
