@@ -422,6 +422,36 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	void testFollowRedirectPredicateDoesNotApplyToNonRedirectStatus() {
+		final int serverPort = SocketUtils.findAvailableTcpPort();
+
+		disposableServer =
+				createServer(serverPort)
+				          .host("localhost")
+				          .route(r -> r.get("/not-a-redirect", (req, res) -> res.status(201).header(HttpHeaderNames.LOCATION, "/created-resource-location"))
+				                       .get("/created-resource-location", (req, res) -> res.status(200)
+				                                                           .sendString(Mono.just("Success"))))
+				          .bindNow();
+
+		HttpClientResponse response =
+				createClient(disposableServer::address)
+				          .followRedirect((req, res) -> {
+							// 201 CREATED is not a redirect status code, so the predicate should not be applied
+							return true;
+				          })
+				          .get()
+				          .uri("/not-a-redirect")
+				          .response()
+				          .block(Duration.ofSeconds(30));
+
+		// A 201 CREATED with a Location header should not be followed as a redirect,
+		// even if the predicate returns true.
+		assertThat(response).isNotNull();
+		assertThat(response.status()).isEqualTo(HttpResponseStatus.CREATED);
+		assertThat(response.responseHeaders().get(HttpHeaderNames.LOCATION)).isEqualTo("/created-resource-location");
+	}
+
+	@Test
 	@SuppressWarnings("deprecation")
 	void testIssue843() throws Exception {
 		final int server2Port = SocketUtils.findAvailableTcpPort();

@@ -958,7 +958,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final boolean notRedirected(HttpResponse response) {
 		// Deliberately suppress "NullAway"
 		// followRedirectPredicate is checked for null in isFollowRedirect()
-		if (isFollowRedirect() && followRedirectPredicate.test(this, this)) {
+		// we only follow redirects if the status code is a redirect status code
+		if (isFollowRedirect() && isRedirectStatusCode(response.status().code()) && followRedirectPredicate.test(this, this)) {
 			try {
 				redirecting = new RedirectClientException(response.headers(), response.status());
 			}
@@ -975,6 +976,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return false;
 		}
 		return true;
+	}
+
+	final boolean isRedirectStatusCode(int statusCode) {
+		return statusCode >= 300 && statusCode < 400;
 	}
 
 	@Override
