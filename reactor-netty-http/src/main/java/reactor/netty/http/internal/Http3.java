@@ -15,6 +15,8 @@
  */
 package reactor.netty.http.internal;
 
+import io.netty.handler.codec.quic.Quic;
+
 /**
  * Utility class around HTTP/3.
  * <p><strong>Note:</strong> This utility class is for internal use only. It can be removed at any time.
@@ -24,26 +26,13 @@ package reactor.netty.http.internal;
  */
 public final class Http3 {
 
-	static final boolean isHttp3Available;
-	static {
-		boolean http3;
-		try {
-			Class.forName("io.netty.handler.codec.http3.Http3");
-			http3 = true;
-		}
-		catch (Throwable t) {
-			http3 = false;
-		}
-		isHttp3Available = http3;
-	}
-
 	/**
 	 * Check if the current runtime supports HTTP/3, by verifying if {@code io.netty:netty-codec-native-quic} is on the classpath.
 	 *
 	 * @return true if {@code io.netty:netty-codec-native-quic} is available
 	 */
 	public static boolean isHttp3Available() {
-		return isHttp3Available;
+		return Quic.isAvailable();
 	}
 
 	private Http3() {}
