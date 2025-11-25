@@ -158,9 +158,9 @@ class ClientTransportTest {
 				.proxyWithSystemProperties(properties);
 
 		TestClientTransportConfig config = transport.configuration();
-		ProxyProvider proxyProvider = config.proxyProvider();
+		Supplier<ProxyProvider> proxyProvider = config.proxyProviderSupplier();
 		assertThat(proxyProvider).isNotNull();
-		assertThat(proxyProvider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(proxyProvider.get().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
 		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 
@@ -173,9 +173,9 @@ class ClientTransportTest {
 				.proxyWithSystemProperties(properties);
 
 		TestClientTransportConfig config = transport.configuration();
-		ProxyProvider proxyProvider = config.proxyProvider();
+		Supplier<ProxyProvider> proxyProvider = config.proxyProviderSupplier();
 		assertThat(proxyProvider).isNotNull();
-		assertThat(proxyProvider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(proxyProvider.get().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
 		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 
@@ -188,9 +188,9 @@ class ClientTransportTest {
 				.proxyWithSystemProperties(properties);
 
 		TestClientTransportConfig config = transport.configuration();
-		ProxyProvider proxyProvider = config.proxyProvider();
+		Supplier<ProxyProvider> proxyProvider = config.proxyProviderSupplier();
 		assertThat(proxyProvider).isNotNull();
-		assertThat(proxyProvider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+		assertThat(proxyProvider.get().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
 		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 
@@ -204,9 +204,9 @@ class ClientTransportTest {
 				.proxyWithSystemProperties(properties);
 
 		TestClientTransportConfig config = transport.configuration();
-		ProxyProvider proxyProvider = config.proxyProvider();
+		Supplier<ProxyProvider> proxyProvider = config.proxyProviderSupplier();
 		assertThat(proxyProvider).isNotNull();
-		assertThat(proxyProvider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
+		assertThat(proxyProvider.get().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
 		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 

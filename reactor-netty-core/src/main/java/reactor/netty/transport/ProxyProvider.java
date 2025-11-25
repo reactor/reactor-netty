@@ -324,7 +324,7 @@ public final class ProxyProvider {
 	static final String SOCKS_USERNAME = "java.net.socks.username";
 	static final String SOCKS_PASSWORD = "java.net.socks.password";
 
-	static @Nullable ProxyProvider createFrom(Properties properties) {
+	static @Nullable Supplier<ProxyProvider> createFrom(Properties properties) {
 		Objects.requireNonNull(properties, "properties");
 
 		if (properties.containsKey(HTTP_PROXY_HOST) || properties.containsKey(HTTPS_PROXY_HOST)) {
@@ -340,7 +340,7 @@ public final class ProxyProvider {
 	/*
 		assumes properties has either http.proxyHost or https.proxyHost
 	 */
-	static ProxyProvider createHttpProxyFrom(Properties properties) {
+	static Supplier<ProxyProvider> createHttpProxyFrom(Properties properties) {
 		String hostProperty;
 		String portProperty;
 		String userProperty;
@@ -384,10 +384,10 @@ public final class ProxyProvider {
 			}
 		}
 
-		return proxy.build();
+		return proxy::build;
 	}
 
-	static ProxyProvider createSocksProxyFrom(Properties properties) {
+	static Supplier<ProxyProvider> createSocksProxyFrom(Properties properties) {
 		String hostname = Objects.requireNonNull(properties.getProperty(SOCKS_PROXY_HOST), SOCKS_PROXY_HOST);
 		String version = properties.getProperty(SOCKS_VERSION, SOCKS_VERSION_5);
 		if (!SOCKS_VERSION_5.equals(version) && !SOCKS_VERSION_4.equals(version)) {
@@ -410,7 +410,7 @@ public final class ProxyProvider {
 			proxy.password(properties.getProperty(SOCKS_PASSWORD));
 		}
 
-		return proxy.build();
+		return proxy::build;
 	}
 
 	static int parsePort(String port, String propertyName) {
