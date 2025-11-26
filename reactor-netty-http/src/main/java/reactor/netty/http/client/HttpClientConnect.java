@@ -738,8 +738,7 @@ class HttpClientConnect extends HttpClient {
 			if (redirectedFrom != null) {
 				ops.redirectedFrom = redirectedFrom;
 			}
-			ops.authenticationRetries = this.authenticationRetries;
-			ops.maxAuthenticationRetries = this.maxAuthenticationRetries;
+			ops.configureAuthenticationRetries(this.authenticationRetries, this.maxAuthenticationRetries);
 		}
 
 		@Override

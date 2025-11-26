@@ -356,6 +356,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.authenticationPredicate = predicate;
 	}
 
+	void configureAuthenticationRetries(int authenticationRetries, int maxAuthenticationRetries) {
+		this.authenticationRetries = authenticationRetries;
+		this.maxAuthenticationRetries = maxAuthenticationRetries;
+	}
+
 	void redirectRequestConsumer(@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		this.redirectRequestConsumer = redirectRequestConsumer;
 	}
