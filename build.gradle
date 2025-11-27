@@ -136,7 +136,7 @@ ext {
 	reflectionsVersion = '0.10.2'
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
-	bouncycastleVersion = '1.82'
+	bouncycastleVersion = '1.83'
 
 	// Antora
 	antoraPluginVersion = '1.0.0'
