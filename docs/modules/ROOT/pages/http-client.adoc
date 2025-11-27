@@ -126,12 +126,15 @@ You can configure the `HTTP` client to enable auto-redirect support.
 
 Reactor Netty provides two different strategies for auto-redirect support:
 
-* `followRedirect(boolean)`: Specifies whether HTTP auto-redirect support is enabled for statuses `301|302|303|307|308`.
-When it is `303` status code, `GET` method is used for the redirect.
-* `followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse>)`: Enables auto-redirect support if the supplied
-predicate matches.
+* `followRedirect(boolean)`: Automatically follows redirects for standard HTTP redirect status codes `301|302|303|307|308`.
+This method uses a built-in predicate that checks if the response status code matches one of these values.
+When the status code is `303`, the `GET` method is used for the redirect.
+* `followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse>)`: Provides full control over redirect behavior through a custom predicate.
+The redirect decision is determined **entirely** by the result returned by the supplied predicate,
+which receives the `HttpClientRequest` and `HttpClientResponse` and must return `true` to enable auto-redirect.
+This allows you to implement custom logic, such as following redirects for non-standard status codes or based on specific conditions.
 
-The following example uses `followRedirect(true)`:
+The following example uses `followRedirect(true)` to automatically follow standard 30x redirects:
 
 {examples-link}/redirect/Application.java
 [%unbreakable]
