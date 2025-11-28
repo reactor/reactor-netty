@@ -111,6 +111,7 @@ import static reactor.netty.micrometer.TimerAssert.assertTimer;
  * Holds HTTP/3 specific tests.
  *
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 1.2.0
  */
 class Http3Tests {
@@ -1248,6 +1249,57 @@ class Http3Tests {
 
 			assertThat(logTracker.actualMessages).hasSize(1);
 			assertThat(logTracker.actualMessages.get(0).getFormattedMessage()).contains(message);
+		}
+	}
+
+	@Test
+	void testMaxConnectionsLimit() throws Exception {
+		AtomicInteger connectionCount = new AtomicInteger();
+
+		disposableServer =
+				createServer()
+				        .maxConnections(2)
+						.doOnConnection(connection -> connectionCount.incrementAndGet())
+				        .handle((req, res) -> res.sendString(Mono.just("OK")))
+				        .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(3);
+		AtomicInteger successCount = new AtomicInteger();
+		AtomicInteger failureCount = new AtomicInteger();
+
+		List<ConnectionProvider> providers = new ArrayList<>();
+		try {
+			for (int i = 0; i < 3; i++) {
+				ConnectionProvider provider = ConnectionProvider.newConnection();
+				providers.add(provider);
+
+				createClient(provider, disposableServer.port())
+				        .get()
+				        .uri("/")
+				        .responseContent()
+						.aggregate()
+						.asString()
+						.subscribe(
+								s -> {
+									successCount.incrementAndGet();
+									latch.countDown();
+								},
+								e -> {
+									failureCount.incrementAndGet();
+									latch.countDown();
+								}
+						);
+			}
+
+			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+			assertThat(connectionCount.get()).isEqualTo(2);
+			assertThat(successCount.get()).isEqualTo(2);
+			assertThat(failureCount.get()).isEqualTo(1);
+		} finally {
+			disposableServer.disposeNow();
+			for (ConnectionProvider provider : providers) {
+				provider.disposeLater().block(Duration.ofSeconds(1));
+			}
 		}
 	}
 

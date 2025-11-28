@@ -83,6 +83,7 @@ import static reactor.netty.http.server.HttpServerConfig.h3;
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  */
 public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerConfig> {
 
@@ -957,6 +958,31 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	@Override
 	public final HttpServer port(int port) {
 		return super.port(port);
+	}
+
+	/**
+	 * Configures the maximum number of concurrent HTTP connections that the server will accept.
+	 * When the limit is reached, new connections will be rejected by immediately closing them.
+	 * A value of -1 means no limit (default).
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .maxConnections(1000)
+	 *           .handle((req, res) -> res.sendString(Mono.just("Hello World!")))
+	 *           .bindNow();
+	 * }
+	 * </pre>
+	 *
+	 * @param maxConnections the maximum number of concurrent connections, or -1 for no limit
+	 * @return a new {@link HttpServer}
+	 * @throws IllegalArgumentException if maxConnections is less than -1 or equals to 0
+	 */
+	@Override
+	public final HttpServer maxConnections(int maxConnections) {
+		return super.maxConnections(maxConnections);
 	}
 
 	/**

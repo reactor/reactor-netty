@@ -19,6 +19,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -44,6 +45,7 @@ import static reactor.netty.ReactorNetty.format;
  * @param <CONF> Configuration implementation
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 1.0.0
  */
 public abstract class ServerTransportConfig<CONF extends TransportConfig> extends TransportConfig {
@@ -119,9 +121,19 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		return doOnUnbound;
 	}
 
+	/**
+	 * Return the configured maximum number of connections or -1 if not configured.
+	 *
+	 * @return the configured maximum number of connections or -1 if not configured
+	 */
+	public final int maxConnections() {
+		return maxConnections;
+	}
+
 
 	// Protected/Package private write API
 
+	final AtomicInteger                          activeConnections = new AtomicInteger(0);
 	Map<AttributeKey<?>, ?>                      childAttrs;
 	ConnectionObserver                           childObserver;
 	Map<ChannelOption<?>, ?>                     childOptions;
@@ -129,6 +141,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	@Nullable Consumer<? super DisposableServer> doOnBound;
 	@Nullable Consumer<? super Connection>       doOnConnection;
 	@Nullable Consumer<? super DisposableServer> doOnUnbound;
+	int                                          maxConnections = -1;
 
 	/**
 	 * Default ServerTransportConfig with options.
@@ -138,7 +151,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 * @param bindAddress the local address
 	 */
 	protected ServerTransportConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions,
-				Supplier<? extends SocketAddress> bindAddress) {
+			Supplier<? extends SocketAddress> bindAddress) {
 		super(options, bindAddress);
 		this.childAttrs = Collections.emptyMap();
 		this.childObserver = ConnectionObserver.emptyListener();
@@ -154,6 +167,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		this.doOnBound = parent.doOnBound;
 		this.doOnConnection = parent.doOnConnection;
 		this.doOnUnbound = parent.doOnUnbound;
+		this.maxConnections = parent.maxConnections;
 	}
 
 	@Override
@@ -167,11 +181,11 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 * @return the configured child lifecycle {@link ConnectionObserver} if any or {@link ConnectionObserver#emptyListener()}
 	 */
 	protected ConnectionObserver defaultChildObserver() {
-		if (channelGroup() == null && doOnConnection() == null) {
+		if (channelGroup() == null && doOnConnection() == null && maxConnections <= 0) {
 			return ConnectionObserver.emptyListener();
 		}
 		else {
-			return new ServerTransportDoOnConnection(channelGroup(), doOnConnection());
+			return new ServerTransportDoOnConnection(channelGroup(), doOnConnection(), maxConnections, activeConnections);
 		}
 	}
 
@@ -232,22 +246,63 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 		final @Nullable ChannelGroup                 channelGroup;
 		final @Nullable Consumer<? super Connection> doOnConnection;
+		final int                                    maxConnections;
+		final AtomicInteger                          activeConnections;
 
-		ServerTransportDoOnConnection(@Nullable ChannelGroup channelGroup, @Nullable Consumer<? super Connection> doOnConnection) {
+		ServerTransportDoOnConnection(@Nullable ChannelGroup channelGroup,
+				@Nullable Consumer<? super Connection> doOnConnection,
+				int maxConnections,
+				AtomicInteger activeConnections) {
 			this.channelGroup = channelGroup;
 			this.doOnConnection = doOnConnection;
+			this.maxConnections = maxConnections;
+			this.activeConnections = activeConnections;
 		}
 
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
-			if (channelGroup != null && newState == State.CONNECTED) {
+			if (newState == State.CONNECTED) {
 				Channel channel = connection.channel();
-				channelGroup.add(channel);
 				Channel parent = channel.parent();
-				if (!(parent instanceof ServerChannel)) {
-					// HTTP/2 - add both the stream and the connection
-					channelGroup.add(parent);
+				// HTTP/2 streams have a parent that is not a ServerChannel, and that parent has a ServerChannel parent
+				// HTTP/3 QuicChannels have a DatagramChannel parent (not ServerChannel), but should still be counted as connections, not streams
+				boolean isHttp2Stream = parent != null &&
+				                        !(parent instanceof ServerChannel) &&
+				                        parent.parent() instanceof ServerChannel;
+
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel, "Channel type: {}, parent: {}, isHttp2Stream: {}, maxConnections: {}"),
+					          channel.getClass().getSimpleName(),
+					          parent == null ? "null" : parent.getClass().getSimpleName(),
+					          isHttp2Stream,
+					          maxConnections);
+				}
+
+				// Check max connections limit using AtomicInteger
+				// Only count actual connections (TCP, QUIC/HTTP3), not HTTP/2 streams
+				if (maxConnections > 0 && !isHttp2Stream) {
+					int current = activeConnections.incrementAndGet();
+					if (current > maxConnections) {
+						activeConnections.decrementAndGet();
+						if (log.isDebugEnabled()) {
+							log.debug(format(channel, "Connection rejected: max connections limit reached ({})"), maxConnections);
+						}
+						channel.close();
+						return;
+					}
+					else {
+						channel.closeFuture().addListener(future -> activeConnections.decrementAndGet());
+					}
+				}
+
+				// Add to ChannelGroup if configured
+				if (channelGroup != null) {
+					channelGroup.add(channel);
+					if (isHttp2Stream) {
+						// HTTP/2 - add both the stream and the connection
+						channelGroup.add(parent);
+					}
 				}
 				return;
 			}

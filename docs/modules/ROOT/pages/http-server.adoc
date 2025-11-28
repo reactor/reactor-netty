@@ -366,6 +366,40 @@ include::{examples-dir}/lifecycle/Application.java[lines=18..39]
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
 
+[[connection-limit]]
+== Connection Limit
+
+You can configure the `HTTP` server to limit the maximum number of concurrent connections.
+When the limit is reached, new connections are immediately rejected by closing them.
+By default, there is no limit (value of `-1`).
+
+The following example configures the server to accept a maximum of 100 concurrent connections:
+
+[source,java,indent=0]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+	public static void main(String[] args) {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(8080)
+				          .maxConnections(100)   // <1>
+				          .handle((request, response) -> response.sendString(Mono.just("Hello World!")))
+				          .bindNow();
+
+		server.onDispose()
+		      .block();
+	}
+}
+----
+<1> Configures the maximum number of concurrent connections to 100.
+
+NOTE: This limit applies to the actual network connections (TCP for HTTP/1.1 and HTTP/2, QUIC for HTTP/3).
+HTTP/2 streams over the same connection are not counted separately.
+
 [[tcp-level-configuration]]
 == TCP-level Configuration
 
