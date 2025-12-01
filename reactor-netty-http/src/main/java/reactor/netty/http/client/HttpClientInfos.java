@@ -25,6 +25,7 @@ import reactor.util.context.ContextView;
  * An Http Reactive Channel with several accessors related to HTTP flow: resource URL,
  * information for redirections etc...
  *
+ * @author raccoonback
  * @since 0.9.3
  */
 public interface HttpClientInfos extends HttpInfos {
@@ -55,6 +56,14 @@ public interface HttpClientInfos extends HttpInfos {
 	 * @return the previous redirections or empty array
 	 */
 	String[] redirectedFrom();
+
+	/**
+	 * Return the number of authentication retry attempts for this request.
+	 *
+	 * @return the number of authentication retries
+	 * @since 1.3.1
+	 */
+	int authenticationRetryCount();
 
 	/**
 	 * Return outbound headers to be sent.

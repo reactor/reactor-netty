@@ -515,6 +515,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	public int authenticationRetryCount() {
+		return authenticationRetries;
+	}
+
+	@Override
 	public HttpHeaders requestHeaders() {
 		return nettyRequest.headers();
 	}

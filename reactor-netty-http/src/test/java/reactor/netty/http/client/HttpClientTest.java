@@ -3813,6 +3813,7 @@ class HttpClientTest extends BaseHttpTest {
 	void testHttpAuthentication() {
 		AtomicInteger requestCount = new AtomicInteger(0);
 		AtomicBoolean authHeaderAdded = new AtomicBoolean(false);
+		AtomicReference<HttpClientRequest> capturedRequest = new AtomicReference<>();
 
 		disposableServer =
 				HttpServer.create()
@@ -3845,7 +3846,8 @@ class HttpClientTest extends BaseHttpTest {
 									  req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
 								  });
 
-		String response = client.get()
+		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
+		                        .get()
 		                        .uri("/protected")
 		                        .responseContent()
 		                        .aggregate()
@@ -3855,12 +3857,15 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(response).isEqualTo("Authenticated!");
 		assertThat(requestCount.get()).isEqualTo(2);
 		assertThat(authHeaderAdded.get()).isTrue();
+		assertThat(capturedRequest.get()).isNotNull();
+		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(1);
 	}
 
 	@Test
 	void testHttpAuthenticationNoRetryWhenPredicateDoesNotMatch() {
 		AtomicInteger requestCount = new AtomicInteger(0);
 		AtomicBoolean authenticatorCalled = new AtomicBoolean(false);
+		AtomicReference<HttpClientRequest> capturedRequest = new AtomicReference<>();
 
 		disposableServer =
 				HttpServer.create()
@@ -3885,23 +3890,27 @@ class HttpClientTest extends BaseHttpTest {
 				                  }
 				          );
 
-		client.get()
-		      .uri("/protected")
-		      .responseSingle((res, content) -> Mono.just(res.status()))
-		      .as(StepVerifier::create)
-		      .expectNext(HttpResponseStatus.FORBIDDEN)
-		      .expectComplete()
-		      .verify(Duration.ofSeconds(5));
+		client.doAfterRequest((req, conn) -> capturedRequest.set(req))
+				.get()
+				.uri("/protected")
+				.responseSingle((res, content) -> Mono.just(res.status()))
+				.as(StepVerifier::create)
+				.expectNext(HttpResponseStatus.FORBIDDEN)
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 
 		// Should only make one request since predicate doesn't match
 		assertThat(requestCount.get()).isEqualTo(1);
 		assertThat(authenticatorCalled.get()).isFalse();
+		assertThat(capturedRequest.get()).isNotNull();
+		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(0);
 	}
 
 	@Test
 	void testHttpAuthenticationWithMonoAuthenticator() {
 		AtomicInteger requestCount = new AtomicInteger(0);
 		AtomicInteger authCallCount = new AtomicInteger(0);
+		AtomicReference<HttpClientRequest> capturedRequest = new AtomicReference<>();
 
 		disposableServer =
 				HttpServer.create()
@@ -3937,7 +3946,8 @@ class HttpClientTest extends BaseHttpTest {
 				                  }
 				          );
 
-		String response = client.get()
+		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
+								.get()
 		                        .uri("/api/resource")
 		                        .responseContent()
 		                        .aggregate()
@@ -3947,6 +3957,8 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(response).isEqualTo("Success");
 		assertThat(requestCount.get()).isEqualTo(2);
 		assertThat(authCallCount.get()).isEqualTo(1);
+		assertThat(capturedRequest.get()).isNotNull();
+		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(1);
 	}
 
 	@Test
@@ -3999,6 +4011,7 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	void testHttpAuthenticationWithCustomStatusCode() {
 		AtomicInteger requestCount = new AtomicInteger(0);
+		AtomicReference<HttpClientRequest> capturedRequest = new AtomicReference<>();
 
 		disposableServer =
 				HttpServer.create()
@@ -4033,7 +4046,8 @@ class HttpClientTest extends BaseHttpTest {
 				                  }
 				          );
 
-		String response = client.get()
+		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
+								.get()
 		                        .uri("/proxy-protected")
 		                        .responseContent()
 		                        .aggregate()
@@ -4042,12 +4056,15 @@ class HttpClientTest extends BaseHttpTest {
 
 		assertThat(response).isEqualTo("Authorized");
 		assertThat(requestCount.get()).isEqualTo(2);
+		assertThat(capturedRequest.get()).isNotNull();
+		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(1);
 	}
 
 	@Test
 	void testHttpAuthenticationMaxRetries() {
 		AtomicInteger requestCount = new AtomicInteger(0);
 		AtomicInteger authenticatorCallCount = new AtomicInteger(0);
+		AtomicReference<HttpClientRequest> capturedRequest = new AtomicReference<>();
 
 		disposableServer =
 				HttpServer.create()
@@ -4073,7 +4090,8 @@ class HttpClientTest extends BaseHttpTest {
 				          );
 
 		// After 3 retry attempts, request should complete with 401 status
-		client.get()
+		client.doAfterRequest((req, conn) -> capturedRequest.set(req))
+		      .get()
 		      .uri("/protected")
 		      .responseSingle((res, bytes) -> bytes.then(Mono.just(res.status())))
 		      .as(StepVerifier::create)
@@ -4085,6 +4103,9 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(requestCount.get()).isEqualTo(4);
 		// Authenticator should be called 3 times (once per retry)
 		assertThat(authenticatorCallCount.get()).isEqualTo(3);
+		// Authentication retry count should be 3 (reached max limit)
+		assertThat(capturedRequest.get()).isNotNull();
+		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(3);
 	}
 
 	@Test

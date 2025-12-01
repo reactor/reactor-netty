@@ -38,6 +38,7 @@ import java.util.Set;
  * cannot be created.
  *
  * @author Violeta Georgieva
+ * @author raccoonback
  */
 final class FailedHttpClientRequest implements HttpClientRequest {
 
@@ -133,6 +134,11 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	@Override
 	public String[] redirectedFrom() {
 		return EMPTY;
+	}
+
+	@Override
+	public int authenticationRetryCount() {
+		return 0;
 	}
 
 	@Override

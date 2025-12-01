@@ -608,6 +608,8 @@ class HttpClientOperationsTest extends BaseHttpTest {
 					requestListener, responseListener);
 			assertThat(result).isNotNull().isEqualTo("testConstructorWithProvidedAuthentication");
 			assertThat(requestListener.get()).isSameAs(responseListener.get());
+			assertThat(request.get()).isNotNull();
+			assertThat(request.get().authenticationRetryCount()).isEqualTo(1);
 			checkRequest(request.get(), response.get(), requestChannel.get(), responseChannel.get(), false, false);
 		}
 		finally {
