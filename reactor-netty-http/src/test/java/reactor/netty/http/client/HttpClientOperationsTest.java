@@ -72,6 +72,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * This test class verifies basic {@link HttpClient} functionality.
  *
  * @author Simon Baslé
+ * @author raccoonback
  */
 class HttpClientOperationsTest extends BaseHttpTest {
 	static X509Bundle ssc;

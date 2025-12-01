@@ -499,10 +499,10 @@ class HttpClientConnect extends HttpClient {
 		volatile Supplier<String> @Nullable []  redirectedFrom;
 		volatile boolean                        shouldRetry;
 		volatile @Nullable HttpHeaders          previousRequestHeaders;
-		volatile int                     authenticationRetries;
 
 		@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
 		@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
+		volatile int authenticationRetries;
 		int maxAuthenticationRetries;
 
 		HttpClientHandler(HttpClientConfig configuration) {
@@ -752,10 +752,6 @@ class HttpClientConnect extends HttpClient {
 				return true;
 			}
 			if (throwable instanceof HttpClientAuthenticationException) {
-				// Check if we've exceeded the max retry limit
-				if (authenticationRetries >= maxAuthenticationRetries) {
-					return false;
-				}
 				// Increment retry counter to trigger authenticator on retry
 				authenticationRetries++;
 				return true;
