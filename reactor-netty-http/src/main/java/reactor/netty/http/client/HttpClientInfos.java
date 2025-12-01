@@ -63,7 +63,9 @@ public interface HttpClientInfos extends HttpInfos {
 	 * @return the number of authentication retries
 	 * @since 1.3.1
 	 */
-	int authenticationRetryCount();
+	default int authenticationRetryCount() {
+		return 0;
+	}
 
 	/**
 	 * Return outbound headers to be sent.
