@@ -894,6 +894,44 @@ HttpClient client = HttpClient.create()
 ----
 <1> Custom predicate checks for `407 Proxy Authentication Required` status code.
 
+=== Accessing Authentication Retry Count
+
+During the authentication process, you may need to track how many times authentication has been retried for a given request.
+The {javadoc}/reactor/netty/http/client/HttpClientInfos.html#authenticationRetryCount--[`authenticationRetryCount()`] method
+on {javadoc}/reactor/netty/http/client/HttpClientInfos.html[`HttpClientInfos`] provides this information.
+
+This is useful for:
+
+* Implementing custom retry logic or backoff strategies
+* Logging and debugging authentication flows
+* Applying different authentication strategies based on retry count
+* Preventing infinite retry loops in custom authentication implementations
+
+==== Example: Logging Authentication Retries
+
+[source,java]
+----
+HttpClient client = HttpClient.create()
+    .httpAuthenticationWhen(
+        (req, res) -> res.status().code() == 401,
+        (req, addr) -> {
+            int retryCount = req.authenticationRetryCount(); // <1>
+            log.info("Authentication retry attempt: {}", retryCount);
+
+            String token = generateToken(retryCount); // <2>
+            req.header(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
+            return Mono.empty();
+        },
+        3 // <3>
+    );
+----
+<1> Get the current authentication retry count.
+<2> Use the retry count to implement custom logic (e.g., different token generation).
+<3> Configure maximum authentication retry attempts to 3.
+
+NOTE: The retry count starts at `0` for the first authentication attempt and increments by 1 for each subsequent retry.
+When the retry count reaches the configured `maxRetries`, authentication will fail if still unsuccessful.
+
 === Important Notes
 
 * The authenticator function is invoked only when the predicate returns `true` (indicating authentication is needed).
