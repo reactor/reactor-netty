@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -503,7 +502,7 @@ class HttpClientConnect extends HttpClient {
 
 		@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
 		@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
-		AtomicInteger authenticationRetries;
+		volatile int authenticationRetries;
 		int maxAuthenticationRetries;
 
 		HttpClientHandler(HttpClientConfig configuration) {
@@ -545,7 +544,6 @@ class HttpClientConnect extends HttpClient {
 			this.resourceUrl = toURI.toExternalForm();
 			this.authenticationPredicate = configuration.authenticationPredicate;
 			this.authenticator = configuration.authenticator;
-			this.authenticationRetries = new AtomicInteger(0);
 			this.maxAuthenticationRetries = configuration.maxAuthenticationRetries;
 		}
 
@@ -664,7 +662,7 @@ class HttpClientConnect extends HttpClient {
 				}
 
 				// Apply authenticator if needed (after REQUEST_PREPARED)
-				if (authenticator != null && authenticationRetries.get() > 0) {
+				if (authenticator != null && authenticationRetries > 0) {
 					return authenticator.apply(ch, ch.address())
 							.then(Mono.defer(() -> Mono.from(result)));
 				}
@@ -740,10 +738,11 @@ class HttpClientConnect extends HttpClient {
 			if (redirectedFrom != null) {
 				ops.redirectedFrom = redirectedFrom;
 			}
-			ops.configureAuthenticationRetries(this.authenticationRetries.get(), this.maxAuthenticationRetries);
+			ops.configureAuthenticationRetries(this.authenticationRetries, this.maxAuthenticationRetries);
 		}
 
 		@Override
+		@SuppressWarnings("NonAtomicOperationOnVolatileField")
 		public boolean test(Throwable throwable) {
 			if (throwable instanceof RedirectClientException) {
 				RedirectClientException re = (RedirectClientException) throwable;
@@ -755,7 +754,7 @@ class HttpClientConnect extends HttpClient {
 			}
 			if (throwable instanceof HttpClientAuthenticationException) {
 				// Increment retry counter to trigger authenticator on retry
-				authenticationRetries.incrementAndGet();
+				authenticationRetries++;
 				return true;
 			}
 			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {
