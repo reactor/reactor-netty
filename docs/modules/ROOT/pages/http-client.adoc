@@ -783,10 +783,10 @@ include::{examples-dir}/resolver/Application.java[lines=18..39]
 
 [[http-authentication]]
 == HTTP Authentication
-Reactor Netty `HttpClient` provides a flexible HTTP authentication framework that allows you to implement
-custom authentication mechanisms such as SPNEGO/Negotiate, OAuth, Bearer tokens, or any other HTTP-based authentication scheme.
+Reactor Netty `HttpClient` provides a mechanism for automatic retry of requests when HTTP authentication is expected,
+allowing you to implement custom authentication such as SPNEGO/Negotiate, OAuth, Bearer tokens, or any other HTTP-based authentication scheme.
 
-The framework provides two APIs for HTTP authentication:
+This mechanism provides two types of APIs for HTTP authentication:
 
 * {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthentication-java.util.function.BiPredicate-java.util.function.BiConsumer-[`httpAuthentication(BiPredicate, BiConsumer)`] -
 For authentication where credentials can be computed immediately without delay. The predicate determines when to retry with authentication. Defaults to 1 maximum retry attempt.
@@ -822,7 +822,7 @@ The following example demonstrates how to implement Bearer token authentication 
 {examples-link}/authentication/token/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/token/Application.java[lines=18..51]
+include::{examples-dir}/authentication/token/Application.java[lines=18..52]
 ----
 <1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds the `Authorization` header with a Bearer token.
@@ -833,33 +833,31 @@ include::{examples-dir}/authentication/token/Application.java[lines=18..51]
 {examples-link}/authentication/basic/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/basic/Application.java[lines=18..44]
+include::{examples-dir}/authentication/basic/Application.java[lines=18..46]
 ----
 <1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds Basic authentication credentials to the `Authorization` header.
 <3> Uses the default maximum retry count of 1.
 
-=== Custom Authentication with httpAuthenticationWhen
+=== Asynchronous Authentication with httpAuthenticationWhen
 
-When you need custom retry conditions (e.g., checking specific headers or status codes other than 401),
+When credentials need to be fetched asynchronously (e.g., from external token services, databases, or requiring I/O operations),
 use the {javadoc}/reactor/netty/http/client/HttpClient.html#httpAuthenticationWhen-java.util.function.BiPredicate-java.util.function.BiFunction-[`httpAuthenticationWhen(BiPredicate, BiFunction)`] method.
 
 ==== SPNEGO/Negotiate Authentication Example
 
-For SPNEGO (Kerberos) authentication, you can implement a custom authenticator using Java's GSS-API:
+The following example demonstrates how the authentication API can be used with SPNEGO (Kerberos) using Java's GSS-API:
+
+NOTE: This is a simplified example to showcase the API.
 
 {examples-link}/authentication/spnego/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/spnego/Application.java[lines=18..70]
+include::{examples-dir}/authentication/spnego/Application.java[lines=18..72]
 ----
 <1> Custom predicate checks for `401 Unauthorized` with `WWW-Authenticate: Negotiate` header.
 <2> The authenticator generates a SPNEGO token using GSS-API and adds it to the `Authorization` header.
 <3> Configures the maximum count of authentication retry attempts to 2.
-
-NOTE: For SPNEGO authentication, you need to configure Kerberos settings (e.g., `krb5.conf`) and JAAS configuration
-(e.g., `jaas.conf`) appropriately. Set the system properties `java.security.krb5.conf` and `java.security.auth.login.config`
-to point to your configuration files.
 
 === Custom Authentication Scenarios
 
@@ -882,21 +880,6 @@ HttpClient client = HttpClient.create()
 <1> Retry authentication on `401 Unauthorized` responses.
 <2> Asynchronously fetch an OAuth token and add it to the request.
 
-==== Proxy Authentication
-[source,java]
-----
-HttpClient client = HttpClient.create()
-    .httpAuthenticationWhen(
-        (req, res) -> res.status().code() == 407, // <1>
-        (req, addr) -> {
-            String proxyCredentials = generateProxyCredentials();
-            req.header("Proxy-Authorization", "Bearer " + proxyCredentials);
-            return Mono.empty();
-        }
-    );
-----
-<1> Custom predicate checks for `407 Proxy Authentication Required` status code.
-
 === Accessing Authentication Retry Count
 
 During the authentication process, you may need to track how many times authentication has been retried for a given request.
@@ -908,7 +891,6 @@ This is useful for:
 * Implementing custom retry logic or backoff strategies
 * Logging and debugging authentication flows
 * Applying different authentication strategies based on retry count
-* Preventing infinite retry loops in custom authentication implementations
 
 ==== Example: Logging Authentication Retries
 
@@ -941,5 +923,5 @@ When the retry count reaches the configured `maxRetries`, authentication will fa
 * For `httpAuthentication`, use a `BiConsumer` when credentials can be computed immediately without delay. No `Mono` is needed as headers are added directly.
 * For `httpAuthenticationWhen`, use a `BiFunction` that returns `Mono<Void>` when credentials need to be fetched from external sources or require delayed computation.
 * The authenticator receives the request and remote address, allowing you to customize authentication based on the target server.
-* By default, authentication is retried once per request. You can configure the maximum count of retry attempts using the `maxRetries` parameter. If authentication fails after all retry attempts are exhausted, the error is propagated to the caller.
+* By default, authentication is retried once per request. You can configure the maximum count of retry attempts using the `maxRetries` parameter. If authentication fails after all retry attempts are exhausted, the last response (e.g., `401 Unauthorized`) is returned to the caller.
 * For security reasons, ensure that sensitive credentials are not logged or exposed in error messages.

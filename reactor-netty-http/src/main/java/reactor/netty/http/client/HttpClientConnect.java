@@ -742,7 +742,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
-		@SuppressWarnings("NonAtomicOperationOnVolatileField")
+		@SuppressWarnings("NonAtomicVolatileUpdate")
 		public boolean test(Throwable throwable) {
 			if (throwable instanceof RedirectClientException) {
 				RedirectClientException re = (RedirectClientException) throwable;

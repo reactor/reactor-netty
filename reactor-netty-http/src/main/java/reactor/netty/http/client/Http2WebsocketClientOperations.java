@@ -91,7 +91,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 	}
 
 	@Override
-	@SuppressWarnings({"FutureReturnValueIgnored", "NullAway"})
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			FullHttpResponse response = (FullHttpResponse) msg;

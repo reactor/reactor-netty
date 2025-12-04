@@ -1826,8 +1826,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public final HttpClient httpAuthentication(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator,
-			int maxRetries
-	) {
+			int maxRetries) {
 		return httpAuthenticationWhen(
 				predicate,
 				(req, addr) -> {
@@ -1938,8 +1937,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public final HttpClient httpAuthenticationWhen(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator,
-			int maxRetries
-	) {
+			int maxRetries) {
 		Objects.requireNonNull(predicate, "predicate");
 		Objects.requireNonNull(authenticator, "authenticator");
 		if (maxRetries < 1) {

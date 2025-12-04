@@ -3840,11 +3840,11 @@ class HttpClientTest extends BaseHttpTest {
 				HttpClient.create()
 				          .port(disposableServer.port())
 				          .httpAuthentication(
-						          (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
-						          (req, addr) -> {
-									  authHeaderAdded.set(true);
-									  req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
-								  });
+				                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
+				                  (req, addr) -> {
+				                      authHeaderAdded.set(true);
+				                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+				                  });
 
 		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
 		                        .get()
@@ -3891,13 +3891,13 @@ class HttpClientTest extends BaseHttpTest {
 				          );
 
 		client.doAfterRequest((req, conn) -> capturedRequest.set(req))
-				.get()
-				.uri("/protected")
-				.responseSingle((res, content) -> Mono.just(res.status()))
-				.as(StepVerifier::create)
-				.expectNext(HttpResponseStatus.FORBIDDEN)
-				.expectComplete()
-				.verify(Duration.ofSeconds(5));
+		      .get()
+		      .uri("/protected")
+		      .responseSingle((res, content) -> Mono.just(res.status()))
+		      .as(StepVerifier::create)
+		      .expectNext(HttpResponseStatus.FORBIDDEN)
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 
 		// Should only make one request since predicate doesn't match
 		assertThat(requestCount.get()).isEqualTo(1);
@@ -3947,7 +3947,7 @@ class HttpClientTest extends BaseHttpTest {
 				          );
 
 		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
-								.get()
+		                        .get()
 		                        .uri("/api/resource")
 		                        .responseContent()
 		                        .aggregate()
@@ -4041,13 +4041,13 @@ class HttpClientTest extends BaseHttpTest {
 				                  // Retry on 407 instead of 401
 				                  (req, res) -> res.status().equals(HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED),
 				                  (req, addr) -> {
-									  req.header("WWW-Authenticate", "Negotiate custom-token");
+				                      req.header("WWW-Authenticate", "Negotiate custom-token");
 				                      return Mono.empty();
 				                  }
 				          );
 
 		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
-								.get()
+		                        .get()
 		                        .uri("/proxy-protected")
 		                        .responseContent()
 		                        .aggregate()
@@ -4200,11 +4200,8 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicInteger authenticatorCallCount = new AtomicInteger(0);
 		Set<ChannelId> parentChannelIds = ConcurrentHashMap.newKeySet();
 
-		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem())
-				.build();
-		SslContext sslClient = SslContextBuilder.forClient()
-				.trustManager(InsecureTrustManagerFactory.INSTANCE)
-				.build();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
+		SslContext sslClient = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
 		disposableServer =
 				HttpServer.create()

@@ -29,6 +29,8 @@ public class Application {
 				          .httpAuthentication(
 				              (req, res) -> res.status().code() == 401, // <1>
 				              (req, addr) -> { // <2>
+				                  // Never hardcode credentials in production code.
+				                  // The one below is just an example.
 				                  String credentials = "username:password";
 				                  String encodedCredentials = Base64.getEncoder()
 				                      .encodeToString(credentials.getBytes(StandardCharsets.UTF_8));

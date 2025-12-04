@@ -42,10 +42,11 @@ public class Application {
 
 	/**
 	 * Generates an authentication token for the given remote address.
-	 * In a real application, this would retrieve or generate a valid token.
+	 * In production code, this would retrieve or generate a valid token.
 	 */
 	static String generateAuthToken(SocketAddress remoteAddress) {
-		// In a real application, implement token generation/retrieval logic
+		// Never hardcode tokens in production code.
+		// The one below is just an example.
 		return "sample-token-123";
 	}
 }

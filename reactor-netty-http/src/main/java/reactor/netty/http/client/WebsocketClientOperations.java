@@ -135,7 +135,7 @@ class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	@Override
-	@SuppressWarnings({"FutureReturnValueIgnored", "NullAway"})
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			started = true;
