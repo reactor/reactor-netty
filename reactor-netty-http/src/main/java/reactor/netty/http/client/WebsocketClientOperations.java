@@ -59,6 +59,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Stephane Maldini
  * @author Simon Baslé
+ * @author raccoonback
  */
 class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
@@ -144,7 +145,7 @@ class WebsocketClientOperations extends HttpClientOperations
 
 			setNettyResponse(response);
 
-			if (notRedirected(response)) {
+			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
 					handshakerHttp11.finishHandshake(channel(), response);
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
@@ -165,9 +166,12 @@ class WebsocketClientOperations extends HttpClientOperations
 			else {
 				response.content()
 				        .release();
-				// Deliberately suppress "NullAway"
-				// redirecting is initialized in notRedirected(response)
-				listener().onUncaughtException(this, redirecting);
+				if (redirecting != null) {
+					listener().onUncaughtException(this, redirecting);
+				}
+				else if (authenticating != null) {
+					listener().onUncaughtException(this, authenticating);
+				}
 			}
 			return;
 		}

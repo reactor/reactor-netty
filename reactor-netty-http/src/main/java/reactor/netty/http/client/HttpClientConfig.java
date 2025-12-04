@@ -108,6 +108,7 @@ import static reactor.netty.http.client.Http3Codec.newHttp3ClientConnectionHandl
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  */
 public final class HttpClientConfig extends ClientTransportConfig<HttpClientConfig> {
 
@@ -367,6 +368,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Nullable String uriStr;
 	@Nullable Function<String, String> uriTagValue;
 	@Nullable WebsocketClientSpec websocketClientSpec;
+	@Nullable BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> authenticationPredicate;
+	@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
+	int maxAuthenticationRetries;
 
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -419,6 +423,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.uriStr = parent.uriStr;
 		this.uriTagValue = parent.uriTagValue;
 		this.websocketClientSpec = parent.websocketClientSpec;
+		this.authenticationPredicate = parent.authenticationPredicate;
+		this.authenticator = parent.authenticator;
+		this.maxAuthenticationRetries = parent.maxAuthenticationRetries;
 	}
 
 	@Override
