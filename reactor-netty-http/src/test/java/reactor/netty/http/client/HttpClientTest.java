@@ -3811,8 +3811,34 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testHttpAuthentication() {
-		AtomicInteger requestCount = new AtomicInteger(0);
 		AtomicBoolean authHeaderAdded = new AtomicBoolean(false);
+		doTestHttpAuthentication(httpClient -> httpClient.httpAuthentication(
+				(req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
+				(req, addr) -> {
+					authHeaderAdded.set(true);
+					req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+				}));
+		assertThat(authHeaderAdded.get()).isTrue();
+	}
+
+	@Test
+	void testHttpAuthenticationWithMonoAuthenticator() {
+		AtomicInteger authCallCount = new AtomicInteger(0);
+		doTestHttpAuthentication(httpClient -> httpClient.httpAuthenticationWhen(
+				(req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
+				(req, addr) -> {
+					int callNum = authCallCount.incrementAndGet();
+					// Simulate async token generation
+					return Mono.delay(Duration.ofMillis(100))
+					           .then(Mono.fromRunnable(() -> req.header(HttpHeaderNames.AUTHORIZATION,
+					                   "Bearer test-token-" + callNum)));
+				}
+		));
+		assertThat(authCallCount.get()).isEqualTo(1);
+	}
+
+	private void doTestHttpAuthentication(Function<HttpClient, HttpClient> httpClientCustomizer) {
+		AtomicInteger requestCount = new AtomicInteger(0);
 		AtomicReference<HttpClientRequest> capturedRequest = new AtomicReference<>();
 
 		disposableServer =
@@ -3829,22 +3855,14 @@ class HttpClientTest extends BaseHttpTest {
 				              }
 				              else {
 				                  // Second request should have auth header
-				                  assertThat(authHeader).isEqualTo("Bearer test-token");
+				                  assertThat(authHeader).startsWith("Bearer test-token");
 				                  return res.status(HttpResponseStatus.OK)
 				                            .sendString(Mono.just("Authenticated!"));
 				              }
 				          })
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .httpAuthentication(
-				                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
-				                  (req, addr) -> {
-				                      authHeaderAdded.set(true);
-				                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
-				                  });
+		HttpClient client = httpClientCustomizer.apply(HttpClient.create().port(disposableServer.port()));
 
 		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
 		                        .get()
@@ -3856,7 +3874,6 @@ class HttpClientTest extends BaseHttpTest {
 
 		assertThat(response).isEqualTo("Authenticated!");
 		assertThat(requestCount.get()).isEqualTo(2);
-		assertThat(authHeaderAdded.get()).isTrue();
 		assertThat(capturedRequest.get()).isNotNull();
 		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(1);
 	}
@@ -3904,61 +3921,6 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(authenticatorCalled.get()).isFalse();
 		assertThat(capturedRequest.get()).isNotNull();
 		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(0);
-	}
-
-	@Test
-	void testHttpAuthenticationWithMonoAuthenticator() {
-		AtomicInteger requestCount = new AtomicInteger(0);
-		AtomicInteger authCallCount = new AtomicInteger(0);
-		AtomicReference<HttpClientRequest> capturedRequest = new AtomicReference<>();
-
-		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .handle((req, res) -> {
-				              int count = requestCount.incrementAndGet();
-				              String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
-
-				              if (count == 1) {
-				                  assertThat(authHeader).isNull();
-				                  return res.status(HttpResponseStatus.UNAUTHORIZED).send();
-				              }
-				              else {
-				                  assertThat(authHeader).startsWith("Bearer async-token-");
-				                  return res.status(HttpResponseStatus.OK)
-				                            .sendString(Mono.just("Success"));
-				              }
-				          })
-				          .bindNow();
-
-		HttpClient client =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .httpAuthenticationWhen(
-				                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
-				                  (req, addr) -> {
-				                      int callNum = authCallCount.incrementAndGet();
-				                      // Simulate async token generation
-				                      return Mono.delay(Duration.ofMillis(100))
-				                                 .then(Mono.fromRunnable(() ->
-				                                         req.header(HttpHeaderNames.AUTHORIZATION,
-				                                                   "Bearer async-token-" + callNum)));
-				                  }
-				          );
-
-		String response = client.doAfterRequest((req, conn) -> capturedRequest.set(req))
-		                        .get()
-		                        .uri("/api/resource")
-		                        .responseContent()
-		                        .aggregate()
-		                        .asString()
-		                        .block(Duration.ofSeconds(5));
-
-		assertThat(response).isEqualTo("Success");
-		assertThat(requestCount.get()).isEqualTo(2);
-		assertThat(authCallCount.get()).isEqualTo(1);
-		assertThat(capturedRequest.get()).isNotNull();
-		assertThat(capturedRequest.get().authenticationRetryCount()).isEqualTo(1);
 	}
 
 	@Test
@@ -4109,21 +4071,37 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpAuthenticationRetriesResetPerRequestHttp1() {
+	void testHttpAuthenticationRetriesResetPerRequestHttp1() throws Exception {
+		doTestHttpAuthenticationRetriesResetPerRequest(false);
+	}
+
+	@Test
+	void testHttpAuthenticationRetriesResetPerRequestHttp2() throws Exception {
+		doTestHttpAuthenticationRetriesResetPerRequest(true);
+	}
+
+	private void doTestHttpAuthenticationRetriesResetPerRequest(boolean isHttp2) throws Exception {
 		AtomicInteger requestCount = new AtomicInteger(0);
 		AtomicInteger authenticatorCallCount = new AtomicInteger(0);
 		Set<ChannelId> channelIds = ConcurrentHashMap.newKeySet();
+
+		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
+		SslContext sslClient = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
 				          .wiretap(true)
+				          .protocol(isHttp2 ? HttpProtocol.H2 : HttpProtocol.HTTP11)
+				          .secure(spec -> spec.sslContext(sslServer))
 				          .handle((req, res) -> {
 				              int count = requestCount.incrementAndGet();
 				              String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
 
 				              // Track channel ID to verify connection reuse
-				              req.withConnection(conn -> channelIds.add(conn.channel().id()));
+				              // Track parent channel ID (HTTP/2 connection) to verify reuse
+				              req.withConnection(conn ->
+				                      channelIds.add(isHttp2 ? conn.channel().parent().id() : conn.channel().id()));
 
 				              // Always return 401 on first attempt (no auth header)
 				              if (authHeader == null || !authHeader.equals("Bearer token")) {
@@ -4136,13 +4114,14 @@ class HttpClientTest extends BaseHttpTest {
 				          })
 				          .bindNow();
 
-		ConnectionProvider provider = ConnectionProvider.create("test", 1);
+		ConnectionProvider provider = ConnectionProvider.create("doTestHttpAuthenticationRetriesResetPerRequest", 1);
 
 		try {
 			HttpClient client =
 					HttpClient.create(provider)
 					          .port(disposableServer.port())
-					          .protocol(HttpProtocol.HTTP11)
+					          .protocol(isHttp2 ? HttpProtocol.H2 : HttpProtocol.HTTP11)
+					          .secure(spec -> spec.sslContext(sslClient))
 					          .httpAuthenticationWhen(
 					                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
 					                  (req, addr) -> {
@@ -4153,32 +4132,22 @@ class HttpClientTest extends BaseHttpTest {
 					          );
 
 			// First request: 401 -> retry with auth -> 200
-			String response1 = client.get()
-			                         .uri("/api/1")
-			                         .responseContent()
-			                         .aggregate()
-			                         .asString()
-			                         .block(Duration.ofSeconds(5));
-			assertThat(response1).contains("OK");
-
 			// Second request using same connection from pool: should reset authenticationRetries
 			// Should also trigger: 401 -> retry with auth -> 200
-			String response2 = client.get()
-			                         .uri("/api/2")
-			                         .responseContent()
-			                         .aggregate()
-			                         .asString()
-			                         .block(Duration.ofSeconds(5));
-			assertThat(response2).contains("OK");
-
+			// Second request on same HTTP/2 connection (new stream): should reset authenticationRetries
 			// Third request: same pattern
-			String response3 = client.get()
-			                         .uri("/api/3")
-			                         .responseContent()
-			                         .aggregate()
-			                         .asString()
-			                         .block(Duration.ofSeconds(5));
-			assertThat(response3).contains("OK");
+			Flux.range(1, 3)
+			    .concatMap(i ->
+			        client.get()
+			              .uri("/api/" + i)
+			              .responseContent()
+			              .aggregate()
+			              .asString())
+			    .collectList()
+			    .as(StepVerifier::create)
+			    .assertNext(list -> assertThat(list).allMatch(s -> s.contains("OK")))
+			    .expectComplete()
+			    .verify(Duration.ofSeconds(5));
 
 			// Verify:
 			// - Each request triggered auth retry (3 requests × 2 attempts = 6 total server requests)
@@ -4187,101 +4156,8 @@ class HttpClientTest extends BaseHttpTest {
 			assertThat(authenticatorCallCount.get()).isEqualTo(3);
 			// - Connection was reused (HTTP/1.1 keep-alive with pool size 1)
 			// All requests should use the same channel
-			assertThat(channelIds).hasSize(1);
-		}
-		finally {
-			provider.disposeLater().block(Duration.ofSeconds(5));
-		}
-	}
-
-	@Test
-	void testHttpAuthenticationRetriesResetPerRequestHttp2() throws Exception {
-		AtomicInteger requestCount = new AtomicInteger(0);
-		AtomicInteger authenticatorCallCount = new AtomicInteger(0);
-		Set<ChannelId> parentChannelIds = ConcurrentHashMap.newKeySet();
-
-		SslContext sslServer = SslContextBuilder.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem()).build();
-		SslContext sslClient = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-
-		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .protocol(HttpProtocol.H2)
-				          .secure(spec -> spec.sslContext(sslServer))
-				          .wiretap(true)
-				          .handle((req, res) -> {
-				              int count = requestCount.incrementAndGet();
-				              String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
-
-				              // Track parent channel ID (HTTP/2 connection) to verify reuse
-				              req.withConnection(conn -> {
-				                  if (conn.channel().parent() != null) {
-				                      parentChannelIds.add(conn.channel().parent().id());
-				                  }
-				              });
-
-				              // Always return 401 on first attempt (no auth header)
-				              if (authHeader == null || !authHeader.equals("Bearer h2-token")) {
-				                  return res.status(HttpResponseStatus.UNAUTHORIZED).send();
-				              }
-				              else {
-				                  return res.status(HttpResponseStatus.OK)
-				                            .sendString(Mono.just("OK-H2-" + count));
-				              }
-				          })
-				          .bindNow();
-
-		ConnectionProvider provider = ConnectionProvider.create("test-h2", 1);
-
-		try {
-			HttpClient client =
-					HttpClient.create(provider)
-					          .port(disposableServer.port())
-					          .protocol(HttpProtocol.H2)
-					          .secure(spec -> spec.sslContext(sslClient))
-					          .httpAuthenticationWhen(
-					                  (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
-					                  (req, addr) -> {
-					                      authenticatorCallCount.incrementAndGet();
-					                      req.header(HttpHeaderNames.AUTHORIZATION, "Bearer h2-token");
-					                      return Mono.empty();
-					                  }
-					          );
-
-			// First request: 401 -> retry with auth -> 200
-			String response1 = client.get()
-			                         .uri("/api/1")
-			                         .responseContent()
-			                         .aggregate()
-			                         .asString()
-			                         .block(Duration.ofSeconds(5));
-			assertThat(response1).contains("OK-H2");
-
-			// Second request on same HTTP/2 connection (new stream): should reset authenticationRetries
-			String response2 = client.get()
-			                         .uri("/api/2")
-			                         .responseContent()
-			                         .aggregate()
-			                         .asString()
-			                         .block(Duration.ofSeconds(5));
-			assertThat(response2).contains("OK-H2");
-
-			// Third request: same pattern
-			String response3 = client.get()
-			                         .uri("/api/3")
-			                         .responseContent()
-			                         .aggregate()
-			                         .asString()
-			                         .block(Duration.ofSeconds(5));
-			assertThat(response3).contains("OK-H2");
-
-			// Verify:
-			// - Each request triggered auth retry (3 requests × 2 attempts = 6 total)
-			assertThat(requestCount.get()).isEqualTo(6);
-			// - Authenticator was called 3 times (once per request)
-			assertThat(authenticatorCallCount.get()).isEqualTo(3);
 			// - Same HTTP/2 connection was reused for all streams
-			assertThat(parentChannelIds).hasSize(1);
+			assertThat(channelIds).hasSize(1);
 		}
 		finally {
 			provider.disposeLater().block(Duration.ofSeconds(5));
