@@ -504,6 +504,7 @@ class HttpClientConnect extends HttpClient {
 		@Nullable BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator;
 		volatile int authenticationRetries;
 		int maxAuthenticationRetries;
+		volatile boolean applyAuthenticatorOnNextRequest;
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
@@ -661,8 +662,10 @@ class HttpClientConnect extends HttpClient {
 					}
 				}
 
-				// Apply authenticator if needed (after REQUEST_PREPARED)
-				if (authenticator != null && authenticationRetries > 0) {
+				// Apply authenticator only if we're retrying due to authentication failure
+				// (not on redirects, even if authenticationRetries > 0)
+				if (authenticator != null && applyAuthenticatorOnNextRequest) {
+					applyAuthenticatorOnNextRequest = false;
 					return authenticator.apply(ch, ch.address())
 							.then(Mono.defer(() -> Mono.from(result)));
 				}
@@ -755,6 +758,7 @@ class HttpClientConnect extends HttpClient {
 			if (throwable instanceof HttpClientAuthenticationException) {
 				// Increment retry counter to trigger authenticator on retry
 				authenticationRetries++;
+				applyAuthenticatorOnNextRequest = true;
 				return true;
 			}
 			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {

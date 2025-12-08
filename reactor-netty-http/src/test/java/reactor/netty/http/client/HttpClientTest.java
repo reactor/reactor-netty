@@ -122,6 +122,7 @@ import reactor.netty.ByteBufMono;
 import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
@@ -4161,6 +4162,65 @@ class HttpClientTest extends BaseHttpTest {
 		}
 		finally {
 			provider.disposeLater().block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testHttpAuthenticationThenRedirect() {
+		AtomicInteger server2RequestCount = new AtomicInteger(0);
+		DisposableServer server2 =
+				createServer()
+				        .handle((req, res) -> {
+				            server2RequestCount.incrementAndGet();
+				            String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
+				            return res.sendString(Mono.just(authHeader == null ? "OK" : "KO"));
+				        })
+				        .bindNow();
+
+		AtomicInteger server1RequestCount = new AtomicInteger(0);
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> {
+				            int count = server1RequestCount.incrementAndGet();
+				            String authHeader = req.requestHeaders().get(HttpHeaderNames.AUTHORIZATION);
+
+				            if (count == 1) {
+				                assertThat(authHeader).isNull();
+				                return res.status(HttpResponseStatus.UNAUTHORIZED).send();
+				            }
+				            else {
+				                assertThat(authHeader).isEqualTo("Bearer test-token");
+				                return res.sendRedirect("http://127.0.0.1:" + server2.port());
+				            }
+				        })
+				        .bindNow();
+
+		try {
+			AtomicInteger authenticatorCallCount = new AtomicInteger(0);
+			createClient(disposableServer::address)
+			        .followRedirect(true)
+			        .httpAuthentication(
+			            (req, res) -> res.status().equals(HttpResponseStatus.UNAUTHORIZED),
+			            (req, addr) -> {
+			                authenticatorCallCount.incrementAndGet();
+			                req.header(HttpHeaderNames.AUTHORIZATION, "Bearer test-token");
+			            })
+			        .get()
+			        .uri("/")
+			        .responseContent()
+			        .aggregate()
+			        .asString()
+			        .as(StepVerifier::create)
+			        .expectNext("OK")
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(5));
+
+			assertThat(server1RequestCount.get()).isEqualTo(2);
+			assertThat(server2RequestCount.get()).isEqualTo(1);
+			assertThat(authenticatorCallCount.get()).isEqualTo(1);
+		}
+		finally {
+			server2.disposeNow();
 		}
 	}
 
