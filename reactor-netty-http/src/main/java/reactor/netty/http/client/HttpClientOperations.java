@@ -783,6 +783,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
 			listener().onUncaughtException(this, err);
+			//force auto read to enable more accurate close selection now inbound is done
+			channel().config().setAutoRead(true);
 			if (markSentBody()) {
 				markPersistent(false);
 			}
@@ -804,6 +806,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
 				// FAIL_ZERO_SUBSCRIBER
 				trailerHeaders.tryEmitEmpty();
+				//force auto read to enable more accurate close selection now inbound is done
+				channel().config().setAutoRead(true);
 				terminate();
 				return;
 			}
@@ -866,6 +870,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
 				// FAIL_ZERO_SUBSCRIBER
 				trailerHeaders.tryEmitValue(request.trailingHeaders());
+				//force auto read to enable more accurate close selection now inbound is done
+				channel().config().setAutoRead(true);
 				terminate();
 			}
 			return;
@@ -881,6 +887,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
 				// FAIL_ZERO_SUBSCRIBER
 				trailerHeaders.tryEmitValue(lastHttpContent.trailingHeaders());
+				//force auto read to enable more accurate close selection now inbound is done
+				channel().config().setAutoRead(true);
 				terminate();
 				return;
 			}
