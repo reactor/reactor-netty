@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -45,6 +46,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
@@ -169,10 +171,13 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 		}
 		else if (!pendingResponse) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
+				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+				HttpVersion version = channelOps instanceof HttpServerOperations ?
+						((HttpServerOperations) channelOps).version() : null;
 				HttpServerOperations.log.debug(
 						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
 						msg instanceof HttpObject ?
-								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg, version)) : msg);
 			}
 			ReferenceCountUtil.release(msg);
 			ctx.read();

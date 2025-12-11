@@ -225,7 +225,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	protected String asDebugLogMessage(Object o) {
 		return o instanceof HttpObject ?
-				httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(o)) :
+				httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(o, version())) :
 				o.toString();
 	}
 

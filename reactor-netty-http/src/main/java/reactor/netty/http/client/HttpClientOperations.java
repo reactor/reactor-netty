@@ -210,22 +210,13 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.trailerHeaders = Sinks.unsafe().one();
 	}
 
-	private HttpVersion initHttpVersion(Connection c) {
+	private static HttpVersion initHttpVersion(Connection c) {
 		HttpVersion version;
 		if (c.channel() instanceof Http2StreamChannel) {
 			version = H2;
 		}
 		else if (c.channel() instanceof SocketChannel || c.channel() instanceof DomainSocketChannel) {
-			HttpVersion protocolVersion = this.nettyRequest.protocolVersion();
-			if (protocolVersion.equals(HttpVersion.HTTP_1_0)) {
-				version = HttpVersion.HTTP_1_0;
-			}
-			else if (protocolVersion.equals(HttpVersion.HTTP_1_1)) {
-				version = HttpVersion.HTTP_1_1;
-			}
-			else {
-				throw new IllegalStateException(protocolVersion.protocolName() + " not supported");
-			}
+			version = HttpVersion.HTTP_1_1;
 		}
 		else {
 			version = H3;
@@ -819,7 +810,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (started) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel(), "HttpClientOperations cannot proceed more than one response {}"),
-							httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
+							httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response, version)));
 				}
 				ReferenceCountUtil.release(msg);
 				return;
@@ -839,7 +830,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
 						channel().config().isAutoRead(),
-						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
+						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response, version)));
 			}
 
 			if (notRedirected(response)) {
@@ -976,7 +967,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received redirect location: {}"),
-						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
+						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response, version)));
 			}
 			return false;
 		}
