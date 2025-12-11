@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package reactor.netty.http.logging;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.http.logging.HttpMessageType.REQUEST;
 
@@ -27,11 +29,11 @@ final class HttpRequestArgProvider extends AbstractHttpMessageArgProvider {
 	final String protocol;
 	final String uri;
 
-	HttpRequestArgProvider(HttpRequest httpRequest) {
+	HttpRequestArgProvider(HttpRequest httpRequest, @Nullable HttpVersion actualVersion) {
 		super(httpRequest.decoderResult());
 		this.httpHeaders = httpRequest.headers();
 		this.method = httpRequest.method().name();
-		this.protocol = httpRequest.protocolVersion().text();
+		this.protocol = actualVersion != null ? actualVersion.text() : httpRequest.protocolVersion().text();
 		this.uri = httpRequest.uri();
 	}
 

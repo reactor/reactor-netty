@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import reactor.util.annotation.Nullable;
 
 /**
  * Factory for creating {@link HttpContentArgProvider} based on the provided HTTP object.
@@ -37,17 +39,29 @@ public final class HttpMessageArgProviderFactory {
 	 * @return a new {@link HttpContentArgProvider}
 	 */
 	public static HttpMessageArgProvider create(Object httpObject) {
+		return create(httpObject, null);
+	}
+
+	/**
+	 * Creates {@link HttpContentArgProvider} based on the provided HTTP object and actual protocol version.
+	 *
+	 * @param httpObject the HTTP object
+	 * @param actualVersion the actual HTTP version (optional, used to override the protocol version from the HTTP message)
+	 * @return a new {@link HttpContentArgProvider}
+	 * @since 1.2.14
+	 */
+	public static HttpMessageArgProvider create(Object httpObject, @Nullable HttpVersion actualVersion) {
 		if (httpObject instanceof FullHttpRequest) {
-			return new FullHttpRequestArgProvider((FullHttpRequest) httpObject);
+			return new FullHttpRequestArgProvider((FullHttpRequest) httpObject, actualVersion);
 		}
 		else if (httpObject instanceof HttpRequest) {
-			return new HttpRequestArgProvider((HttpRequest) httpObject);
+			return new HttpRequestArgProvider((HttpRequest) httpObject, actualVersion);
 		}
 		else if (httpObject instanceof FullHttpResponse) {
-			return new FullHttpResponseArgProvider((FullHttpResponse) httpObject);
+			return new FullHttpResponseArgProvider((FullHttpResponse) httpObject, actualVersion);
 		}
 		else if (httpObject instanceof HttpResponse) {
-			return new HttpResponseArgProvider((HttpResponse) httpObject);
+			return new HttpResponseArgProvider((HttpResponse) httpObject, actualVersion);
 		}
 		else if (httpObject instanceof LastHttpContent) {
 			return new LastHttpContentArgProvider((LastHttpContent) httpObject);
