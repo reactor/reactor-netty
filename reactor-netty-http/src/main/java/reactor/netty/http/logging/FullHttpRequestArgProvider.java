@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package reactor.netty.http.logging;
 
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpVersion;
+import org.jspecify.annotations.Nullable;
 
 import static reactor.netty.http.logging.HttpMessageType.FULL_REQUEST;
 
@@ -27,11 +29,11 @@ final class FullHttpRequestArgProvider extends LastHttpContentArgProvider {
 	final String protocol;
 	final String uri;
 
-	FullHttpRequestArgProvider(FullHttpRequest fullHttpRequest) {
+	FullHttpRequestArgProvider(FullHttpRequest fullHttpRequest, @Nullable HttpVersion actualVersion) {
 		super(fullHttpRequest);
 		this.httpHeaders = fullHttpRequest.headers();
 		this.method = fullHttpRequest.method().name();
-		this.protocol = fullHttpRequest.protocolVersion().text();
+		this.protocol = actualVersion != null ? actualVersion.text() : fullHttpRequest.protocolVersion().text();
 		this.uri = fullHttpRequest.uri();
 	}
 

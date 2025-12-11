@@ -303,10 +303,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			}
 			else {
 				if (HttpServerOperations.log.isDebugEnabled()) {
+					ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+					HttpVersion version = channelOps instanceof HttpServerOperations ?
+							((HttpServerOperations) channelOps).version() : null;
 					HttpServerOperations.log.debug(
 							format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
 							msg instanceof HttpObject ?
-									httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
+									httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg, version)) : msg);
 				}
 				ReferenceCountUtil.release(msg);
 			}
@@ -443,10 +446,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		}
 		if (persistentConnection && pendingResponses == 0) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
+				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+				HttpVersion version = channelOps instanceof HttpServerOperations ?
+						((HttpServerOperations) channelOps).version() : null;
 				HttpServerOperations.log.debug(
 						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
 						msg instanceof HttpObject ?
-								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg, version)) : msg);
 			}
 			ReferenceCountUtil.release(msg);
 			promise.setSuccess();
@@ -483,9 +489,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	void handleDefaultHttContent(DefaultHttpContent msg, ChannelPromise promise) {
 		if (persistentConnection && pendingResponses == 0) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
+				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+				HttpVersion version = channelOps instanceof HttpServerOperations ?
+						((HttpServerOperations) channelOps).version() : null;
 				HttpServerOperations.log.debug(
 						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
-								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)));
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg, version)));
 			}
 			msg.release();
 			promise.setSuccess();

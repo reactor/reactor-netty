@@ -1229,6 +1229,28 @@ class Http3Tests {
 		        .verify(Duration.ofSeconds(30));
 	}
 
+	@Test
+	void testIssue3522() throws Exception {
+		disposableServer = createServer().handle((req, res) -> res.sendString(Mono.just("testIssue3522"))).bindNow();
+
+		String message = "HTTP/3.0 200";
+		try (LogTracker logTracker = new LogTracker("reactor.netty.http.client.HttpClientOperations", message)) {
+			createClient(disposableServer.port())
+			        .get()
+			        .uri("/")
+			        .responseSingle((res, buf) -> buf.asString())
+			        .as(StepVerifier::create)
+			        .expectNext("testIssue3522")
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(5));
+
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(logTracker.actualMessages).hasSize(1);
+			assertThat(logTracker.actualMessages.get(0).getFormattedMessage()).contains(message);
+		}
+	}
+
 	static HttpClient createClient(int port) {
 		return createClient(null, port);
 	}

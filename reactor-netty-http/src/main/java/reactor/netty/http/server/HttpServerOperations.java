@@ -1125,9 +1125,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
 
 		if (log.isWarnEnabled()) {
+			HttpVersion version = null;
+			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+			if (channelOps instanceof HttpServerOperations) {
+				version = ((HttpServerOperations) channelOps).version();
+			}
+			else if (isHttp2) {
+				version = H2;
+			}
 			log.warn(format(ctx.channel(), "Decoding failed: {}"),
 					msg instanceof HttpObject ?
-							httpMessageLogFactory.warn(HttpMessageArgProviderFactory.create(msg)) : msg);
+							httpMessageLogFactory.warn(HttpMessageArgProviderFactory.create(msg, version)) : msg);
 		}
 
 		ReferenceCountUtil.release(msg);

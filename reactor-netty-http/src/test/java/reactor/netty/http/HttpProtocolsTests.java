@@ -1421,6 +1421,32 @@ class HttpProtocolsTests extends BaseHttpTest {
 		      .verify(Duration.ofSeconds(5));
 	}
 
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3522(HttpServer server, HttpClient client) throws Exception {
+		disposableServer = server.handle((req, res) -> res.sendString(Mono.just("testIssue3522"))).bindNow();
+
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		String message = "HTTP/" + (isHttp11 ? "1.1" : "2.0") + " 200";
+		try (LogTracker logTracker = new LogTracker("reactor.netty.http.client.HttpClientOperations", message)) {
+			client.port(disposableServer.port())
+			      .get()
+			      .uri("/")
+			      .responseSingle((res, buf) -> buf.asString())
+			      .as(StepVerifier::create)
+			      .expectNext("testIssue3522")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
+
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(logTracker.actualMessages).hasSize(1);
+			assertThat(logTracker.actualMessages.get(0).getFormattedMessage()).contains(message);
+		}
+	}
+
 	static final class IdleTimeoutTestChannelInboundHandler extends ChannelInboundHandlerAdapter {
 
 		final CountDownLatch latch = new CountDownLatch(1);

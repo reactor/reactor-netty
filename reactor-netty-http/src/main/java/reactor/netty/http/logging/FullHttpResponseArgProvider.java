@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package reactor.netty.http.logging;
 
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpVersion;
+import org.jspecify.annotations.Nullable;
 
 import static reactor.netty.http.logging.HttpMessageType.FULL_RESPONSE;
 
@@ -26,10 +28,10 @@ final class FullHttpResponseArgProvider extends LastHttpContentArgProvider {
 	final String protocol;
 	final String status;
 
-	FullHttpResponseArgProvider(FullHttpResponse fullHttpResponse) {
+	FullHttpResponseArgProvider(FullHttpResponse fullHttpResponse, @Nullable HttpVersion actualVersion) {
 		super(fullHttpResponse);
 		this.httpHeaders = fullHttpResponse.headers();
-		this.protocol = fullHttpResponse.protocolVersion().text();
+		this.protocol = actualVersion != null ? actualVersion.text() : fullHttpResponse.protocolVersion().text();
 		this.status = fullHttpResponse.status().toString();
 	}
 
