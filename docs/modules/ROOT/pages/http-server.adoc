@@ -369,7 +369,7 @@ include::{examples-dir}/lifecycle/Application.java[lines=18..39]
 [[connection-limit]]
 == Connection Limit
 
-You can configure the `HTTP` server to limit the maximum number of concurrent connections.
+You can configure the `HttpServer` to limit the maximum number of concurrent connections.
 When the limit is reached, new connections are immediately rejected by closing them.
 By default, there is no limit (value of `-1`).
 
