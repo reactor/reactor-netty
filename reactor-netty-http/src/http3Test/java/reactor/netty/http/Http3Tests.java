@@ -1295,7 +1295,8 @@ class Http3Tests {
 			assertThat(connectionCount.get()).isEqualTo(2);
 			assertThat(successCount.get()).isEqualTo(2);
 			assertThat(failureCount.get()).isEqualTo(1);
-		} finally {
+		}
+		finally {
 			disposableServer.disposeNow();
 			for (ConnectionProvider provider : providers) {
 				provider.disposeLater().block(Duration.ofSeconds(1));
