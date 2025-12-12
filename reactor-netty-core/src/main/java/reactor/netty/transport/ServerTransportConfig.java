@@ -271,14 +271,6 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 				                        !(parent instanceof ServerChannel) &&
 				                        parent.parent() instanceof ServerChannel;
 
-				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "Channel type: {}, parent: {}, isHttp2Stream: {}, maxConnections: {}"),
-					          channel.getClass().getSimpleName(),
-					          parent == null ? "null" : parent.getClass().getSimpleName(),
-					          isHttp2Stream,
-					          maxConnections);
-				}
-
 				// Check max connections limit using AtomicInteger
 				// Only count actual connections (TCP, QUIC/HTTP3), not HTTP/2 streams
 				if (maxConnections > 0 && !isHttp2Stream) {
