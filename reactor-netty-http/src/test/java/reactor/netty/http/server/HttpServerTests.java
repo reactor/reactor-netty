@@ -176,6 +176,7 @@ import static reactor.netty.resources.LoopResources.DEFAULT_SHUTDOWN_TIMEOUT;
  * This test class verifies {@link HttpServer}.
  *
  * @author Stephane Maldini
+ * @author raccoonback
  */
 class HttpServerTests extends BaseHttpTest {
 
@@ -3931,6 +3932,53 @@ class HttpServerTests extends BaseHttpTest {
 
 		@Override
 		public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		}
+	}
+
+	@Test
+	void testMaxConnectionsLimit() throws Exception {
+		try {
+			AtomicInteger connectionCount = new AtomicInteger();
+
+			disposableServer =
+					HttpServer.create()
+							.port(0)
+							.maxConnections(2)
+							.doOnConnection(connection -> connectionCount.incrementAndGet())
+							.handle((req, res) -> res.sendString(Mono.just("OK")))
+							.bindNow();
+
+			CountDownLatch latch = new CountDownLatch(3);
+			AtomicInteger successCount = new AtomicInteger();
+			AtomicInteger failureCount = new AtomicInteger();
+
+			for (int i = 0; i < 3; i++) {
+				HttpClient.create()
+						.port(disposableServer.port())
+						.get()
+						.uri("/")
+						.responseContent()
+						.aggregate()
+						.asString()
+						.subscribe(
+								s -> {
+									successCount.incrementAndGet();
+									latch.countDown();
+								},
+								e -> {
+									failureCount.incrementAndGet();
+									latch.countDown();
+								}
+						);
+			}
+
+			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+			assertThat(connectionCount.get()).isEqualTo(2);
+			assertThat(successCount.get()).isEqualTo(2);
+			assertThat(failureCount.get()).isEqualTo(1);
+		}
+		finally {
+			disposableServer.disposeNow();
 		}
 	}
 }

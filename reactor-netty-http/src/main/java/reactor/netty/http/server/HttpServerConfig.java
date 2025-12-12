@@ -113,6 +113,7 @@ import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FO
  * @author Stephane Maldini
  * @author Violeta Georgieva
  * @author Andrey Shlykov
+ * @author raccoonback
  */
 public final class HttpServerConfig extends ServerTransportConfig<HttpServerConfig> {
 
@@ -390,7 +391,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	public ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
 			@Nullable SocketAddress remoteAddress, boolean onServer) {
 		ChannelInitializer<Channel> channelInitializer = super.channelInitializer(connectionObserver, remoteAddress, onServer);
-		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer) : channelInitializer;
+		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer, connectionObserver) : channelInitializer;
 	}
 
 	@Override
@@ -718,7 +719,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		          new Http2MultiplexHandler(new H2Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate,
 		                  http2SettingsSpec != null ? http2SettingsSpec.connectProtocolEnabled() : null,
 		                  cookieDecoder, cookieEncoder, errorLogEnabled, errorLog, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener,
-		                  mapHandle, methodTagValue, metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue)));
+		                  mapHandle, methodTagValue, metricsRecorder, minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue)))
+		 .addLast(NettyPipeline.H2ConnectionHandler, new H2ConnectionHandler(listener));
 
 		IdleTimeoutHandler.addIdleTimeoutHandler(p, idleTimeout,
 				http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null ?
@@ -1038,6 +1040,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			// Add this handler at the end of the pipeline as it does not forward all channelRead events
 			pipeline.addLast(NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader));
+			// Add H2ConnectionHandler to trigger State.CONNECTED for maxConnections limiting
+			pipeline.addLast(NettyPipeline.H2ConnectionHandler, new H2ConnectionHandler(upgrader.listener));
 
 			pipeline.remove(this);
 
@@ -1283,6 +1287,23 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			else {
 				return null;
 			}
+		}
+	}
+
+	static final class H2ConnectionHandler extends ChannelInboundHandlerAdapter {
+
+		final ConnectionObserver listener;
+
+		H2ConnectionHandler(ConnectionObserver listener) {
+			this.listener = listener;
+		}
+
+		@Override
+		public void channelActive(ChannelHandlerContext ctx) throws Exception {
+			// Trigger State.CONNECTED for the HTTP/2 connection so that maxConnections limiting works
+			Connection c = Connection.from(ctx.channel());
+			listener.onStateChange(c, ConnectionObserver.State.CONNECTED);
+			super.channelActive(ctx);
 		}
 	}
 

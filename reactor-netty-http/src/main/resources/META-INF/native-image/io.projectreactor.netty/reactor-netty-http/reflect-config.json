@@ -197,6 +197,13 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerConfig$H2ConnectionHandler"
+		},
+		"name": "reactor.netty.http.server.HttpServerConfig$H2ConnectionHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.server.HttpServerConfig$H2OrHttp11Codec"
 		},
 		"name": "reactor.netty.http.server.HttpServerConfig$H2OrHttp11Codec",
@@ -214,6 +221,20 @@
 			"typeReachable": "reactor.netty.http.server.Http3ChannelInitializer"
 		},
 		"name": "reactor.netty.http.server.Http3ChannelInitializer",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.Http3ChannelInitializer$1"
+		},
+		"name": "reactor.netty.http.server.Http3ChannelInitializer$1",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.Http3ChannelInitializer$Http3ConnectionObserverBridge"
+		},
+		"name": "reactor.netty.http.server.Http3ChannelInitializer$Http3ConnectionObserverBridge",
 		"queryAllPublicMethods": true
 	},
 	{

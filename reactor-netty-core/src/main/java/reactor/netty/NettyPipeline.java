@@ -81,6 +81,7 @@ import io.netty.channel.ChannelInboundHandler;
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 0.6
  */
 public interface NettyPipeline {
@@ -95,6 +96,7 @@ public interface NettyPipeline {
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
 	String ErrorLogHandler       = LEFT + "errorLogHandler";
 	String H2CUpgradeHandler     = LEFT + "h2cUpgradeHandler";
+	String H2ConnectionHandler   = LEFT + "h2ConnectionHandler";
 	String H2Flush               = LEFT + "h2Flush";
 	String H2MultiplexHandler    = LEFT + "h2MultiplexHandler";
 	String H2OrHttp11Codec       = LEFT + "h2OrHttp11Codec";

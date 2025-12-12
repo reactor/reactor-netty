@@ -72,6 +72,7 @@ import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAdd
  * @param <CONF> Server Configuration implementation
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 1.0.0
  */
 public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
@@ -313,6 +314,24 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		@SuppressWarnings("unchecked")
 		Consumer<DisposableServer> current = (Consumer<DisposableServer>) configuration().doOnUnbound;
 		dup.configuration().doOnUnbound = current == null ? doOnUnbound : current.andThen(doOnUnbound);
+		return dup;
+	}
+
+	/**
+	 * Configures the maximum number of concurrent connections that the server will accept.
+	 * When the limit is reached, new connections will be rejected by immediately closing them.
+	 * A value of -1 means no limit (default).
+	 *
+	 * @param maxConnections the maximum number of concurrent connections, or -1 for no limit
+	 * @return a new {@link ServerTransport} reference
+	 * @throws IllegalArgumentException if maxConnections is less than -1 or equals to 0
+	 */
+	protected T maxConnections(int maxConnections) {
+		if (maxConnections < -1 || maxConnections == 0) {
+			throw new IllegalArgumentException("maxConnections must be greater than 0 or -1 (no limit)");
+		}
+		T dup = duplicate();
+		dup.configuration().maxConnections = maxConnections;
 		return dup;
 	}
 
