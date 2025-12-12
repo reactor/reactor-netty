@@ -41,14 +41,14 @@ jobs:
             java-version: '17.0.12'
       - name: Build and test with Java 8
         if: ${{ ! startsWith(matrix.transport, 'io_uring') }}
-        run: ./gradlew clean check -x :reactor-netty-core:java17Test -x :reactor-netty-core:java11Test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
+        run: ./gradlew clean check -x :reactor-netty-core:java17Test -x :reactor-netty-core:java11Test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.10.Final-SNAPSHOT'
       - name: Build and test IO_Uring on Java 11
         if: ${{ startsWith(matrix.transport, 'io_uring') }}
         # Add -PtestToolchain=11
-        run: ./gradlew clean check -x :reactor-netty-core:test -x :reactor-netty-core:java17Test -x :reactor-netty-core:shadedJarTest -x :reactor-netty-graalvm-smoke-tests:test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
+        run: ./gradlew clean check -x :reactor-netty-core:test -x :reactor-netty-core:java17Test -x :reactor-netty-core:shadedJarTest -x :reactor-netty-graalvm-smoke-tests:test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.10.Final-SNAPSHOT'
       - name: GraalVM smoke tests
         if: ${{ ! startsWith(matrix.transport, 'io_uring') }}
-        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
+        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.10.Final-SNAPSHOT'
       - name: GraalVM smoke tests IO_Uring on Java 17
         if: ${{ startsWith(matrix.transport, 'io_uring') }}
-        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest -PtestToolchain=17 --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.8.Final-SNAPSHOT'
+        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest -PtestToolchain=17 --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.2.10.Final-SNAPSHOT'
