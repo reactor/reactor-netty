@@ -925,7 +925,8 @@ class Http2Tests extends BaseHttpTest {
 			assertThat(connectionCount.get()).isEqualTo(2);
 			assertThat(successCount.get()).isEqualTo(2);
 			assertThat(failureCount.get()).isEqualTo(1);
-		} finally {
+		}
+		finally {
 			disposableServer.disposeNow();
 		}
 	}
@@ -947,7 +948,7 @@ class Http2Tests extends BaseHttpTest {
 			disposableServer =
 					createServer()
 							.protocol(serverProtocols)
-							.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>)serverCtx))
+							.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx))
 							.maxConnections(2)
 							.doOnConnection(connection -> connectionCount.incrementAndGet())
 							.handle((req, res) -> res.sendString(Mono.just("OK")))
@@ -961,7 +962,7 @@ class Http2Tests extends BaseHttpTest {
 				HttpClient.newConnection()
 						.remoteAddress(() -> disposableServer.address())
 						.protocol(clientProtocols)
-						.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>)clientCtx))
+						.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx))
 						.wiretap(true)
 						.get()
 						.uri("/")
@@ -984,7 +985,8 @@ class Http2Tests extends BaseHttpTest {
 			assertThat(connectionCount.get()).isEqualTo(2);
 			assertThat(successCount.get()).isEqualTo(2);
 			assertThat(failureCount.get()).isEqualTo(1);
-		} finally {
+		}
+		finally {
 			disposableServer.disposeNow();
 		}
 	}

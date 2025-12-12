@@ -126,7 +126,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
@@ -3977,7 +3976,8 @@ class HttpServerTests extends BaseHttpTest {
 			assertThat(connectionCount.get()).isEqualTo(2);
 			assertThat(successCount.get()).isEqualTo(2);
 			assertThat(failureCount.get()).isEqualTo(1);
-		} finally {
+		}
+		finally {
 			disposableServer.disposeNow();
 		}
 	}
