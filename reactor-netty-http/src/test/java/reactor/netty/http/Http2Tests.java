@@ -22,6 +22,7 @@ import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
+import java.util.ArrayList;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.Connection;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -884,6 +886,7 @@ class Http2Tests extends BaseHttpTest {
 	@MethodSource("h2cCompatibleCombinations")
 	void testMaxConnectionsLimitH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols)
 			throws InterruptedException {
+		List<Connection> connections = new ArrayList<>(3);
 		try {
 			AtomicInteger connectionCount = new AtomicInteger();
 
@@ -904,6 +907,7 @@ class Http2Tests extends BaseHttpTest {
 						.remoteAddress(() -> disposableServer.address())
 						.protocol(clientProtocols)
 						.wiretap(true)
+						.doOnRequest((req, conn) -> connections.add(conn))
 						.get()
 						.uri("/")
 						.responseContent()
@@ -927,6 +931,9 @@ class Http2Tests extends BaseHttpTest {
 			assertThat(failureCount.get()).isEqualTo(1);
 		}
 		finally {
+			for (Connection conn : connections) {
+				conn.dispose();
+			}
 			disposableServer.disposeNow();
 		}
 	}
@@ -936,6 +943,7 @@ class Http2Tests extends BaseHttpTest {
 	void testMaxConnectionsLimitH2(
 			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols
 	) throws Exception {
+		List<Connection> connections = new ArrayList<>(3);
 		try {
 			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(),
 					ssc.toTempPrivateKeyPem());
@@ -964,6 +972,7 @@ class Http2Tests extends BaseHttpTest {
 						.protocol(clientProtocols)
 						.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx))
 						.wiretap(true)
+						.doOnRequest((req, conn) -> connections.add(conn))
 						.get()
 						.uri("/")
 						.responseContent()
@@ -987,6 +996,9 @@ class Http2Tests extends BaseHttpTest {
 			assertThat(failureCount.get()).isEqualTo(1);
 		}
 		finally {
+			for (Connection conn : connections) {
+				conn.dispose();
+			}
 			disposableServer.disposeNow();
 		}
 	}
