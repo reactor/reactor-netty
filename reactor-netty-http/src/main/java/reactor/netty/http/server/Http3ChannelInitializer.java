@@ -33,6 +33,7 @@ import reactor.util.Loggers;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.handler.codec.http3.Http3.newQuicServerCodecBuilder;
 import static reactor.netty.ReactorNetty.format;
@@ -50,6 +51,8 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 	final Map<ChannelOption<?>, ?>    options;
 	final ChannelInitializer<Channel> quicChannelInitializer;
 	final QuicSslContext              quicSslContext;
+	final int                         maxConnections;
+	final AtomicInteger               activeConnections;
 
 	Http3ChannelInitializer(HttpServerConfig config, ChannelInitializer<Channel> quicChannelInitializer,
 			ConnectionObserver connectionObserver) {
@@ -61,6 +64,8 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 		this.loggingHandler = config.loggingHandler();
 		this.options = config.options();
 		this.quicChannelInitializer = quicChannelInitializer;
+		this.maxConnections = config.maxConnections();
+		this.activeConnections = config.activeConnectionsCounter();
 		if (config.sslProvider != null && config.sslProvider.getSslContext() instanceof QuicSslContext) {
 			this.quicSslContext = (QuicSslContext) config.sslProvider.getSslContext();
 		}
@@ -75,7 +80,7 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 			@Override
 			protected void initChannel(Channel ch) {
 				if (ch instanceof QuicChannel) {
-					ch.pipeline().addLast(new Http3ConnectionObserverBridge(connectionObserver));
+					ch.pipeline().addLast(new Http3ConnectionHandler(connectionObserver, maxConnections, activeConnections));
 				}
 				ch.pipeline().addLast(quicChannelInitializer);
 			}
@@ -145,17 +150,37 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 		}
 	}
 
-	static final class Http3ConnectionObserverBridge extends io.netty.channel.ChannelInboundHandlerAdapter {
+	static final class Http3ConnectionHandler extends io.netty.channel.ChannelInboundHandlerAdapter {
 
 		final ConnectionObserver connectionObserver;
+		final int                maxConnections;
+		final AtomicInteger      activeConnections;
 
-		Http3ConnectionObserverBridge(ConnectionObserver connectionObserver) {
+		Http3ConnectionHandler(ConnectionObserver connectionObserver, int maxConnections, AtomicInteger activeConnections) {
 			this.connectionObserver = connectionObserver;
+			this.maxConnections = maxConnections;
+			this.activeConnections = activeConnections;
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void channelActive(io.netty.channel.ChannelHandlerContext ctx) throws Exception {
 			if (ctx.channel() instanceof QuicChannel) {
+				if (maxConnections > 0) {
+					int current = activeConnections.incrementAndGet();
+					if (current > maxConnections) {
+						activeConnections.decrementAndGet();
+						if (log.isDebugEnabled()) {
+							log.debug(format(ctx.channel(), "Connection rejected: max connections limit reached ({})"), maxConnections);
+						}
+						ctx.channel().close();
+						return;
+					}
+					else {
+						ctx.channel().closeFuture().addListener(future -> activeConnections.decrementAndGet());
+					}
+				}
+
 				if (log.isDebugEnabled()) {
 					log.debug(format(ctx.channel(), "HTTP/3: Firing State.CONNECTED for QuicChannel"));
 				}

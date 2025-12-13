@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -117,7 +118,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			ChannelInitializer<Channel> channelInitializer = config.channelInitializer(childObs, null, true);
 			if (!config.channelType(isDomainSocket).equals(DatagramChannel.class)) {
 				Acceptor acceptor = new Acceptor(config.childEventLoopGroup(), channelInitializer,
-						config.childOptions, config.childAttrs, isDomainSocket);
+						config.childOptions, config.childAttrs, isDomainSocket,
+						config.maxConnections(), config.activeConnections);
 				channelInitializer = new AcceptorInitializer(acceptor);
 			}
 			TransportConnector.bind(config, channelInitializer, local, isDomainSocket)
@@ -386,22 +388,41 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		final Map<ChannelOption<?>, ?> childOptions;
 		final Map<AttributeKey<?>, ?> childAttrs;
 		final boolean isDomainSocket;
+		final int maxConnections;
+		final AtomicInteger activeConnections;
 
 		@Nullable Runnable enableAutoReadTask;
 
 		Acceptor(EventLoopGroup childGroup, ChannelHandler childHandler,
 				Map<ChannelOption<?>, ?> childOptions, Map<AttributeKey<?>, ?> childAttrs,
-				boolean isDomainSocket) {
+				boolean isDomainSocket, int maxConnections, AtomicInteger activeConnections) {
 			this.childGroup = childGroup;
 			this.childHandler = childHandler;
 			this.childOptions = childOptions;
 			this.childAttrs = childAttrs;
 			this.isDomainSocket = isDomainSocket;
+			this.maxConnections = maxConnections;
+			this.activeConnections = activeConnections;
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
 			final Channel child = (Channel) msg;
+			if (maxConnections > 0) {
+				int current = activeConnections.incrementAndGet();
+				if (current > maxConnections) {
+					activeConnections.decrementAndGet();
+					if (log.isDebugEnabled()) {
+						log.debug(format(child, "Connection rejected: max connections limit reached ({})"), maxConnections);
+					}
+					forceClose(child, new RuntimeException("Connection rejected: max connections limit reached"));
+					return;
+				}
+				else {
+					child.closeFuture().addListener(future -> activeConnections.decrementAndGet());
+				}
+			}
 
 			child.pipeline().addLast(childHandler);
 

@@ -130,6 +130,15 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		return maxConnections;
 	}
 
+	/**
+	 * Return the active connections counter.
+	 *
+	 * @return the active connections counter
+	 */
+	public final AtomicInteger activeConnectionsCounter() {
+		return activeConnections;
+	}
+
 
 	// Protected/Package private write API
 
@@ -151,7 +160,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 * @param bindAddress the local address
 	 */
 	protected ServerTransportConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions,
-			Supplier<? extends SocketAddress> bindAddress) {
+				Supplier<? extends SocketAddress> bindAddress) {
 		super(options, bindAddress);
 		this.childAttrs = Collections.emptyMap();
 		this.childObserver = ConnectionObserver.emptyListener();
@@ -181,11 +190,11 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 * @return the configured child lifecycle {@link ConnectionObserver} if any or {@link ConnectionObserver#emptyListener()}
 	 */
 	protected ConnectionObserver defaultChildObserver() {
-		if (channelGroup() == null && doOnConnection() == null && maxConnections <= 0) {
+		if (channelGroup() == null && doOnConnection() == null) {
 			return ConnectionObserver.emptyListener();
 		}
 		else {
-			return new ServerTransportDoOnConnection(channelGroup(), doOnConnection(), maxConnections, activeConnections);
+			return new ServerTransportDoOnConnection(channelGroup(), doOnConnection());
 		}
 	}
 
@@ -246,17 +255,10 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 		final @Nullable ChannelGroup                 channelGroup;
 		final @Nullable Consumer<? super Connection> doOnConnection;
-		final int                                    maxConnections;
-		final AtomicInteger                          activeConnections;
 
-		ServerTransportDoOnConnection(@Nullable ChannelGroup channelGroup,
-				@Nullable Consumer<? super Connection> doOnConnection,
-				int maxConnections,
-				AtomicInteger activeConnections) {
+		ServerTransportDoOnConnection(@Nullable ChannelGroup channelGroup, @Nullable Consumer<? super Connection> doOnConnection) {
 			this.channelGroup = channelGroup;
 			this.doOnConnection = doOnConnection;
-			this.maxConnections = maxConnections;
-			this.activeConnections = activeConnections;
 		}
 
 		@Override
@@ -266,29 +268,9 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 				Channel channel = connection.channel();
 				Channel parent = channel.parent();
 				// HTTP/2 streams have a parent that is not a ServerChannel, and that parent has a ServerChannel parent
-				// HTTP/3 QuicChannels have a DatagramChannel parent (not ServerChannel), but should still be counted as connections, not streams
 				boolean isHttp2Stream = parent != null &&
 				                        !(parent instanceof ServerChannel) &&
 				                        parent.parent() instanceof ServerChannel;
-
-				// Check max connections limit using AtomicInteger
-				// Only count actual connections (TCP, QUIC/HTTP3), not HTTP/2 streams
-				if (maxConnections > 0 && !isHttp2Stream) {
-					int current = activeConnections.incrementAndGet();
-					if (current > maxConnections) {
-						activeConnections.decrementAndGet();
-						if (log.isDebugEnabled()) {
-							log.debug(format(channel, "Connection rejected: max connections limit reached ({})"), maxConnections);
-						}
-						channel.close();
-						return;
-					}
-					else {
-						channel.closeFuture().addListener(future -> activeConnections.decrementAndGet());
-					}
-				}
-
-				// Add to ChannelGroup if configured
 				if (channelGroup != null) {
 					channelGroup.add(channel);
 					if (isHttp2Stream) {
