@@ -562,9 +562,8 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 					              createClient(port2)
 					                        .get()
 					                        .uri("/")
-					                        .responseContent())
-					                  .then()
-					                  .doOnError(t -> error.set(t.getCause())))
+					                        .responseContent()
+					                        .doOnError(error::set)))
 					          // .retain() deliberately not invoked
 					          // so that .release() in FluxReceive.drainReceiver will fail
 					          //.retain()))
