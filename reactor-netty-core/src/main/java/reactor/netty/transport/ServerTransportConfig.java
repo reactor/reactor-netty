@@ -121,25 +121,6 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		return doOnUnbound;
 	}
 
-	/**
-	 * Return the configured maximum number of connections or -1 if not configured.
-	 *
-	 * @return the configured maximum number of connections or -1 if not configured
-	 */
-	public final int maxConnections() {
-		return maxConnections;
-	}
-
-	/**
-	 * Return the active connections counter.
-	 *
-	 * @return the active connections counter
-	 */
-	public final AtomicInteger activeConnectionsCounter() {
-		return activeConnections;
-	}
-
-
 	// Protected/Package private write API
 
 	final AtomicInteger                          activeConnections = new AtomicInteger(0);

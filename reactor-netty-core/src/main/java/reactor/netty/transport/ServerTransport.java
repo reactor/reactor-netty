@@ -119,7 +119,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			if (!config.channelType(isDomainSocket).equals(DatagramChannel.class)) {
 				Acceptor acceptor = new Acceptor(config.childEventLoopGroup(), channelInitializer,
 						config.childOptions, config.childAttrs, isDomainSocket,
-						config.maxConnections(), config.activeConnections);
+						config.maxConnections, config.activeConnections);
 				channelInitializer = new AcceptorInitializer(acceptor);
 			}
 			TransportConnector.bind(config, channelInitializer, local, isDomainSocket)
