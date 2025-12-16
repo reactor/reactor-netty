@@ -111,7 +111,6 @@ import static reactor.netty.micrometer.TimerAssert.assertTimer;
  * Holds HTTP/3 specific tests.
  *
  * @author Violeta Georgieva
- * @author raccoonback
  * @since 1.2.0
  */
 class Http3Tests {

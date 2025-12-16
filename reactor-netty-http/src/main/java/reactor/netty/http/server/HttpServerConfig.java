@@ -113,7 +113,6 @@ import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FO
  * @author Stephane Maldini
  * @author Violeta Georgieva
  * @author Andrey Shlykov
- * @author raccoonback
  */
 public final class HttpServerConfig extends ServerTransportConfig<HttpServerConfig> {
 
