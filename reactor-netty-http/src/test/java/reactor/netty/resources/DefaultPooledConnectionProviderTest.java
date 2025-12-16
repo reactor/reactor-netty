@@ -46,10 +46,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufMono;
 import reactor.netty.ConnectionObserver;
@@ -76,6 +79,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -900,6 +904,138 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		finally {
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testEvictInBackgroundWithCustomScheduler() throws Exception {
+		String expectedResponse = "Hello from the server";
+		disposableServer =
+				createServer()
+				        .wiretap(false)
+				        .handle((req, res) -> res.sendString(Mono.just(expectedResponse)))
+				        .bindNow();
+
+		// Create a custom scheduler that tracks which thread executes the eviction tasks
+		String customThreadName = "custom-eviction-scheduler";
+		AtomicReference<Thread> evictionThread = new AtomicReference<>();
+		CountDownLatch evictionExecutedLatch = new CountDownLatch(1);
+
+		Scheduler customScheduler = new TrackingScheduler(
+				Schedulers.newSingle(customThreadName),
+				evictionThread,
+				evictionExecutedLatch);
+
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testEvictInBackgroundWithCustomScheduler")
+				                  .maxConnections(5)
+				                  .maxIdleTime(Duration.ofMillis(50))
+				                  .evictInBackground(Duration.ofMillis(20), customScheduler)
+				                  .build();
+
+		HttpClient client = createClient(provider, disposableServer.port());
+
+		try {
+			// Make a request to create some connection
+			String receivedResponse = client.get()
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.asString()
+				.block();
+
+			assertThat(receivedResponse).isEqualTo(expectedResponse);
+
+			// Wait for eviction to occur and verify it executed on the custom scheduler thread
+			assertThat(evictionExecutedLatch.await(500, TimeUnit.MILLISECONDS))
+					.as("Eviction should have executed")
+					.isTrue();
+
+			// Verify the eviction executed on the custom scheduler thread
+			assertThat(evictionThread.get())
+					.as("Eviction thread should be set")
+					.isNotNull();
+			assertThat(evictionThread.get().getName())
+					.as("Eviction should execute on custom scheduler thread")
+					.contains(customThreadName);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+			customScheduler.dispose();
+		}
+	}
+
+	static final class TrackingScheduler implements Scheduler {
+		private final Scheduler delegate;
+		private final AtomicReference<Thread> threadRef;
+		private final CountDownLatch latch;
+
+		TrackingScheduler(Scheduler delegate, AtomicReference<Thread> threadRef, CountDownLatch latch) {
+			this.delegate = delegate;
+			this.threadRef = threadRef;
+			this.latch = latch;
+		}
+
+		@Override
+		public Disposable schedule(Runnable task) {
+			return delegate.schedule(wrapTask(task));
+		}
+
+		@Override
+		public Disposable schedule(Runnable task, long delay, TimeUnit unit) {
+			return delegate.schedule(wrapTask(task), delay, unit);
+		}
+
+		@Override
+		public Worker createWorker() {
+			return new TrackingWorker(delegate.createWorker());
+		}
+
+		@Override
+		public void dispose() {
+			delegate.dispose();
+		}
+
+		@Override
+		public boolean isDisposed() {
+			return delegate.isDisposed();
+		}
+
+		private Runnable wrapTask(Runnable task) {
+			return () -> {
+				threadRef.set(Thread.currentThread());
+				latch.countDown();
+				task.run();
+			};
+		}
+
+		class TrackingWorker implements Worker {
+			private final Worker delegateWorker;
+
+			TrackingWorker(Worker delegateWorker) {
+				this.delegateWorker = delegateWorker;
+			}
+
+			@Override
+			public Disposable schedule(Runnable task) {
+				return delegateWorker.schedule(wrapTask(task));
+			}
+
+			@Override
+			public Disposable schedule(Runnable task, long delay, TimeUnit unit) {
+				return delegateWorker.schedule(wrapTask(task), delay, unit);
+			}
+
+			@Override
+			public void dispose() {
+				delegateWorker.dispose();
+			}
+
+			@Override
+			public boolean isDisposed() {
+				return delegateWorker.isDisposed();
+			}
 		}
 	}
 

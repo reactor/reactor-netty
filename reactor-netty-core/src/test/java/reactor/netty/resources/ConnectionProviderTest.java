@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package reactor.netty.resources;
 
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 
 import java.lang.reflect.Field;
@@ -85,6 +87,9 @@ class ConnectionProviderTest {
 		}
 		else if (BiPredicate.class == clazz) {
 			field.set(builder, TEST_BI_PREDICATE);
+		}
+		else if (Scheduler.class == clazz) {
+			field.set(builder, Schedulers.parallel());
 		}
 		else {
 			throw new IllegalArgumentException("Unknown field type " + clazz);
