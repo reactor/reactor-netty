@@ -121,6 +121,15 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		return doOnUnbound;
 	}
 
+	/**
+	 * Return the configured maximum number of concurrent connections.
+	 *
+	 * @return the maximum number of concurrent connections, or -1 for no limit
+	 */
+	public final int maxConnections() {
+		return maxConnections;
+	}
+
 
 	// Protected/Package private write API
 

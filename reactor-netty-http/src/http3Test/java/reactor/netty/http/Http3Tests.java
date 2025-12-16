@@ -111,6 +111,7 @@ import static reactor.netty.micrometer.TimerAssert.assertTimer;
  * Holds HTTP/3 specific tests.
  *
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 1.2.0
  */
 class Http3Tests {
@@ -1249,6 +1250,23 @@ class Http3Tests {
 			assertThat(logTracker.actualMessages).hasSize(1);
 			assertThat(logTracker.actualMessages.get(0).getFormattedMessage()).contains(message);
 		}
+	}
+
+	@Test
+	void testMaxConnectionsNotSupportedForHttp3() throws Exception {
+		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
+
+		HttpServer.create()
+		          .port(0)
+		          .protocol(HttpProtocol.HTTP3)
+		          .secure(spec -> spec.sslContext(serverCtx))
+		          .maxConnections(100)
+		          .handle((req, res) -> res.sendString(Mono.just("OK")))
+		          .bind()
+		          .as(StepVerifier::create)
+		          .expectErrorMatches(t -> t instanceof UnsupportedOperationException &&
+		                  t.getMessage().contains("maxConnections is not supported for HTTP/3 protocol"))
+		          .verify(Duration.ofSeconds(5));
 	}
 
 	static HttpClient createClient(int port) {

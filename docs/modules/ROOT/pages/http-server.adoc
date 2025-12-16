@@ -400,6 +400,8 @@ public class Application {
 NOTE: This limit applies to the actual network connections (TCP for HTTP/1.1 and HTTP/2).
 HTTP/2 streams over the same connection are not counted separately.
 
+IMPORTANT: This feature is *not supported for HTTP/3*. Attempting to use `maxConnections` with HTTP/3 protocol will result in an `UnsupportedOperationException` when the server attempts to bind.
+
 [[tcp-level-configuration]]
 == TCP-level Configuration
 

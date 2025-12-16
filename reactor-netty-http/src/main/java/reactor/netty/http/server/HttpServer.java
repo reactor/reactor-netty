@@ -965,6 +965,13 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * When the limit is reached, new connections will be rejected by immediately closing them.
 	 * A value of -1 means no limit (default).
 	 * <p>
+	 * <strong>Note:</strong> This limit applies to actual network connections (TCP for HTTP/1.1 and HTTP/2).
+	 * HTTP/2 streams over the same connection are not counted separately.
+	 * <p>
+	 * <strong>Important:</strong> This feature is <strong>not supported for HTTP/3</strong>.
+	 * Attempting to use maxConnections with HTTP/3 protocol will result in an
+	 * {@link UnsupportedOperationException} when binding the server.
+	 * <p>
 	 * Example:
 	 * <pre>
 	 * {@code
@@ -979,6 +986,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param maxConnections the maximum number of concurrent connections, or -1 for no limit
 	 * @return a new {@link HttpServer}
 	 * @throws IllegalArgumentException if maxConnections is less than -1 or equals to 0
+	 * @throws UnsupportedOperationException if used with HTTP/3 protocol (thrown during bind)
 	 */
 	@Override
 	public final HttpServer maxConnections(int maxConnections) {
