@@ -397,7 +397,7 @@ public class Application {
 ----
 <1> Configures the maximum number of concurrent connections to 100.
 
-NOTE: This limit applies to the actual network connections (TCP for HTTP/1.1 and HTTP/2, QUIC for HTTP/3).
+NOTE: This limit applies to the actual network connections (TCP for HTTP/1.1 and HTTP/2).
 HTTP/2 streams over the same connection are not counted separately.
 
 [[tcp-level-configuration]]

@@ -391,7 +391,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	public ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
 			@Nullable SocketAddress remoteAddress, boolean onServer) {
 		ChannelInitializer<Channel> channelInitializer = super.channelInitializer(connectionObserver, remoteAddress, onServer);
-		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer, connectionObserver) : channelInitializer;
+		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer) : channelInitializer;
 	}
 
 	@Override

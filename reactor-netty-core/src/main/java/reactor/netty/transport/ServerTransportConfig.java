@@ -264,19 +264,13 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
-			if (newState == State.CONNECTED) {
+			if (channelGroup != null && newState == State.CONNECTED) {
 				Channel channel = connection.channel();
+				channelGroup.add(channel);
 				Channel parent = channel.parent();
-				// HTTP/2 streams have a parent that is not a ServerChannel, and that parent has a ServerChannel parent
-				boolean isHttp2Stream = parent != null &&
-				                        !(parent instanceof ServerChannel) &&
-				                        parent.parent() instanceof ServerChannel;
-				if (channelGroup != null) {
-					channelGroup.add(channel);
-					if (isHttp2Stream) {
-						// HTTP/2 - add both the stream and the connection
-						channelGroup.add(parent);
-					}
+				if (!(parent instanceof ServerChannel)) {
+					// HTTP/2 - add both the stream and the connection
+					channelGroup.add(parent);
 				}
 				return;
 			}
