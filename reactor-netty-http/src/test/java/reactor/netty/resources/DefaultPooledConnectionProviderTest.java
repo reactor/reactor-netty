@@ -967,7 +967,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	static final class TrackingScheduler implements Scheduler {
 		private final Scheduler delegate;
-		private final AtomicReference<Thread> threadRef;
+		private final AtomicReference<@Nullable Thread> threadRef;
 		private final CountDownLatch latch;
 
 		TrackingScheduler(Scheduler delegate, AtomicReference<@Nullable Thread> threadRef, CountDownLatch latch) {
