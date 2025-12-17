@@ -762,6 +762,7 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC evictInBackground(Duration evictionInterval) {
 			this.evictionInterval = Objects.requireNonNull(evictionInterval, "evictionInterval");
+			this.evictInBackgroundScheduler = null;
 			return get();
 		}
 
