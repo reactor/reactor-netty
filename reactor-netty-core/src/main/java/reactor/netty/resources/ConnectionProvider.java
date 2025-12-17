@@ -777,7 +777,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @param evictionInterval specifies the interval to be used for checking the connection pool, (resolution: ns)
 		 * @param scheduler the scheduler to use for background eviction tasks. If no scheduler is provided, the default scheduler used by reactor-pool (typically {@link Schedulers#parallel()}) is used.
 		 * @return {@literal this}
-		 * @since 1.4.0
+		 * @since 1.3.2
 		 * @see #evictInBackground(Duration)
 		 */
 		public final SPEC evictInBackground(Duration evictionInterval, Scheduler scheduler) {
