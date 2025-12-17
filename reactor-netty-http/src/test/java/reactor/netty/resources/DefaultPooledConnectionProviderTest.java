@@ -917,7 +917,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 		// Create a custom scheduler that tracks which thread executes the eviction tasks
 		String customThreadName = "custom-eviction-scheduler";
-		AtomicReference<Thread> evictionThread = new AtomicReference<>();
+		AtomicReference<@Nullable Thread> evictionThread = new AtomicReference<>();
 		CountDownLatch evictionExecutedLatch = new CountDownLatch(1);
 
 		Scheduler customScheduler = new TrackingScheduler(
