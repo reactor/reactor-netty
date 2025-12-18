@@ -27,6 +27,7 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -514,6 +515,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final @Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
 		final @Nullable AllocationStrategy<?> allocationStrategy;
 		final @Nullable BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
+		final @Nullable Scheduler evictInBackgroundScheduler;
 
 		PoolFactory(ConnectionPoolSpec<?> conf, @Nullable Duration disposeTimeout) {
 			this(conf, disposeTimeout, null);
@@ -536,6 +538,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.pendingAcquireTimer = conf.pendingAcquireTimer;
 			this.allocationStrategy = conf.allocationStrategy;
 			this.evictionPredicate = conf.evictionPredicate;
+			this.evictInBackgroundScheduler = conf.evictInBackgroundScheduler;
 		}
 
 		public InstrumentedPool<T> newPool(
@@ -603,8 +606,13 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			PoolBuilder<T, PoolConfig<T>> poolBuilder =
 					PoolBuilder.from(allocator)
 					           .destroyHandler(destroyHandler)
-					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .evictInBackground(evictionInterval);
+					           .maxPendingAcquire(pendingAcquireMaxCount);
+			if (evictInBackgroundScheduler != null) {
+				poolBuilder = poolBuilder.evictInBackground(evictionInterval, evictInBackgroundScheduler);
+			}
+			else {
+				poolBuilder = poolBuilder.evictInBackground(evictionInterval);
+			}
 
 			if (this.evictionPredicate != null) {
 				poolBuilder = poolBuilder.evictionPredicate(

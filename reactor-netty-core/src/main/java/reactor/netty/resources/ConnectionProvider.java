@@ -19,6 +19,7 @@ import io.netty.resolver.AddressResolverGroup;
 import org.jspecify.annotations.Nullable;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -538,6 +539,7 @@ public interface ConnectionProvider extends Disposable {
 		@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
 		@Nullable AllocationStrategy<?> allocationStrategy;
 		@Nullable BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
+		@Nullable Scheduler evictInBackgroundScheduler;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
@@ -564,6 +566,7 @@ public interface ConnectionProvider extends Disposable {
 			this.pendingAcquireTimer = copy.pendingAcquireTimer;
 			this.allocationStrategy = copy.allocationStrategy;
 			this.evictionPredicate = copy.evictionPredicate;
+			this.evictInBackgroundScheduler = copy.evictInBackgroundScheduler;
 		}
 
 		/**
@@ -755,9 +758,32 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @param evictionInterval specifies the interval to be used for checking the connection pool, (resolution: ns)
 		 * @return {@literal this}
+		 * @see #evictInBackground(Duration, Scheduler)
 		 */
 		public final SPEC evictInBackground(Duration evictionInterval) {
 			this.evictionInterval = Objects.requireNonNull(evictionInterval, "evictionInterval");
+			this.evictInBackgroundScheduler = null;
+			return get();
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} background eviction.
+		 * When a background eviction is enabled, the connection pool is regularly checked for connections,
+		 * that are applicable for removal.
+		 * Interval defaults to {@link #EVICT_IN_BACKGROUND_DISABLED} - the background eviction is disabled.
+		 * Providing an {@code evictionInterval} of {@link Duration#ZERO zero} means the background eviction is disabled.
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
+		 *
+		 * @param evictionInterval specifies the interval to be used for checking the connection pool, (resolution: ns)
+		 * @param scheduler the scheduler to use for background eviction tasks. If no scheduler is provided, the default scheduler used by reactor-pool (typically {@link Schedulers#parallel()}) is used.
+		 * @return {@literal this}
+		 * @since 1.3.2
+		 * @see #evictInBackground(Duration)
+		 */
+		public final SPEC evictInBackground(Duration evictionInterval, Scheduler scheduler) {
+			this.evictionInterval = Objects.requireNonNull(evictionInterval, "evictionInterval");
+			this.evictInBackgroundScheduler = Objects.requireNonNull(scheduler, "scheduler");
 			return get();
 		}
 
