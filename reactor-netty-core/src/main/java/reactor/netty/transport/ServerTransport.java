@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -119,7 +119,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			if (!config.channelType(isDomainSocket).equals(DatagramChannel.class)) {
 				Acceptor acceptor = new Acceptor(config.childEventLoopGroup(), channelInitializer,
 						config.childOptions, config.childAttrs, isDomainSocket,
-						config.maxConnections, config.activeConnections);
+						config.maxConnections);
 				channelInitializer = new AcceptorInitializer(acceptor);
 			}
 			TransportConnector.bind(config, channelInitializer, local, isDomainSocket)
@@ -383,26 +383,29 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 	static class Acceptor extends ChannelInboundHandlerAdapter {
 
+		static final AtomicIntegerFieldUpdater<Acceptor> ACTIVE_CONNECTIONS =
+				AtomicIntegerFieldUpdater.newUpdater(Acceptor.class, "activeConnections");
+
 		final EventLoopGroup childGroup;
 		final ChannelHandler childHandler;
 		final Map<ChannelOption<?>, ?> childOptions;
 		final Map<AttributeKey<?>, ?> childAttrs;
 		final boolean isDomainSocket;
 		final int maxConnections;
-		final AtomicInteger activeConnections;
+
+		volatile int activeConnections;
 
 		@Nullable Runnable enableAutoReadTask;
 
 		Acceptor(EventLoopGroup childGroup, ChannelHandler childHandler,
 				Map<ChannelOption<?>, ?> childOptions, Map<AttributeKey<?>, ?> childAttrs,
-				boolean isDomainSocket, int maxConnections, AtomicInteger activeConnections) {
+				boolean isDomainSocket, int maxConnections) {
 			this.childGroup = childGroup;
 			this.childHandler = childHandler;
 			this.childOptions = childOptions;
 			this.childAttrs = childAttrs;
 			this.isDomainSocket = isDomainSocket;
 			this.maxConnections = maxConnections;
-			this.activeConnections = activeConnections;
 		}
 
 		@Override
@@ -410,18 +413,16 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
 			final Channel child = (Channel) msg;
 			if (maxConnections > 0) {
-				int current = activeConnections.incrementAndGet();
-				if (current > maxConnections) {
-					activeConnections.decrementAndGet();
+				int current = ACTIVE_CONNECTIONS.get(this);
+				if (current >= maxConnections) {
 					if (log.isDebugEnabled()) {
 						log.debug(format(child, "Connection rejected: max connections limit reached ({})"), maxConnections);
 					}
 					forceClose(child, new RuntimeException("Connection rejected: max connections limit reached"));
 					return;
 				}
-				else {
-					child.closeFuture().addListener(future -> activeConnections.decrementAndGet());
-				}
+				ACTIVE_CONNECTIONS.incrementAndGet(this);
+				child.closeFuture().addListener(future -> ACTIVE_CONNECTIONS.decrementAndGet(this));
 			}
 
 			child.pipeline().addLast(childHandler);
