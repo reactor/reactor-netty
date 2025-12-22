@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -72,6 +73,7 @@ import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAdd
  * @param <CONF> Server Configuration implementation
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 1.0.0
  */
 public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
@@ -116,7 +118,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			ChannelInitializer<Channel> channelInitializer = config.channelInitializer(childObs, null, true);
 			if (!config.channelType(isDomainSocket).equals(DatagramChannel.class)) {
 				Acceptor acceptor = new Acceptor(config.childEventLoopGroup(), channelInitializer,
-						config.childOptions, config.childAttrs, isDomainSocket);
+						config.childOptions, config.childAttrs, isDomainSocket,
+						config.maxConnections);
 				channelInitializer = new AcceptorInitializer(acceptor);
 			}
 			TransportConnector.bind(config, channelInitializer, local, isDomainSocket)
@@ -317,6 +320,24 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	}
 
 	/**
+	 * Configures the maximum number of concurrent connections that the server will accept.
+	 * When the limit is reached, new connections will be rejected by immediately closing them.
+	 * A value of -1 means no limit (default).
+	 *
+	 * @param maxConnections the maximum number of concurrent connections, or -1 for no limit
+	 * @return a new {@link ServerTransport} reference
+	 * @throws IllegalArgumentException if maxConnections is less than -1 or equals to 0
+	 */
+	protected T maxConnections(int maxConnections) {
+		if (maxConnections < -1 || maxConnections == 0) {
+			throw new IllegalArgumentException("maxConnections must be greater than 0 or -1 (no limit)");
+		}
+		T dup = duplicate();
+		dup.configuration().maxConnections = maxConnections;
+		return dup;
+	}
+
+	/**
 	 * The host to which this server should bind.
 	 *
 	 * @param host the host to bind to.
@@ -362,27 +383,47 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 	static class Acceptor extends ChannelInboundHandlerAdapter {
 
+		static final AtomicIntegerFieldUpdater<Acceptor> ACTIVE_CONNECTIONS =
+				AtomicIntegerFieldUpdater.newUpdater(Acceptor.class, "activeConnections");
+
 		final EventLoopGroup childGroup;
 		final ChannelHandler childHandler;
 		final Map<ChannelOption<?>, ?> childOptions;
 		final Map<AttributeKey<?>, ?> childAttrs;
 		final boolean isDomainSocket;
+		final int maxConnections;
+
+		volatile int activeConnections;
 
 		@Nullable Runnable enableAutoReadTask;
 
 		Acceptor(EventLoopGroup childGroup, ChannelHandler childHandler,
 				Map<ChannelOption<?>, ?> childOptions, Map<AttributeKey<?>, ?> childAttrs,
-				boolean isDomainSocket) {
+				boolean isDomainSocket, int maxConnections) {
 			this.childGroup = childGroup;
 			this.childHandler = childHandler;
 			this.childOptions = childOptions;
 			this.childAttrs = childAttrs;
 			this.isDomainSocket = isDomainSocket;
+			this.maxConnections = maxConnections;
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
 			final Channel child = (Channel) msg;
+			if (maxConnections > 0) {
+				int current = ACTIVE_CONNECTIONS.get(this);
+				if (current >= maxConnections) {
+					if (log.isDebugEnabled()) {
+						log.debug(format(child, "Connection rejected: max connections limit reached ({})"), maxConnections);
+					}
+					forceClose(child, new RuntimeException("Connection rejected: max connections limit reached"));
+					return;
+				}
+				ACTIVE_CONNECTIONS.incrementAndGet(this);
+				child.closeFuture().addListener(future -> ACTIVE_CONNECTIONS.decrementAndGet(this));
+			}
 
 			child.pipeline().addLast(childHandler);
 

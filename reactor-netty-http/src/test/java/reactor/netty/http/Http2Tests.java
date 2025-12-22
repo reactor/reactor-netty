@@ -22,6 +22,7 @@ import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
+import java.util.ArrayList;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -36,10 +37,12 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.Connection;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
@@ -52,6 +55,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -65,6 +69,7 @@ import static reactor.netty.ConnectionObserver.State.CONFIGURED;
  * Holds HTTP/2 specific tests.
  *
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 1.0.0
  */
 class Http2Tests extends BaseHttpTest {
@@ -875,6 +880,127 @@ class Http2Tests extends BaseHttpTest {
 		      .expectNextMatches(t -> expectations[0].equals(t.getT1()) && expectations[1].equals(t.getT2()))
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testMaxConnectionsLimitH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols)
+			throws InterruptedException {
+		List<Connection> connections = new ArrayList<>(3);
+		try {
+			AtomicInteger connectionCount = new AtomicInteger();
+
+			disposableServer =
+					createServer()
+							.protocol(serverProtocols)
+							.maxConnections(2)
+							.doOnConnection(connection -> connectionCount.incrementAndGet())
+							.handle((req, res) -> res.sendString(Mono.just("OK")))
+							.bindNow();
+
+			CountDownLatch latch = new CountDownLatch(3);
+			AtomicInteger successCount = new AtomicInteger();
+			AtomicInteger failureCount = new AtomicInteger();
+
+			for (int i = 0; i < 3; i++) {
+				HttpClient.newConnection()
+						.remoteAddress(() -> disposableServer.address())
+						.protocol(clientProtocols)
+						.wiretap(true)
+						.doOnRequest((req, conn) -> connections.add(conn))
+						.get()
+						.uri("/")
+						.responseContent()
+						.aggregate()
+						.asString()
+						.subscribe(
+								s -> {
+									successCount.incrementAndGet();
+									latch.countDown();
+								},
+								e -> {
+									failureCount.incrementAndGet();
+									latch.countDown();
+								}
+						);
+			}
+
+			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+			assertThat(connectionCount.get()).isEqualTo(2);
+			assertThat(successCount.get()).isEqualTo(2);
+			assertThat(failureCount.get()).isEqualTo(1);
+		}
+		finally {
+			for (Connection conn : connections) {
+				conn.dispose();
+			}
+			disposableServer.disposeNow();
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testMaxConnectionsLimitH2(
+			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols
+	) throws Exception {
+		List<Connection> connections = new ArrayList<>(3);
+		try {
+			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(),
+					ssc.toTempPrivateKeyPem());
+			Http2SslContextSpec clientCtx =
+					Http2SslContextSpec.forClient()
+							.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+			AtomicInteger connectionCount = new AtomicInteger();
+
+			disposableServer =
+					createServer()
+							.protocol(serverProtocols)
+							.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx))
+							.maxConnections(2)
+							.doOnConnection(connection -> connectionCount.incrementAndGet())
+							.handle((req, res) -> res.sendString(Mono.just("OK")))
+							.bindNow();
+
+			CountDownLatch latch = new CountDownLatch(3);
+			AtomicInteger successCount = new AtomicInteger();
+			AtomicInteger failureCount = new AtomicInteger();
+
+			for (int i = 0; i < 3; i++) {
+				HttpClient.newConnection()
+						.remoteAddress(() -> disposableServer.address())
+						.protocol(clientProtocols)
+						.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx))
+						.wiretap(true)
+						.doOnRequest((req, conn) -> connections.add(conn))
+						.get()
+						.uri("/")
+						.responseContent()
+						.aggregate()
+						.asString()
+						.subscribe(
+								s -> {
+									successCount.incrementAndGet();
+									latch.countDown();
+								},
+								e -> {
+									failureCount.incrementAndGet();
+									latch.countDown();
+								}
+						);
+			}
+
+			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+			assertThat(connectionCount.get()).isEqualTo(2);
+			assertThat(successCount.get()).isEqualTo(2);
+			assertThat(failureCount.get()).isEqualTo(1);
+		}
+		finally {
+			for (Connection conn : connections) {
+				conn.dispose();
+			}
+			disposableServer.disposeNow();
+		}
 	}
 
 	static String getValuesReflection(Http2FrameCodec obj) {

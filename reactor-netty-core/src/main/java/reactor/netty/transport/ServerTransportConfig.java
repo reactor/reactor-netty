@@ -19,6 +19,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -44,6 +45,7 @@ import static reactor.netty.ReactorNetty.format;
  * @param <CONF> Configuration implementation
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @author raccoonback
  * @since 1.0.0
  */
 public abstract class ServerTransportConfig<CONF extends TransportConfig> extends TransportConfig {
@@ -119,9 +121,19 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		return doOnUnbound;
 	}
 
+	/**
+	 * Return the configured maximum number of concurrent connections.
+	 *
+	 * @return the maximum number of concurrent connections, or -1 for no limit
+	 */
+	public final int maxConnections() {
+		return maxConnections;
+	}
+
 
 	// Protected/Package private write API
 
+	final AtomicInteger                          activeConnections = new AtomicInteger(0);
 	Map<AttributeKey<?>, ?>                      childAttrs;
 	ConnectionObserver                           childObserver;
 	Map<ChannelOption<?>, ?>                     childOptions;
@@ -129,6 +141,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	@Nullable Consumer<? super DisposableServer> doOnBound;
 	@Nullable Consumer<? super Connection>       doOnConnection;
 	@Nullable Consumer<? super DisposableServer> doOnUnbound;
+	int                                          maxConnections = -1;
 
 	/**
 	 * Default ServerTransportConfig with options.
@@ -154,6 +167,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		this.doOnBound = parent.doOnBound;
 		this.doOnConnection = parent.doOnConnection;
 		this.doOnUnbound = parent.doOnUnbound;
+		this.maxConnections = parent.maxConnections;
 	}
 
 	@Override
