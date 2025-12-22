@@ -78,7 +78,7 @@ final class HttpServerBind extends HttpServer {
 			}
 		}
 
-		if ((config._protocols & HttpServerConfig.h3) == HttpServerConfig.h3 && config.maxConnections() >= 0) {
+		if ((config._protocols & HttpServerConfig.h3) == HttpServerConfig.h3 && config.maxConnections() > 0) {
 			return Mono.error(new UnsupportedOperationException(
 					"maxConnections is not supported for HTTP/3 protocol. " +
 							"Connection limiting is only supported for TCP-based protocols (HTTP/1.1 and HTTP/2)."));
