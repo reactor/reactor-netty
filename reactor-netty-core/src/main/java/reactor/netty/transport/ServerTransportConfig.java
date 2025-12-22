@@ -19,7 +19,6 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -133,7 +132,6 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 	// Protected/Package private write API
 
-	final AtomicInteger                          activeConnections = new AtomicInteger(0);
 	Map<AttributeKey<?>, ?>                      childAttrs;
 	ConnectionObserver                           childObserver;
 	Map<ChannelOption<?>, ?>                     childOptions;

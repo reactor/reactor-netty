@@ -892,11 +892,11 @@ class Http2Tests extends BaseHttpTest {
 
 			disposableServer =
 					createServer()
-							.protocol(serverProtocols)
-							.maxConnections(2)
-							.doOnConnection(connection -> connectionCount.incrementAndGet())
-							.handle((req, res) -> res.sendString(Mono.just("OK")))
-							.bindNow();
+					        .protocol(serverProtocols)
+					        .maxConnections(2)
+					        .doOnConnection(connection -> connectionCount.incrementAndGet())
+					        .handle((req, res) -> res.sendString(Mono.just("OK")))
+					        .bindNow();
 
 			CountDownLatch latch = new CountDownLatch(3);
 			AtomicInteger successCount = new AtomicInteger();
@@ -904,25 +904,24 @@ class Http2Tests extends BaseHttpTest {
 
 			for (int i = 0; i < 3; i++) {
 				HttpClient.newConnection()
-						.remoteAddress(() -> disposableServer.address())
-						.protocol(clientProtocols)
-						.wiretap(true)
-						.doOnRequest((req, conn) -> connections.add(conn))
-						.get()
-						.uri("/")
-						.responseContent()
-						.aggregate()
-						.asString()
-						.subscribe(
-								s -> {
-									successCount.incrementAndGet();
-									latch.countDown();
-								},
-								e -> {
-									failureCount.incrementAndGet();
-									latch.countDown();
-								}
-						);
+				          .remoteAddress(() -> disposableServer.address())
+				          .protocol(clientProtocols)
+				          .wiretap(true)
+				          .doOnRequest((req, conn) -> connections.add(conn))
+				          .get()
+				          .uri("/")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .subscribe(
+				              s -> {
+				                  successCount.incrementAndGet();
+				                  latch.countDown();
+				              },
+				              e -> {
+				                  failureCount.incrementAndGet();
+				                  latch.countDown();
+				              });
 			}
 
 			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
@@ -940,27 +939,24 @@ class Http2Tests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
-	void testMaxConnectionsLimitH2(
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols
-	) throws Exception {
+	void testMaxConnectionsLimitH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		List<Connection> connections = new ArrayList<>(3);
 		try {
-			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(),
-					ssc.toTempPrivateKeyPem());
+			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			Http2SslContextSpec clientCtx =
 					Http2SslContextSpec.forClient()
-							.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+					                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 			AtomicInteger connectionCount = new AtomicInteger();
 
 			disposableServer =
 					createServer()
-							.protocol(serverProtocols)
-							.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx))
-							.maxConnections(2)
-							.doOnConnection(connection -> connectionCount.incrementAndGet())
-							.handle((req, res) -> res.sendString(Mono.just("OK")))
-							.bindNow();
+					        .protocol(serverProtocols)
+					        .secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx))
+					        .maxConnections(2)
+					        .doOnConnection(connection -> connectionCount.incrementAndGet())
+					        .handle((req, res) -> res.sendString(Mono.just("OK")))
+					        .bindNow();
 
 			CountDownLatch latch = new CountDownLatch(3);
 			AtomicInteger successCount = new AtomicInteger();
@@ -968,26 +964,25 @@ class Http2Tests extends BaseHttpTest {
 
 			for (int i = 0; i < 3; i++) {
 				HttpClient.newConnection()
-						.remoteAddress(() -> disposableServer.address())
-						.protocol(clientProtocols)
-						.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx))
-						.wiretap(true)
-						.doOnRequest((req, conn) -> connections.add(conn))
-						.get()
-						.uri("/")
-						.responseContent()
-						.aggregate()
-						.asString()
-						.subscribe(
-								s -> {
-									successCount.incrementAndGet();
-									latch.countDown();
-								},
-								e -> {
-									failureCount.incrementAndGet();
-									latch.countDown();
-								}
-						);
+				          .remoteAddress(() -> disposableServer.address())
+				          .protocol(clientProtocols)
+				          .secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx))
+				          .wiretap(true)
+				          .doOnRequest((req, conn) -> connections.add(conn))
+				          .get()
+				          .uri("/")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .subscribe(
+				              s -> {
+				                  successCount.incrementAndGet();
+				                  latch.countDown();
+				              },
+				              e -> {
+				                  failureCount.incrementAndGet();
+				                  latch.countDown();
+				              });
 			}
 
 			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();

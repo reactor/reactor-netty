@@ -3942,11 +3942,11 @@ class HttpServerTests extends BaseHttpTest {
 
 			disposableServer =
 					HttpServer.create()
-							.port(0)
-							.maxConnections(2)
-							.doOnConnection(connection -> connectionCount.incrementAndGet())
-							.handle((req, res) -> res.sendString(Mono.just("OK")))
-							.bindNow();
+					          .port(0)
+					          .maxConnections(2)
+					          .doOnConnection(connection -> connectionCount.incrementAndGet())
+					          .handle((req, res) -> res.sendString(Mono.just("OK")))
+					          .bindNow();
 
 			CountDownLatch latch = new CountDownLatch(3);
 			AtomicInteger successCount = new AtomicInteger();
@@ -3954,22 +3954,21 @@ class HttpServerTests extends BaseHttpTest {
 
 			for (int i = 0; i < 3; i++) {
 				HttpClient.create()
-						.port(disposableServer.port())
-						.get()
-						.uri("/")
-						.responseContent()
-						.aggregate()
-						.asString()
-						.subscribe(
-								s -> {
-									successCount.incrementAndGet();
-									latch.countDown();
-								},
-								e -> {
-									failureCount.incrementAndGet();
-									latch.countDown();
-								}
-						);
+				          .port(disposableServer.port())
+				          .get()
+				          .uri("/")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .subscribe(
+				              s -> {
+				                  successCount.incrementAndGet();
+				                  latch.countDown();
+				              },
+				              e -> {
+				                  failureCount.incrementAndGet();
+				                  latch.countDown();
+				              });
 			}
 
 			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();

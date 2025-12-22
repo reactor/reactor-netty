@@ -409,7 +409,6 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
 			final Channel child = (Channel) msg;
 			if (maxConnections > 0) {
