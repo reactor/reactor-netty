@@ -59,6 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -884,78 +885,35 @@ class Http2Tests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
-	void testMaxConnectionsLimitH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols)
-			throws InterruptedException {
-		List<Connection> connections = new ArrayList<>(3);
-		try {
-			AtomicInteger connectionCount = new AtomicInteger();
-
-			disposableServer =
-					createServer()
-					        .protocol(serverProtocols)
-					        .maxConnections(2)
-					        .doOnConnection(connection -> connectionCount.incrementAndGet())
-					        .handle((req, res) -> res.sendString(Mono.just("OK")))
-					        .bindNow();
-
-			CountDownLatch latch = new CountDownLatch(3);
-			AtomicInteger successCount = new AtomicInteger();
-			AtomicInteger failureCount = new AtomicInteger();
-
-			for (int i = 0; i < 3; i++) {
-				HttpClient.newConnection()
-				          .remoteAddress(() -> disposableServer.address())
-				          .protocol(clientProtocols)
-				          .wiretap(true)
-				          .doOnRequest((req, conn) -> connections.add(conn))
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .subscribe(
-				              s -> {
-				                  successCount.incrementAndGet();
-				                  latch.countDown();
-				              },
-				              e -> {
-				                  failureCount.incrementAndGet();
-				                  latch.countDown();
-				              });
-			}
-
-			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
-			assertThat(connectionCount.get()).isEqualTo(2);
-			assertThat(successCount.get()).isEqualTo(2);
-			assertThat(failureCount.get()).isEqualTo(1);
-		}
-		finally {
-			for (Connection conn : connections) {
-				conn.dispose();
-			}
-			disposableServer.disposeNow();
-		}
+	void testMaxConnectionsLimitH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestMaxConnectionsLimit(server -> server.protocol(serverProtocols), client -> client.protocol(clientProtocols));
 	}
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
 	void testMaxConnectionsLimitH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestMaxConnectionsLimit(
+				server -> server.protocol(serverProtocols)
+				                .secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx)),
+				client -> client.protocol(clientProtocols)
+				                .secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx)));
+	}
+
+	void doTestMaxConnectionsLimit(Function<HttpServer, HttpServer> serverCustomizer, Function<HttpClient, HttpClient> clientCustomizer) throws Exception {
 		List<Connection> connections = new ArrayList<>(3);
 		try {
-			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
-			Http2SslContextSpec clientCtx =
-					Http2SslContextSpec.forClient()
-					                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-
 			AtomicInteger connectionCount = new AtomicInteger();
 
 			disposableServer =
-					createServer()
-					        .protocol(serverProtocols)
-					        .secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx))
-					        .maxConnections(2)
-					        .doOnConnection(connection -> connectionCount.incrementAndGet())
-					        .handle((req, res) -> res.sendString(Mono.just("OK")))
+					serverCustomizer.apply(
+					        createServer()
+					                .maxConnections(2)
+					                .doOnConnection(connection -> connectionCount.incrementAndGet())
+					                .handle((req, res) -> res.sendString(Mono.just("OK"))))
 					        .bindNow();
 
 			CountDownLatch latch = new CountDownLatch(3);
@@ -963,26 +921,25 @@ class Http2Tests extends BaseHttpTest {
 			AtomicInteger failureCount = new AtomicInteger();
 
 			for (int i = 0; i < 3; i++) {
-				HttpClient.newConnection()
-				          .remoteAddress(() -> disposableServer.address())
-				          .protocol(clientProtocols)
-				          .secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx))
-				          .wiretap(true)
-				          .doOnRequest((req, conn) -> connections.add(conn))
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .subscribe(
-				              s -> {
-				                  successCount.incrementAndGet();
-				                  latch.countDown();
-				              },
-				              e -> {
-				                  failureCount.incrementAndGet();
-				                  latch.countDown();
-				              });
+				clientCustomizer.apply(
+				        HttpClient.newConnection()
+				                  .remoteAddress(() -> disposableServer.address())
+				                  .wiretap(true)
+				                  .doOnRequest((req, conn) -> connections.add(conn)))
+				        .get()
+				        .uri("/")
+				        .responseContent()
+				        .aggregate()
+				        .asString()
+				        .subscribe(
+				            s -> {
+				                successCount.incrementAndGet();
+				                latch.countDown();
+				            },
+				            e -> {
+				                failureCount.incrementAndGet();
+				                latch.countDown();
+				            });
 			}
 
 			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
@@ -994,7 +951,6 @@ class Http2Tests extends BaseHttpTest {
 			for (Connection conn : connections) {
 				conn.dispose();
 			}
-			disposableServer.disposeNow();
 		}
 	}
 
