@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 
 /**
@@ -44,7 +44,8 @@ final class Http2StreamBridgeClientHandler extends ChannelDuplexHandler {
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof ByteBuf) {
 			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
+			//This will skip Http2StreamFrameToHttpObjectCodec as there is no need of any extra handling
+			ctx.write(new DefaultHttp2DataFrame((ByteBuf) msg, false), promise);
 		}
 		else {
 			//"FutureReturnValueIgnored" this is deliberate
