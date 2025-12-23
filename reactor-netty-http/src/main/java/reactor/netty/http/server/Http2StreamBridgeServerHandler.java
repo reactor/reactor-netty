@@ -28,7 +28,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpObject;
@@ -39,6 +38,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -224,7 +224,8 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 			}
 
 			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
+			//This will skip Http2StreamFrameToHttpObjectCodec as there is no need of any extra handling
+			ctx.write(new DefaultHttp2DataFrame((ByteBuf) msg, false), promise);
 		}
 		else if (msg instanceof HttpResponse && HttpResponseStatus.CONTINUE.code() == ((HttpResponse) msg).status().code()) {
 			//"FutureReturnValueIgnored" this is deliberate
