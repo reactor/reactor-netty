@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -407,8 +407,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 						log.debug(format(slot.connection.channel(), "Channel activated"));
 					}
 					ACQUIRED.incrementAndGet(this);
+					// Reserve and re-offer the slot before async deliver, so concurrent acquires can reuse it (H2 multiplexing).
+					slot.incrementConcurrencyAndGet();
+					slot.deactivate();
 					slot.connection.channel().eventLoop().execute(() -> {
-						borrower.deliver(new Http2PooledRef(slot));
+						borrower.deliver(new Http2PooledRef(slot), true);
 						drain();
 					});
 				}
@@ -829,9 +832,15 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		void deliver(Http2PooledRef poolSlot) {
+			deliver(poolSlot, false);
+		}
+
+		void deliver(Http2PooledRef poolSlot, boolean alreadyReserved) {
 			assert poolSlot.slot.connection.channel().eventLoop().inEventLoop();
-			poolSlot.slot.incrementConcurrencyAndGet();
-			poolSlot.slot.deactivate();
+			if (!alreadyReserved) {
+				poolSlot.slot.incrementConcurrencyAndGet();
+				poolSlot.slot.deactivate();
+			}
 			if (get()) {
 				//CANCELLED or timeout reached
 				poolSlot.invalidate().subscribe(aVoid -> {}, e -> Operators.onErrorDropped(e, Context.empty()));
