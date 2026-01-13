@@ -148,7 +148,7 @@ ext {
 					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.2/api/",
-					"https://projectreactor.io/docs/netty/$project.version/api/"] as String[]
+					"https://projectreactor.io/docs/netty/release/api/"] as String[]
 }
 
 nohttp {
