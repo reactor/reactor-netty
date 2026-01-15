@@ -402,7 +402,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 						borrower.fail(new PoolShutdownException());
 						return;
 					}
-					borrower.stopPendingCountdown(true);
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Channel activated"));
 					}
@@ -447,7 +446,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 								borrower.fail(new PoolShutdownException());
 								return;
 							}
-							borrower.stopPendingCountdown(true);
 							Mono<Connection> allocator = poolConfig.allocator();
 							Mono<Connection> primary =
 									allocator.doOnEach(sig -> {
@@ -830,6 +828,14 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		void deliver(Http2PooledRef poolSlot) {
 			assert poolSlot.slot.connection.channel().eventLoop().inEventLoop();
+			poolSlot.slot.updateMaxConcurrentStreams();
+			if (!poolSlot.slot.canOpenStream()) {
+				poolSlot.slot.deactivate();
+				pool.addPending(pool.pending, this, true);
+				return;
+			}
+			stopPendingCountdown(true);
+			// Increment concurrency BEFORE deactivate so that canOpenStream() is correct for other threads
 			poolSlot.slot.incrementConcurrencyAndGet();
 			poolSlot.slot.deactivate();
 			if (get()) {
@@ -963,7 +969,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		final @Nullable String applicationProtocol;
 
 		long idleTimestamp;
-		long maxConcurrentStreams;
+		volatile long maxConcurrentStreams;
 
 		volatile @Nullable ChannelHandlerContext http2FrameCodecCtx;
 		volatile @Nullable ChannelHandlerContext http2MultiplexHandlerCtx;
@@ -985,30 +991,37 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		void initMaxConcurrentStreams() {
-			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
-			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
-				this.maxConcurrentStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
-				this.maxConcurrentStreams = pool.maxConcurrentStreams == -1 ? maxConcurrentStreams :
-						Math.min(pool.maxConcurrentStreams, maxConcurrentStreams);
-			}
-			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
+			long newMaxConcurrentStreams = computeMaxConcurrentStreams();
+			this.maxConcurrentStreams = newMaxConcurrentStreams;
+			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, newMaxConcurrentStreams);
 		}
 
-		boolean canOpenStream() {
+		void updateMaxConcurrentStreams() {
+			long newMaxConcurrentStreams = computeMaxConcurrentStreams();
+			long diff = newMaxConcurrentStreams - maxConcurrentStreams;
+			if (diff != 0) {
+				maxConcurrentStreams = newMaxConcurrentStreams;
+				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, diff);
+			}
+		}
+
+		private long computeMaxConcurrentStreams() {
+			assert connection.channel().eventLoop().inEventLoop();
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
 			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
 				long maxActiveStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
-				maxActiveStreams = pool.maxConcurrentStreams == -1 ? maxActiveStreams :
+				return pool.maxConcurrentStreams == -1 ? maxActiveStreams :
 						Math.min(pool.maxConcurrentStreams, maxActiveStreams);
-				long diff = maxActiveStreams - maxConcurrentStreams;
-				if (diff != 0) {
-					maxConcurrentStreams = maxActiveStreams;
-					TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, diff);
-				}
-				int concurrency = this.concurrency;
-				return concurrency < maxActiveStreams;
 			}
-			return false;
+			return 0;
+		}
+
+		boolean canOpenStream() {
+			int concurrency = this.concurrency;
+			long max = this.maxConcurrentStreams;
+			// For non-HTTP/2 connections (max == 0), allow opening a stream if concurrency is 0
+			// For HTTP/2 connections, check that we haven't reached max concurrent streams
+			return max == 0 ? concurrency == 0 : concurrency < max;
 		}
 
 		int concurrency() {
