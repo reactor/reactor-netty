@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -656,8 +656,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		int permits = poolConfig.allocationStrategy().estimatePermitCount();
 		if (permits + estimateStreamsCount < postOffer) {
 			borrower.pendingAcquireStart = clock.millis();
-			if (!borrower.acquireTimeout.isZero()) {
-				borrower.timeoutTask = poolConfig.pendingAcquireTimer().apply(borrower, borrower.acquireTimeout);
+			if (!borrower.acquireTimeout.isZero() && borrower.timeoutTask == Borrower.TIMEOUT_DISPOSED) {
+				Disposable task = poolConfig.pendingAcquireTimer().apply(borrower, borrower.acquireTimeout);
+				if (!borrower.setTimeoutTask(task)) {
+					task.dispose();
+				}
 			}
 		}
 
@@ -763,6 +766,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	static final class Borrower extends AtomicBoolean implements Scannable, Subscription, Runnable {
 
 		static final Disposable TIMEOUT_DISPOSED = Disposables.disposed();
+		static final Disposable TIMEOUT_STOPPED = Disposables.disposed();
 
 		final Duration acquireTimeout;
 		final CoreSubscriber<? super Http2PooledRef> actual;
@@ -770,7 +774,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		long pendingAcquireStart;
 
-		Disposable timeoutTask;
+		volatile Disposable timeoutTask;
+		@SuppressWarnings("rawtypes")
+		static final AtomicReferenceFieldUpdater<Borrower, Disposable> TIMEOUT_TASK =
+				AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Disposable.class, "timeoutTask");
 
 		Borrower(CoreSubscriber<? super Http2PooledRef> actual, Http2Pool pool, Duration acquireTimeout) {
 			this.acquireTimeout = acquireTimeout;
@@ -851,6 +858,16 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			}
 		}
 
+		/**
+		 * Atomically set the timeout task if not already stopped.
+		 *
+		 * @return true if the task was set, false if countdown was already stopped
+		 * @see #stopPendingCountdown(boolean)
+		 */
+		boolean setTimeoutTask(Disposable task) {
+			return TIMEOUT_TASK.compareAndSet(this, TIMEOUT_DISPOSED, task);
+		}
+
 		void stopPendingCountdown(boolean success) {
 			if (pendingAcquireStart > 0) {
 				if (success) {
@@ -862,7 +879,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 				pendingAcquireStart = 0;
 			}
-			timeoutTask.dispose();
+			Disposable task = TIMEOUT_TASK.getAndSet(this, TIMEOUT_STOPPED);
+			task.dispose();
 		}
 	}
 
