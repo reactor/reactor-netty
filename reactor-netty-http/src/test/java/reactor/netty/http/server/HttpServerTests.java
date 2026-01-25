@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1854,7 +1854,9 @@ class HttpServerTests extends BaseHttpTest {
 	private void doTestGracefulShutdown(HttpServer server, HttpClient client) throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
-		CountDownLatch latchGoAway = new CountDownLatch(2);
+		// HTTP/2 GOAWAY is a connection-level frame. With multiplexing enabled, both concurrent requests
+		// can share the same connection, so we should only expect at least one GOAWAY to be observed.
+		CountDownLatch latchGoAway = new CountDownLatch(1);
 		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
 		group = new DefaultChannelGroup(executor);
@@ -1906,7 +1908,7 @@ class HttpServerTests extends BaseHttpTest {
 		// Stop accepting incoming requests, wait at most 3s for the active requests to finish
 		disposableServer.disposeNow();
 
-		assertThat(latchGoAway.await(30, TimeUnit.SECONDS)).as("2 GOAWAY should have been received").isTrue();
+		assertThat(latchGoAway.await(30, TimeUnit.SECONDS)).as("GOAWAY should have been received").isTrue();
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 
 		// Dispose the event loop
