@@ -75,6 +75,9 @@ updates:
   - dependency-name: org.junit.platform:junit-platform-launcher
     versions:
     - "[6.a, 7]"
+  - dependency-name: gradle-wrapper
+    versions:
+    - "[8.5.a, 10]"
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
