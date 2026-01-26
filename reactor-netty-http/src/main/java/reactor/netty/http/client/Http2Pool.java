@@ -391,7 +391,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				// when cached connections are below minimum connections, then allocate a new connection
 				boolean belowMinConnections = minConnections > 0 &&
 						poolConfig.allocationStrategy().permitGranted() < minConnections;
-				Slot slot = belowMinConnections ? null : findConnection(resources);
+				int resourcesCount = idleSize;
+				Slot slot = belowMinConnections ? null : findConnection(resources, resourcesCount);
 				if (slot != null) {
 					Borrower borrower = pollPending(borrowers, true);
 					if (borrower == null || borrower.get()) {
@@ -412,10 +413,12 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					});
 				}
 				else {
-					int resourcesCount = idleSize;
 					if (minConnections > 0 &&
 							poolConfig.allocationStrategy().permitGranted() >= minConnections &&
-							resourcesCount == 0) {
+							poolConfig.allocationStrategy().permitGranted() > resourcesCount) {
+						// connections allocations were triggered
+					}
+					else if (minConnections == 0 && poolConfig.allocationStrategy().permitGranted() > resourcesCount) {
 						// connections allocations were triggered
 					}
 					else {
@@ -539,8 +542,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		scheduleEviction();
 	}
 
-	@Nullable Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
-		int resourcesCount = idleSize;
+	@Nullable Slot findConnection(ConcurrentLinkedQueue<Slot> resources, int resourcesCount) {
 		while (resourcesCount > 0) {
 			// There are connections in the queue
 
