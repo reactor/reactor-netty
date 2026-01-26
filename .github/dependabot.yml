@@ -137,6 +137,7 @@ updates:
   - dependency-name: org.slf4j:*
   - dependency-name: org.graalvm.buildtools.native
   - dependency-name: com.gradleup.shadow
+  - dependency-name: gradle-wrapper
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
