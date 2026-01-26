@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -202,12 +202,39 @@ jar {
 	}
 }
 
+// Use the shadow JAR for java11Test and java17Test to ensure multi-release class loading works correctly.
+// The JVM's multi-release feature (selecting classes from META-INF/versions/N/) only works with JAR files,
+// not class directories. Without this, both the Java 8 and Java 11+ versions of DefaultLoopIOUring would
+// be on the classpath as separate directories, causing unpredictable class loading. By using the shadow JAR,
+// the JVM correctly selects the appropriate class version (e.g., Java 11+ io_uring vs Java 8 incubator io_uring).
 java17Test {
-	classpath = sourceSets.main.output + sourceSets.test.runtimeClasspath
+	Set<? super File> mainOutputs = [
+		project.sourceSets.main.output.resourcesDir,
+		project.sourceSets.main.java.classesDirectory,
+	]
+	classpath = shadowJar.outputs.files
+	classpath += sourceSets.test.runtimeClasspath.filter { !(it in mainOutputs) }
 	jvmArgs = ["-XX:+AllowRedefinitionToAddDeleteMethods"]
+	//The imports are not relocated, we do relocation only for the main sources not the tests
+	exclude '**/*PooledConnectionProviderTest*.*'
+	//NativeConfigTest uses Reflections to scan for ChannelHandler implementations and compares
+	//against a static config; shaded classes cause a mismatch
+	exclude '**/*NativeConfigTest*.*'
+	dependsOn(shadowJar)
 }
 java11Test {
-	classpath = sourceSets.main.output + sourceSets.test.runtimeClasspath
+	Set<? super File> mainOutputs = [
+		project.sourceSets.main.output.resourcesDir,
+		project.sourceSets.main.java.classesDirectory,
+	]
+	classpath = shadowJar.outputs.files
+	classpath += sourceSets.test.runtimeClasspath.filter { !(it in mainOutputs) }
+	//The imports are not relocated, we do relocation only for the main sources not the tests
+	exclude '**/*PooledConnectionProviderTest*.*'
+	//NativeConfigTest uses Reflections to scan for ChannelHandler implementations and compares
+	//against a static config; shaded classes cause a mismatch
+	exclude '**/*NativeConfigTest*.*'
+	dependsOn(shadowJar)
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
@@ -389,6 +416,9 @@ task shadedJarTest(type: Test) {
 
 	//The imports are not relocated, we do relocation only for the main sources not the tests
 	exclude '**/*PooledConnectionProviderTest*.*'
+	//NativeConfigTest uses Reflections to scan for ChannelHandler implementations and compares
+	//against a static config; shaded classes cause a mismatch
+	exclude '**/*NativeConfigTest*.*'
 
 	dependsOn(shadowJar)
 }
