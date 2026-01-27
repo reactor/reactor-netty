@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,8 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.uring.IoUring;
+import io.netty.incubator.channel.uring.IOUring;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.JRE;
@@ -212,20 +211,10 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
-	@EnabledForJreRange(min = JRE.JAVA_11)
-	void testIoUringIsAvailable() {
-		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
-		assumeThat(isTransportIoUring).isTrue();
-		assertThat(IoUring.isAvailable()).isTrue();
-	}
-
-	@Test
-	@EnabledOnOs(OS.LINUX)
 	@EnabledOnJre(JRE.JAVA_8)
 	void testIoUringIncubatorIsAvailableOnJava8() {
-		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
-		assumeThat(isTransportIoUring).isTrue();
-		assertThat(io.netty.incubator.channel.uring.IOUring.isAvailable()).isTrue();
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("io_uring");
+		assertThat(IOUring.isAvailable()).isTrue();
 	}
 
 	@Test
