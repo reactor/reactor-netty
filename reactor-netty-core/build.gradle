@@ -149,10 +149,6 @@ dependencies {
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
-	java11TestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
-	java11TestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-	java11TestRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
-
 	if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
 		// Necessary for generating SelfSignedCertificate on Java version >= 15
 		testRuntimeOnly "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
@@ -201,13 +197,15 @@ jar {
 }
 
 java17Test {
+	classpath = sourceSets.main.output + sourceSets.test.runtimeClasspath
 	jvmArgs = ["-XX:+AllowRedefinitionToAddDeleteMethods"]
-	exclude '**/NativeConfigTest.*'
 }
 java11Test {
-	exclude '**/NativeConfigTest.*'
-	// Ensure runtime classpath includes java11TestRuntimeClasspath
-	classpath = sourceSets.java11Test.runtimeClasspath
+	// Ensure runtime classpath includes test dependencies plus java11Test specific ones
+	// Exclude incubator io_uring from test.runtimeClasspath as java11 uses the new non-incubator version
+	classpath = sourceSets.main.output + (sourceSets.test.runtimeClasspath - configurations.testRuntimeClasspath.fileCollection { 
+		it.group == 'io.netty.incubator' && it.name.contains('io_uring')
+	}) + sourceSets.java11Test.runtimeClasspath
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
