@@ -28,8 +28,7 @@ class LoopResourcesTest {
 	@Test
 	@EnabledOnOs(OS.LINUX)
 	void testIoUringIsAvailable() {
-		boolean isTransportIoUring = "io_uring".equals(System.getProperty("forceTransport"));
-		assumeThat(isTransportIoUring).isTrue();
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("io_uring");
 		assertThat(IoUring.isAvailable()).isTrue();
 	}
 }
