@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,11 +89,6 @@ dependencies {
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
 	if (project.hasProperty("forceTransport")) {
-		//so that the main code compiles
-		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
-		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
-		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
@@ -113,9 +108,6 @@ dependencies {
 	else {
 		//classic build to be distributed
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
-		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 	}
 
 	//Metrics

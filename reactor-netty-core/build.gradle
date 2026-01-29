@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,28 +84,28 @@ dependencies {
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
+	compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+	compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+	compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
+	testCompileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+	testCompileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+	java11TestCompileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 	if (project.hasProperty("forceTransport")) {
 		//so that the main code compiles
 		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
-		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
-		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
-		testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion"
-		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion"
-		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		testCompileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
-				testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+				testRuntimeOnly "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
 			}
 			else if (osdetector.os == "linux") {
-				testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+				testRuntimeOnly "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
 		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-			testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion$os_suffix"
-			testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+			testRuntimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+			java11TestRuntimeOnly "io.netty:netty-transport-native-io_uring:$nettyVersion$os_suffix"
 		}
 		else if (forceTransport != "nio") {
 			throw new InvalidUserDataException("invalid -PforceTransport option " + forceTransport + ", should be native|nio|io_uring")
@@ -114,12 +114,6 @@ dependencies {
 	else {
 		//classic build to be distributed
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
-		compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
-		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		testImplementation "io.netty:netty-transport-native-io_uring:$nettyVersion"
-		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
 
 	//Metrics
@@ -207,7 +201,11 @@ java17Test {
 	jvmArgs = ["-XX:+AllowRedefinitionToAddDeleteMethods"]
 }
 java11Test {
-	classpath = sourceSets.main.output + sourceSets.test.runtimeClasspath
+	exclude '**/*NativeConfigTest*.*'
+	// Filter out incubator io_uring as java11 uses the new non-incubator version
+	classpath = classpath.filter { file ->
+		!(file.name.contains('io_uring') && file.name.contains('incubator'))
+	} + sourceSets.java11Test.runtimeClasspath
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
