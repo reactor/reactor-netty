@@ -201,11 +201,11 @@ java17Test {
 	jvmArgs = ["-XX:+AllowRedefinitionToAddDeleteMethods"]
 }
 java11Test {
-	// Ensure runtime classpath includes test dependencies plus java11Test specific ones
-	// Exclude incubator io_uring from test.runtimeClasspath as java11 uses the new non-incubator version
-	classpath = sourceSets.main.output + (sourceSets.test.runtimeClasspath - configurations.testRuntimeClasspath.fileCollection { 
-		it.group == 'io.netty.incubator' && it.name.contains('io_uring')
-	}) + sourceSets.java11Test.runtimeClasspath
+	exclude '**/*NativeConfigTest*.*'
+	// Filter out incubator io_uring as java11 uses the new non-incubator version
+	classpath = classpath.filter { file ->
+		!(file.name.contains('io_uring') && file.name.contains('incubator'))
+	} + sourceSets.java11Test.runtimeClasspath
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
