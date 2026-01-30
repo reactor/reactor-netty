@@ -407,8 +407,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 						log.debug(format(slot.connection.channel(), "Channel activated"));
 					}
 					ACQUIRED.incrementAndGet(this);
+					// Reserve concurrency and re-offer the slot before async deliver so concurrent acquires can reuse the connection
+					slot.incrementConcurrencyAndGet();
+					slot.deactivate();
 					slot.connection.channel().eventLoop().execute(() -> {
-						borrower.deliver(new Http2PooledRef(slot));
+						borrower.deliver(new Http2PooledRef(slot), true);
 						drain();
 					});
 				}
@@ -836,17 +839,31 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		void deliver(Http2PooledRef poolSlot) {
+			deliver(poolSlot, false);
+		}
+
+		void deliver(Http2PooledRef poolSlot, boolean alreadyReserved) {
 			assert poolSlot.slot.connection.channel().eventLoop().inEventLoop();
 			poolSlot.slot.updateMaxConcurrentStreams();
-			if (!poolSlot.slot.canOpenStream()) {
-				poolSlot.slot.deactivate();
+
+			int effectiveConcurrency = poolSlot.slot.concurrency() - (alreadyReserved ? 1 : 0);
+			if (!poolSlot.slot.canOpenStream(effectiveConcurrency)) {
+				if (alreadyReserved) {
+					// Concurrency was reserved in drainLoop, rollback reservation
+					poolSlot.slot.decrementConcurrencyAndGet();
+				}
+				else {
+					poolSlot.slot.deactivate();
+				}
 				pool.addPending(pool.pending, this, true);
 				return;
 			}
 			stopPendingCountdown(true);
-			// Increment concurrency BEFORE deactivate so that canOpenStream() is correct for other threads
-			poolSlot.slot.incrementConcurrencyAndGet();
-			poolSlot.slot.deactivate();
+			if (!alreadyReserved) {
+				// Increment concurrency BEFORE deactivate so that canOpenStream() is correct for other threads
+				poolSlot.slot.incrementConcurrencyAndGet();
+				poolSlot.slot.deactivate();
+			}
 			if (get()) {
 				//CANCELLED or timeout reached
 				poolSlot.invalidate().subscribe(aVoid -> {}, e -> Operators.onErrorDropped(e, Context.empty()));
@@ -1037,7 +1054,13 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		boolean canOpenStream() {
-			int concurrency = this.concurrency;
+			return canOpenStream(this.concurrency);
+		}
+
+		boolean canOpenStream(int concurrency) {
+			if (concurrency < 0) {
+				return false;
+			}
 			long max = this.maxConcurrentStreams;
 			// For non-HTTP/2 connections (max == 0), allow opening a stream if concurrency is 0
 			// For HTTP/2 connections, check that we haven't reached max concurrent streams
