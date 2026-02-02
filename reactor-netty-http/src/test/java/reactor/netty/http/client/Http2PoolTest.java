@@ -145,7 +145,7 @@ class Http2PoolTest {
 	}
 
 	@Test
-	void concurrentAcquireReusesConnection() {
+	void strictReuseConcurrentAcquireReusesConnection() {
 		AtomicInteger allocator = new AtomicInteger();
 		ConcurrentLinkedQueue<EmbeddedChannel> channels = new ConcurrentLinkedQueue<>();
 
@@ -162,7 +162,12 @@ class Http2PoolTest {
 						.idleResourceReuseLruOrder()
 						.maxPendingAcquireUnbounded()
 						.sizeBetween(0, 2);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+		// Enable strict reuse so concurrent acquires do not allocate extra connections while a slot/allocation is in-flight.
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(2)
+				.strictConnectionReuse(true)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
 
 		List<PooledRef<Connection>> acquired = new ArrayList<>();
 		try {

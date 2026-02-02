@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,17 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		 * @return {@code this}
 		 */
 		Builder minConnections(int minConnections);
+
+		/**
+		 * Configures whether the HTTP/2 pool should strictly prefer reusing existing connections (multiplexing)
+		 * and avoid opening additional connections until all opened connections reach their max concurrent streams.
+		 * <p>
+		 * Default to {@code false}.
+		 *
+		 * @param strictConnectionReuse whether strict connection reuse should be enabled
+		 * @return {@code this}
+		 */
+		Builder strictConnectionReuse(boolean strictConnectionReuse);
 	}
 
 	/**
@@ -112,6 +123,16 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		return maxConcurrentStreams;
 	}
 
+	/**
+	 * Returns whether strict HTTP/2 connection reuse (multiplexing) is enabled.
+	 *
+	 * @return whether strict connection reuse is enabled
+	 * @since 1.3.3
+	 */
+	public boolean strictConnectionReuse() {
+		return strictConnectionReuse;
+	}
+
 	@Override
 	public int permitGranted() {
 		return maxConnections - PERMITS.get(this);
@@ -144,6 +165,7 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 	final long maxConcurrentStreams;
 	final int maxConnections;
 	final int minConnections;
+	final boolean strictConnectionReuse;
 
 	volatile int permits;
 	static final AtomicIntegerFieldUpdater<Http2AllocationStrategy> PERMITS = AtomicIntegerFieldUpdater.newUpdater(Http2AllocationStrategy.class, "permits");
@@ -152,6 +174,7 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		this.maxConcurrentStreams = build.maxConcurrentStreams;
 		this.maxConnections = build.maxConnections;
 		this.minConnections = build.minConnections;
+		this.strictConnectionReuse = build.strictConnectionReuse;
 		PERMITS.lazySet(this, this.maxConnections);
 	}
 
@@ -159,6 +182,7 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		this.maxConcurrentStreams = copy.maxConcurrentStreams;
 		this.maxConnections = copy.maxConnections;
 		this.minConnections = copy.minConnections;
+		this.strictConnectionReuse = copy.strictConnectionReuse;
 		PERMITS.lazySet(this, this.maxConnections);
 	}
 
@@ -166,10 +190,12 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		static final long DEFAULT_MAX_CONCURRENT_STREAMS = -1;
 		static final int DEFAULT_MAX_CONNECTIONS = Integer.MAX_VALUE;
 		static final int DEFAULT_MIN_CONNECTIONS = 0;
+		static final boolean DEFAULT_STRICT_CONNECTION_REUSE = false;
 
 		long maxConcurrentStreams = DEFAULT_MAX_CONCURRENT_STREAMS;
 		int maxConnections = DEFAULT_MAX_CONNECTIONS;
 		int minConnections = DEFAULT_MIN_CONNECTIONS;
+		boolean strictConnectionReuse = DEFAULT_STRICT_CONNECTION_REUSE;
 
 		@Override
 		public Http2AllocationStrategy build() {
@@ -204,6 +230,12 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 				throw new IllegalArgumentException("minConnections must be positive or zero");
 			}
 			this.minConnections = minConnections;
+			return this;
+		}
+
+		@Override
+		public Builder strictConnectionReuse(boolean strictConnectionReuse) {
+			this.strictConnectionReuse = strictConnectionReuse;
 			return this;
 		}
 	}

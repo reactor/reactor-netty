@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.awaitility.Awaitility.await;
 import static reactor.netty.http.HttpProtocol.H2;
 
 class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
@@ -79,7 +78,7 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 				                  .maxConnections(10)
 				                  .build();
 
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch = new CountDownLatch(5);
 		HttpClient httpClient =
 				createClient(pool, disposableServer::address)
 				        .protocol(H2)
@@ -95,14 +94,10 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 			                           .subscribe());
 
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
-
-			await().atMost(5, TimeUnit.SECONDS)
-			       .untilAsserted(() -> {
-			           assertThat(isRegistered.get()).isTrue();
-			           HttpConnectionPoolMetrics actual = metrics.get();
-			           assertThat(actual).isNotNull();
-			           assertThat(actual.activeStreamSize()).isEqualTo(5);
-			       });
+			assertThat(isRegistered.get()).isTrue();
+			HttpConnectionPoolMetrics actual = metrics.get();
+			assertThat(actual).isNotNull();
+			assertThat(actual.activeStreamSize()).isEqualTo(5);
 		}
 		finally {
 			pool.disposeLater().block(Duration.ofSeconds(5));

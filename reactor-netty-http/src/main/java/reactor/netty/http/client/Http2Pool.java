@@ -156,6 +156,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 	final Clock clock;
 	final Long maxConcurrentStreams;
+	final boolean strictConnectionReuse;
 	final int minConnections;
 	final PoolConfig<Connection> poolConfig;
 	final @Nullable BiPredicate<Connection, PooledRefMetadata> evictionPredicate;
@@ -176,6 +177,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		this.lastInteractionTimestamp = clock.millis();
 		this.maxConcurrentStreams = allocationStrategy instanceof Http2AllocationStrategy ?
 				((Http2AllocationStrategy) allocationStrategy).maxConcurrentStreams() : -1;
+		this.strictConnectionReuse = allocationStrategy instanceof Http2AllocationStrategy &&
+				((Http2AllocationStrategy) allocationStrategy).strictConnectionReuse();
 		this.minConnections = allocationStrategy == null ? 0 : allocationStrategy.permitMinimum();
 		this.pending = new ConcurrentLinkedDeque<>();
 		this.poolConfig = poolConfig;
@@ -391,6 +394,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				// when cached connections are below minimum connections, then allocate a new connection
 				boolean belowMinConnections = minConnections > 0 &&
 						poolConfig.allocationStrategy().permitGranted() < minConnections;
+				boolean enableStrictReuse = strictConnectionReuse || minConnections > 0;
 				int resourcesCount = idleSize;
 				Slot slot = belowMinConnections ? null : findConnection(resources, resourcesCount);
 				if (slot != null) {
@@ -407,21 +411,19 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 						log.debug(format(slot.connection.channel(), "Channel activated"));
 					}
 					ACQUIRED.incrementAndGet(this);
-					// Reserve concurrency and re-offer the slot before async deliver so concurrent acquires can reuse the connection
-					slot.incrementConcurrencyAndGet();
-					slot.deactivate();
+					if (enableStrictReuse) {
+						// Reserve concurrency and re-offer the slot before async deliver so concurrent acquires can reuse the connection
+						slot.incrementConcurrencyAndGet();
+						slot.deactivate();
+					}
 					slot.connection.channel().eventLoop().execute(() -> {
-						borrower.deliver(new Http2PooledRef(slot), true);
+						borrower.deliver(new Http2PooledRef(slot), enableStrictReuse);
 						drain();
 					});
 				}
 				else {
-					if (minConnections > 0 &&
-							poolConfig.allocationStrategy().permitGranted() >= minConnections &&
+					if (enableStrictReuse && !belowMinConnections &&
 							poolConfig.allocationStrategy().permitGranted() > resourcesCount) {
-						// connections allocations were triggered
-					}
-					else if (minConnections == 0 && poolConfig.allocationStrategy().permitGranted() > resourcesCount) {
 						// connections allocations were triggered
 					}
 					else {
