@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.kqueue.KQueueDomainDatagramChannel;
 import io.netty.channel.kqueue.KQueueDomainSocketChannel;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.kqueue.KQueueIoHandle;
 import io.netty.channel.kqueue.KQueueIoHandler;
 import io.netty.channel.kqueue.KQueueServerDomainSocketChannel;
@@ -97,13 +96,11 @@ final class DefaultLoopKQueue implements DefaultLoop {
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
 	public boolean supportGroup(EventLoopGroup group) {
 		if (group instanceof ColocatedEventLoopGroup) {
 			group = ((ColocatedEventLoopGroup) group).get();
 		}
-		return (group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isCompatible(KQueueIoHandle.class)) ||
-				group instanceof KQueueEventLoopGroup;
+		return group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isCompatible(KQueueIoHandle.class);
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopKQueue.class);
