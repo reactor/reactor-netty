@@ -22,9 +22,24 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.epoll.EpollIoHandler;
+import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueDatagramChannel;
+import io.netty.channel.kqueue.KQueueIoHandler;
+import io.netty.channel.kqueue.KQueueServerSocketChannel;
+import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.incubator.channel.uring.IOUring;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -222,5 +237,239 @@ class DefaultLoopResourcesTest {
 	void testKQueueIsAvailable() {
 		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
 		assertThat(KQueue.isAvailable()).isTrue();
+	}
+
+	// ============== Epoll Transport Tests (Linux) ==============
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	void testOnChannelWithEpollEventLoopGroup() throws Exception {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assumeThat(Epoll.isAvailable()).isTrue();
+
+		EventLoopGroup epollGroup = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelEpoll");
+			try {
+				// Verify onChannel returns correct Epoll channel instances
+				SocketChannel socketChannel = loopResources.onChannel(SocketChannel.class, epollGroup);
+				assertThat(socketChannel).isInstanceOf(EpollSocketChannel.class);
+
+				ServerSocketChannel serverSocketChannel = loopResources.onChannel(ServerSocketChannel.class, epollGroup);
+				assertThat(serverSocketChannel).isInstanceOf(EpollServerSocketChannel.class);
+
+				DatagramChannel datagramChannel = loopResources.onChannel(DatagramChannel.class, epollGroup);
+				assertThat(datagramChannel).isInstanceOf(EpollDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			epollGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	void testOnChannelClassWithEpollEventLoopGroup() throws Exception {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assumeThat(Epoll.isAvailable()).isTrue();
+
+		EventLoopGroup epollGroup = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelClassEpoll");
+			try {
+				// Verify onChannelClass returns correct Epoll channel classes
+				Class<? extends SocketChannel> socketChannelClass = loopResources.onChannelClass(SocketChannel.class, epollGroup);
+				assertThat(socketChannelClass).isEqualTo(EpollSocketChannel.class);
+
+				Class<? extends ServerSocketChannel> serverSocketChannelClass = loopResources.onChannelClass(ServerSocketChannel.class, epollGroup);
+				assertThat(serverSocketChannelClass).isEqualTo(EpollServerSocketChannel.class);
+
+				Class<? extends DatagramChannel> datagramChannelClass = loopResources.onChannelClass(DatagramChannel.class, epollGroup);
+				assertThat(datagramChannelClass).isEqualTo(EpollDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			epollGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	// ============== KQueue Transport Tests (macOS) ==============
+
+	@Test
+	@EnabledOnOs(OS.MAC)
+	void testOnChannelWithKQueueEventLoopGroup() throws Exception {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assumeThat(KQueue.isAvailable()).isTrue();
+
+		EventLoopGroup kqueueGroup = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelKQueue");
+			try {
+				// Verify onChannel returns correct KQueue channel instances
+				SocketChannel socketChannel = loopResources.onChannel(SocketChannel.class, kqueueGroup);
+				assertThat(socketChannel).isInstanceOf(KQueueSocketChannel.class);
+
+				ServerSocketChannel serverSocketChannel = loopResources.onChannel(ServerSocketChannel.class, kqueueGroup);
+				assertThat(serverSocketChannel).isInstanceOf(KQueueServerSocketChannel.class);
+
+				DatagramChannel datagramChannel = loopResources.onChannel(DatagramChannel.class, kqueueGroup);
+				assertThat(datagramChannel).isInstanceOf(KQueueDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			kqueueGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	@Test
+	@EnabledOnOs(OS.MAC)
+	void testOnChannelClassWithKQueueEventLoopGroup() throws Exception {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assumeThat(KQueue.isAvailable()).isTrue();
+
+		EventLoopGroup kqueueGroup = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelClassKQueue");
+			try {
+				// Verify onChannelClass returns correct KQueue channel classes
+				Class<? extends SocketChannel> socketChannelClass = loopResources.onChannelClass(SocketChannel.class, kqueueGroup);
+				assertThat(socketChannelClass).isEqualTo(KQueueSocketChannel.class);
+
+				Class<? extends ServerSocketChannel> serverSocketChannelClass = loopResources.onChannelClass(ServerSocketChannel.class, kqueueGroup);
+				assertThat(serverSocketChannelClass).isEqualTo(KQueueServerSocketChannel.class);
+
+				Class<? extends DatagramChannel> datagramChannelClass = loopResources.onChannelClass(DatagramChannel.class, kqueueGroup);
+				assertThat(datagramChannelClass).isEqualTo(KQueueDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			kqueueGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	// ============== io_uring Transport Tests (Linux, Java 8 incubator) ==============
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	@EnabledOnJre(JRE.JAVA_8)
+	void testOnChannelWithIoUringIncubatorEventLoopGroup() throws Exception {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("io_uring");
+		assumeThat(io.netty.incubator.channel.uring.IOUring.isAvailable()).isTrue();
+
+		EventLoopGroup ioUringGroup = new IOUringEventLoopGroup(1);
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelIoUringIncubator");
+			try {
+				// Verify onChannel returns correct io_uring incubator channel instances (Java 8)
+				SocketChannel socketChannel = loopResources.onChannel(SocketChannel.class, ioUringGroup);
+				assertThat(socketChannel).isInstanceOf(io.netty.incubator.channel.uring.IOUringSocketChannel.class);
+
+				ServerSocketChannel serverSocketChannel = loopResources.onChannel(ServerSocketChannel.class, ioUringGroup);
+				assertThat(serverSocketChannel).isInstanceOf(io.netty.incubator.channel.uring.IOUringServerSocketChannel.class);
+
+				DatagramChannel datagramChannel = loopResources.onChannel(DatagramChannel.class, ioUringGroup);
+				assertThat(datagramChannel).isInstanceOf(io.netty.incubator.channel.uring.IOUringDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			ioUringGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	@EnabledOnJre(JRE.JAVA_8)
+	void testOnChannelClassWithIoUringIncubatorEventLoopGroup() throws Exception {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("io_uring");
+		assumeThat(io.netty.incubator.channel.uring.IOUring.isAvailable()).isTrue();
+
+		EventLoopGroup ioUringGroup = new IOUringEventLoopGroup(1);
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelClassIoUringIncubator");
+			try {
+				// Verify onChannelClass returns correct io_uring incubator channel classes (Java 8)
+				Class<? extends SocketChannel> socketChannelClass = loopResources.onChannelClass(SocketChannel.class, ioUringGroup);
+				assertThat(socketChannelClass).isEqualTo(io.netty.incubator.channel.uring.IOUringSocketChannel.class);
+
+				Class<? extends ServerSocketChannel> serverSocketChannelClass = loopResources.onChannelClass(ServerSocketChannel.class, ioUringGroup);
+				assertThat(serverSocketChannelClass).isEqualTo(io.netty.incubator.channel.uring.IOUringServerSocketChannel.class);
+
+				Class<? extends DatagramChannel> datagramChannelClass = loopResources.onChannelClass(DatagramChannel.class, ioUringGroup);
+				assertThat(datagramChannelClass).isEqualTo(io.netty.incubator.channel.uring.IOUringDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			ioUringGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	// ============== NIO Transport Tests (All Platforms) ==============
+
+	@Test
+	void testOnChannelWithNioEventLoopGroup() throws Exception {
+		EventLoopGroup nioGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelNio");
+			try {
+				// Verify onChannel returns correct NIO channel instances
+				SocketChannel socketChannel = loopResources.onChannel(SocketChannel.class, nioGroup);
+				assertThat(socketChannel).isInstanceOf(NioSocketChannel.class);
+
+				ServerSocketChannel serverSocketChannel = loopResources.onChannel(ServerSocketChannel.class, nioGroup);
+				assertThat(serverSocketChannel).isInstanceOf(NioServerSocketChannel.class);
+
+				DatagramChannel datagramChannel = loopResources.onChannel(DatagramChannel.class, nioGroup);
+				assertThat(datagramChannel).isInstanceOf(NioDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			nioGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	@Test
+	void testOnChannelClassWithNioEventLoopGroup() throws Exception {
+		EventLoopGroup nioGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+		try {
+			LoopResources loopResources = LoopResources.create("testOnChannelClassNio");
+			try {
+				// Verify onChannelClass returns correct NIO channel classes
+				Class<? extends SocketChannel> socketChannelClass = loopResources.onChannelClass(SocketChannel.class, nioGroup);
+				assertThat(socketChannelClass).isEqualTo(NioSocketChannel.class);
+
+				Class<? extends ServerSocketChannel> serverSocketChannelClass = loopResources.onChannelClass(ServerSocketChannel.class, nioGroup);
+				assertThat(serverSocketChannelClass).isEqualTo(NioServerSocketChannel.class);
+
+				Class<? extends DatagramChannel> datagramChannelClass = loopResources.onChannelClass(DatagramChannel.class, nioGroup);
+				assertThat(datagramChannelClass).isEqualTo(NioDatagramChannel.class);
+			}
+			finally {
+				loopResources.disposeLater().block(Duration.ofSeconds(5));
+			}
+		}
+		finally {
+			nioGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
+		}
 	}
 }

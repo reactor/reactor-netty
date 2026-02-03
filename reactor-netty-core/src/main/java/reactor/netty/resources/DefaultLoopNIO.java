@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import java.util.concurrent.ThreadFactory;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandle;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -77,6 +79,9 @@ final class DefaultLoopNIO implements DefaultLoop {
 
 	@Override
 	public boolean supportGroup(EventLoopGroup group) {
-		return false;
+		if (group instanceof ColocatedEventLoopGroup) {
+			group = ((ColocatedEventLoopGroup) group).get();
+		}
+		return group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isCompatible(NioIoHandle.class);
 	}
 }
