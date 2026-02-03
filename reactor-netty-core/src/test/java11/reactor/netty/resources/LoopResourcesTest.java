@@ -29,27 +29,25 @@ import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.channel.uring.IoUringSocketChannel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 class LoopResourcesTest {
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
+	@EnabledIf("isIoUringTransport")
 	void testIoUringIsAvailable() {
-		assumeThat(System.getProperty("forceTransport")).isEqualTo("io_uring");
 		assertThat(IoUring.isAvailable()).isTrue();
 	}
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
+	@EnabledIf("isIoUringAvailable")
 	void testOnChannelWithIoUringEventLoopGroup() throws Exception {
-		assumeThat(System.getProperty("forceTransport")).isEqualTo("io_uring");
-		assumeThat(IoUring.isAvailable()).isTrue();
-
 		EventLoopGroup ioUringGroup = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
 		try {
 			LoopResources loopResources = LoopResources.create("testOnChannelIoUring");
@@ -75,10 +73,8 @@ class LoopResourcesTest {
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
+	@EnabledIf("isIoUringAvailable")
 	void testOnChannelClassWithIoUringEventLoopGroup() throws Exception {
-		assumeThat(System.getProperty("forceTransport")).isEqualTo("io_uring");
-		assumeThat(IoUring.isAvailable()).isTrue();
-
 		EventLoopGroup ioUringGroup = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
 		try {
 			LoopResources loopResources = LoopResources.create("testOnChannelClassIoUring");
@@ -100,5 +96,13 @@ class LoopResourcesTest {
 		finally {
 			ioUringGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
 		}
+	}
+
+	static boolean isIoUringTransport() {
+		return "io_uring".equals(System.getProperty("forceTransport"));
+	}
+
+	static boolean isIoUringAvailable() {
+		return isIoUringTransport() && IoUring.isAvailable();
 	}
 }

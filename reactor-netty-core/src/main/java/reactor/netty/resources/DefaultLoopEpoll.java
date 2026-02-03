@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollDomainDatagramChannel;
 import io.netty.channel.epoll.EpollDomainSocketChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollIoHandle;
 import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerDomainSocketChannel;
@@ -98,13 +97,11 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
 	public boolean supportGroup(EventLoopGroup group) {
 		if (group instanceof ColocatedEventLoopGroup) {
 			group = ((ColocatedEventLoopGroup) group).get();
 		}
-		return (group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isCompatible(EpollIoHandle.class)) ||
-				group instanceof EpollEventLoopGroup;
+		return group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isCompatible(EpollIoHandle.class);
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopEpoll.class);
