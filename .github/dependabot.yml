@@ -138,6 +138,7 @@ updates:
   - dependency-name: org.graalvm.buildtools.native
   - dependency-name: com.gradleup.shadow
   - dependency-name: gradle-wrapper
+  - dependency-name: de.undercouch.download
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
