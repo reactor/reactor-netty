@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@ import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
@@ -48,7 +47,7 @@ import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -130,7 +129,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpRequest) {
 			HttpRequest request = (HttpRequest) msg;
 			HttpServerOperations ops;
-			ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+			Instant timestamp = Instant.now();
 			ConnectionInfo connectionInfo = null;
 			try {
 				pendingResponse = true;
