@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -138,7 +139,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final @Nullable Duration requestTimeout;
 	final HttpHeaders responseHeaders;
 	final String scheme;
-	final ZonedDateTime timestamp;
+	final Instant timestamp;
 	final boolean validateHeaders;
 
 	@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
@@ -148,6 +149,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Nullable Future<?> requestTimeoutFuture;
 	@Nullable Consumer<? super HttpHeaders> trailerHeadersConsumer;
 	@Nullable FullHttpResponse fullHttpResponse;
+	@Nullable ZonedDateTime zonedDateTime;
 
 	volatile Context currentContext;
 
@@ -178,6 +180,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.timestamp = replaced.timestamp;
 		this.trailerHeadersConsumer = replaced.trailerHeadersConsumer;
 		this.validateHeaders = replaced.validateHeaders;
+		this.zonedDateTime = replaced.zonedDateTime;
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
@@ -193,7 +196,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			boolean secured,
-			ZonedDateTime timestamp,
+			Instant timestamp,
 			boolean validateHeaders) {
 		super(c, listener, httpMessageLogFactory);
 		this.compressionOptions = compressionOptions;
@@ -528,7 +531,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public ZonedDateTime timestamp() {
-		return timestamp;
+		ZonedDateTime zdt = this.zonedDateTime;
+		if (zdt == null) {
+			this.zonedDateTime = zdt = timestamp.atZone(ReactorNetty.ZONE_ID_SYSTEM);
+		}
+		return zdt;
 	}
 
 	@Override
@@ -1101,7 +1108,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Throwable t,
 			Object msg,
 			HttpMessageLogFactory httpMessageLogFactory,
-			@Nullable ZonedDateTime timestamp,
+			@Nullable Instant timestamp,
 			@Nullable ConnectionInfo connectionInfo,
 			SocketAddress remoteAddress,
 			boolean validateHeaders) {
@@ -1117,7 +1124,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Object msg,
 			HttpMessageLogFactory httpMessageLogFactory,
 			boolean isHttp2,
-			@Nullable ZonedDateTime timestamp,
+			@Nullable Instant timestamp,
 			@Nullable ConnectionInfo connectionInfo,
 			SocketAddress remoteAddress,
 			boolean validateHeaders) {
@@ -1161,7 +1168,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Connection conn = Connection.from(ctx.channel());
 			if (msg instanceof HttpRequest) {
 				ops = new FailedHttpServerRequest(conn, listener, (HttpRequest) msg, response, httpMessageLogFactory, isHttp2,
-						secure, timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp,
+						secure, timestamp == null ? Instant.now() : timestamp,
 						connectionInfo == null ? new ConnectionInfo(ctx.channel().localAddress(), remoteAddress, secure) : connectionInfo, validateHeaders);
 				ops.bind();
 			}
@@ -1353,7 +1360,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				HttpMessageLogFactory httpMessageLogFactory,
 				boolean isHttp2,
 				boolean secure,
-				ZonedDateTime timestamp,
+				Instant timestamp,
 				ConnectionInfo connectionInfo,
 				boolean validateHeaders) {
 			super(c, listener, nettyRequest, null, null, connectionInfo,
