@@ -68,15 +68,23 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		Builder minConnections(int minConnections);
 
 		/**
-		 * Configures whether the HTTP/2 pool should strictly prefer reusing existing connections (multiplexing)
-		 * and avoid opening additional connections until all opened connections reach their max concurrent streams.
+		 * Configures whether the HTTP/2 pool should avoid opening additional connections as long as
+		 * existing connections have not reached their max concurrent streams limit.
+		 * When enabled, the pool may operate with fewer connections (even a single one) and will only
+		 * allocate a new connection when all existing connections have reached their max concurrent streams.
+		 * <p>
+		 * This behavior is automatically enabled when {@link #minConnections(int)} is configured with a value
+		 * greater than zero. Use this option to enable the same behavior without setting a minimum connections constraint.
 		 * <p>
 		 * Default to {@code false}.
 		 *
 		 * @param strictConnectionReuse whether strict connection reuse should be enabled
 		 * @return {@code this}
+		 * @since 1.3.3
 		 */
-		Builder strictConnectionReuse(boolean strictConnectionReuse);
+		default Builder strictConnectionReuse(boolean strictConnectionReuse) {
+			return this;
+		}
 	}
 
 	/**
