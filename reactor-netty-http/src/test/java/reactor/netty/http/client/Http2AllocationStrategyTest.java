@@ -35,12 +35,12 @@ class Http2AllocationStrategyTest {
 
 	@Test
 	void build() {
-		builder.maxConcurrentStreams(2).maxConnections(2).minConnections(1);
+		builder.maxConcurrentStreams(2).maxConnections(2).minConnections(1).strictConnectionReuse(true);
 		Http2AllocationStrategy strategy = builder.build();
 		assertThat(strategy.maxConcurrentStreams()).isEqualTo(2);
 		assertThat(strategy.permitMaximum()).isEqualTo(2);
 		assertThat(strategy.permitMinimum()).isEqualTo(1);
-		assertThat(strategy.strictConnectionReuse()).isEqualTo(DEFAULT_STRICT_CONNECTION_REUSE);
+		assertThat(strategy.strictConnectionReuse()).isTrue();
 	}
 
 	@Test
@@ -65,6 +65,9 @@ class Http2AllocationStrategyTest {
 	void strictConnectionReuse() {
 		builder.strictConnectionReuse(true);
 		Http2AllocationStrategy strategy = builder.build();
+		assertThat(strategy.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
+		assertThat(strategy.permitMaximum()).isEqualTo(DEFAULT_MAX_CONNECTIONS);
+		assertThat(strategy.permitMinimum()).isEqualTo(DEFAULT_MIN_CONNECTIONS);
 		assertThat(strategy.strictConnectionReuse()).isTrue();
 	}
 
@@ -75,6 +78,7 @@ class Http2AllocationStrategyTest {
 		assertThat(strategy.maxConcurrentStreams()).isEqualTo(2);
 		assertThat(strategy.permitMaximum()).isEqualTo(DEFAULT_MAX_CONNECTIONS);
 		assertThat(strategy.permitMinimum()).isEqualTo(DEFAULT_MIN_CONNECTIONS);
+		assertThat(strategy.strictConnectionReuse()).isEqualTo(DEFAULT_STRICT_CONNECTION_REUSE);
 	}
 
 	@Test
@@ -91,6 +95,7 @@ class Http2AllocationStrategyTest {
 		assertThat(strategy.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(strategy.permitMaximum()).isEqualTo(2);
 		assertThat(strategy.permitMinimum()).isEqualTo(DEFAULT_MIN_CONNECTIONS);
+		assertThat(strategy.strictConnectionReuse()).isEqualTo(DEFAULT_STRICT_CONNECTION_REUSE);
 	}
 
 	@Test
@@ -107,6 +112,7 @@ class Http2AllocationStrategyTest {
 		assertThat(strategy.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(strategy.permitMaximum()).isEqualTo(DEFAULT_MAX_CONNECTIONS);
 		assertThat(strategy.permitMinimum()).isEqualTo(2);
+		assertThat(strategy.strictConnectionReuse()).isEqualTo(DEFAULT_STRICT_CONNECTION_REUSE);
 	}
 
 	@Test

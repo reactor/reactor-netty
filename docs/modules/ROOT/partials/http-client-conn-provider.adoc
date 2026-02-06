@@ -82,6 +82,72 @@ If you need to disable the connection pool, you can apply the following configur
 include::{examples-dir}/pool/Application.java[lines=18..49]
 ----
 
+[[http2-connection-pool]]
+=== HTTP/2
+
+When the `HTTP` client is configured for `HTTP/2`, a specialized connection pool manages `HTTP/2` connections and their streams.
+By default, the pool opens new connections as needed for concurrent requests. Since `HTTP/2` supports multiplexing --
+multiple streams over a single connection -- you can fine-tune the connection pool behavior using
+{javadoc}/reactor/netty/http/client/Http2AllocationStrategy.html[`Http2AllocationStrategy`].
+
+The following table describes the available `Http2AllocationStrategy` configuration options:
+
+[width="100%",options="header"]
+|=======
+| Configuration name | Description
+| `maxConnections` | The maximum number of live connections to keep in the pool.
+Default: `Integer.MAX_VALUE` (no upper limit).
+| `minConnections` | The minimum number of live connections to keep in the pool (can be best effort).
+When configured with a value greater than zero, strict connection reuse is also enabled.
+Default: `0`.
+| `maxConcurrentStreams` | The maximum number of concurrent streams that can be opened to the remote peer.
+The minimum of this configuration and the remote peer configuration is used.
+Default: `-1` (use the remote peer configuration).
+| `strictConnectionReuse` | Whether the pool should avoid opening additional connections as long as existing
+connections have not reached their max concurrent streams limit. When enabled, the pool will maximize
+`HTTP/2` multiplexing. This is automatically enabled when `minConnections` is greater than zero.
+Default: `false`.
+|=======
+
+The following example shows how to configure the `HTTP/2` connection pool:
+
+{examples-link}/http2/pool/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/http2/pool/Application.java[lines=18..55]
+----
+<1> Configures the maximum number of live connections to `20`.
+<2> Configures the minimum number of live connections to `5`. This also enables strict connection reuse.
+<3> Configures the maximum number of concurrent streams per connection to `50`.
+
+[[http2-strict-connection-reuse]]
+==== Strict Connection Reuse
+
+By default, when the `HTTP` client needs to open a new stream and there are concurrent acquire requests,
+the pool may allocate additional connections even though existing connections could still accept more streams.
+Enabling strict connection reuse changes this behavior so that the pool maximizes `HTTP/2` multiplexing by
+reusing existing connections before allocating new ones.
+
+This can be particularly beneficial when:
+
+* You want to minimize the number of connections to the remote peer.
+* Your workload benefits from `HTTP/2` multiplexing (many concurrent small requests).
+* You want to reduce connection establishment overhead (TCP + TLS handshakes).
+
+Strict connection reuse can be enabled in two ways:
+
+* Explicitly, by setting `strictConnectionReuse(true)`:
+
+{examples-link}/http2/pool/StrictReuseApplication.java
+[%unbreakable]
+----
+include::{examples-dir}/http2/pool/StrictReuseApplication.java[lines=18..54]
+----
+<1> Enables strict connection reuse. The pool will avoid opening additional connections as long as
+existing connections have not reached their max concurrent streams limit.
+
+* Implicitly, by configuring `minConnections` with a value greater than zero (see the example above).
+
 === Disposing Connection Pool
 
 - If you use the default `ConnectionProvider` provided by Reactor Netty, invoke
