@@ -151,17 +151,17 @@ class Http2PoolTest {
 
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.fromSupplier(() -> {
-							allocator.incrementAndGet();
-							EmbeddedChannel channel = new EmbeddedChannel(
-									new TestChannelId(),
-									Http2FrameCodecBuilder.forClient().build(),
-									new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
-							channels.add(channel);
-							return Connection.from(channel);
-						}))
-						.idleResourceReuseLruOrder()
-						.maxPendingAcquireUnbounded()
-						.sizeBetween(0, 2);
+				               allocator.incrementAndGet();
+				               EmbeddedChannel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build(),
+				                   new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+				               channels.add(channel);
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 2);
 		// Enable strict reuse so concurrent acquires do not allocate extra connections while a slot/allocation is in-flight.
 		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
 				.maxConnections(2)

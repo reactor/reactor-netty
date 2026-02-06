@@ -61,9 +61,13 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 
 		/**
 		 * Configures the minimum number of live connections to keep in the pool (can be the best effort).
+		 * When configured with a value greater than zero, the pool will also enable
+		 * {@link #strictConnectionReuse(boolean) strict connection reuse}.
 		 * Default to {@code 0}.
 		 *
+		 * @param minConnections the minimum number of live connections to keep in the pool
 		 * @return {@code this}
+		 * @see #strictConnectionReuse(boolean)
 		 */
 		Builder minConnections(int minConnections);
 
