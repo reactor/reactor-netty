@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,6 +141,63 @@ class Http2PoolTest {
 		finally {
 			channel.finishAndReleaseAll();
 			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void strictReuseConcurrentAcquireReusesConnection() {
+		AtomicInteger allocator = new AtomicInteger();
+		ConcurrentLinkedQueue<EmbeddedChannel> channels = new ConcurrentLinkedQueue<>();
+
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+							allocator.incrementAndGet();
+							EmbeddedChannel channel = new EmbeddedChannel(
+									new TestChannelId(),
+									Http2FrameCodecBuilder.forClient().build(),
+									new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+							channels.add(channel);
+							return Connection.from(channel);
+						}))
+						.idleResourceReuseLruOrder()
+						.maxPendingAcquireUnbounded()
+						.sizeBetween(0, 2);
+		// Enable strict reuse so concurrent acquires do not allocate extra connections while a slot/allocation is in-flight.
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(2)
+				.strictConnectionReuse(true)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		List<PooledRef<Connection>> acquired = new ArrayList<>();
+		try {
+			// Warm-up: allocate a connection and cache it.
+			PooledRef<Connection> warm = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(warm).isNotNull();
+			warm.release().block(Duration.ofSeconds(1));
+
+			// Don't run pending tasks yet, simulate concurrent acquires before deliver is scheduled.
+			http2Pool.acquire().subscribe(acquired::add);
+			http2Pool.acquire().subscribe(acquired::add);
+
+			assertThat(allocator).as("allocator count").hasValue(1);
+
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+
+			assertThat(acquired).hasSize(2);
+			assertThat(acquired.get(0).poolable())
+					.as("both acquires should share the same H2 connection")
+					.isSameAs(acquired.get(1).poolable());
+
+			for (PooledRef<Connection> ref : acquired) {
+				ref.release().block(Duration.ofSeconds(1));
+			}
+		}
+		finally {
+			for (EmbeddedChannel channel : channels) {
+				channel.finishAndReleaseAll();
+				Connection.from(channel).dispose();
+			}
 		}
 	}
 

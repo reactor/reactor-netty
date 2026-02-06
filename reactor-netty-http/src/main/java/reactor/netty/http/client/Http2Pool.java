@@ -156,6 +156,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 	final Clock clock;
 	final Long maxConcurrentStreams;
+	final boolean strictConnectionReuse;
 	final int minConnections;
 	final PoolConfig<Connection> poolConfig;
 	final @Nullable BiPredicate<Connection, PooledRefMetadata> evictionPredicate;
@@ -176,6 +177,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		this.lastInteractionTimestamp = clock.millis();
 		this.maxConcurrentStreams = allocationStrategy instanceof Http2AllocationStrategy ?
 				((Http2AllocationStrategy) allocationStrategy).maxConcurrentStreams() : -1;
+		this.strictConnectionReuse = allocationStrategy instanceof Http2AllocationStrategy &&
+				((Http2AllocationStrategy) allocationStrategy).strictConnectionReuse();
 		this.minConnections = allocationStrategy == null ? 0 : allocationStrategy.permitMinimum();
 		this.pending = new ConcurrentLinkedDeque<>();
 		this.poolConfig = poolConfig;
@@ -391,7 +394,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				// when cached connections are below minimum connections, then allocate a new connection
 				boolean belowMinConnections = minConnections > 0 &&
 						poolConfig.allocationStrategy().permitGranted() < minConnections;
-				Slot slot = belowMinConnections ? null : findConnection(resources);
+				boolean enableStrictReuse = strictConnectionReuse || minConnections > 0;
+				int resourcesCount = idleSize;
+				Slot slot = belowMinConnections ? null : findConnection(resources, resourcesCount);
 				if (slot != null) {
 					Borrower borrower = pollPending(borrowers, true);
 					if (borrower == null || borrower.get()) {
@@ -406,16 +411,19 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 						log.debug(format(slot.connection.channel(), "Channel activated"));
 					}
 					ACQUIRED.incrementAndGet(this);
+					if (enableStrictReuse) {
+						// Reserve concurrency and re-offer the slot before async deliver so concurrent acquires can reuse the connection
+						slot.incrementConcurrencyAndGet();
+						slot.deactivate();
+					}
 					slot.connection.channel().eventLoop().execute(() -> {
-						borrower.deliver(new Http2PooledRef(slot));
+						borrower.deliver(new Http2PooledRef(slot), enableStrictReuse);
 						drain();
 					});
 				}
 				else {
-					int resourcesCount = idleSize;
-					if (minConnections > 0 &&
-							poolConfig.allocationStrategy().permitGranted() >= minConnections &&
-							resourcesCount == 0) {
+					if (enableStrictReuse && !belowMinConnections &&
+							poolConfig.allocationStrategy().permitGranted() > resourcesCount) {
 						// connections allocations were triggered
 					}
 					else {
@@ -539,8 +547,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		scheduleEviction();
 	}
 
-	@Nullable Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
-		int resourcesCount = idleSize;
+	@Nullable Slot findConnection(ConcurrentLinkedQueue<Slot> resources, int resourcesCount) {
 		while (resourcesCount > 0) {
 			// There are connections in the queue
 
@@ -834,17 +841,31 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		void deliver(Http2PooledRef poolSlot) {
+			deliver(poolSlot, false);
+		}
+
+		void deliver(Http2PooledRef poolSlot, boolean alreadyReserved) {
 			assert poolSlot.slot.connection.channel().eventLoop().inEventLoop();
 			poolSlot.slot.updateMaxConcurrentStreams();
-			if (!poolSlot.slot.canOpenStream()) {
-				poolSlot.slot.deactivate();
+
+			int effectiveConcurrency = poolSlot.slot.concurrency() - (alreadyReserved ? 1 : 0);
+			if (!poolSlot.slot.canOpenStream(effectiveConcurrency)) {
+				if (alreadyReserved) {
+					// Concurrency was reserved in drainLoop, rollback reservation
+					poolSlot.slot.decrementConcurrencyAndGet();
+				}
+				else {
+					poolSlot.slot.deactivate();
+				}
 				pool.addPending(pool.pending, this, true);
 				return;
 			}
 			stopPendingCountdown(true);
-			// Increment concurrency BEFORE deactivate so that canOpenStream() is correct for other threads
-			poolSlot.slot.incrementConcurrencyAndGet();
-			poolSlot.slot.deactivate();
+			if (!alreadyReserved) {
+				// Increment concurrency BEFORE deactivate so that canOpenStream() is correct for other threads
+				poolSlot.slot.incrementConcurrencyAndGet();
+				poolSlot.slot.deactivate();
+			}
 			if (get()) {
 				//CANCELLED or timeout reached
 				poolSlot.invalidate().subscribe(aVoid -> {}, e -> Operators.onErrorDropped(e, Context.empty()));
@@ -1035,7 +1056,13 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		boolean canOpenStream() {
-			int concurrency = this.concurrency;
+			return canOpenStream(this.concurrency);
+		}
+
+		boolean canOpenStream(int concurrency) {
+			if (concurrency < 0) {
+				return false;
+			}
 			long max = this.maxConcurrentStreams;
 			// For non-HTTP/2 connections (max == 0), allow opening a stream if concurrency is 0
 			// For HTTP/2 connections, check that we haven't reached max concurrent streams
