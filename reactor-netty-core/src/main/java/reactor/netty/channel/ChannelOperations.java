@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package reactor.netty.channel;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
@@ -31,6 +32,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -704,6 +706,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			"outboundSubscription");
 
 	static final class DisposedChannel extends AbstractChannel {
+		static final ChannelId DISPOSED_CHANNEL_ID = new DisposedChannelId("disposed");
 
 		final DefaultChannelConfig config;
 		final SocketAddress localAddress;
@@ -711,7 +714,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		final SocketAddress remoteAddress;
 
 		DisposedChannel(Channel actual) {
-			super(null);
+			super(null, DISPOSED_CHANNEL_ID);
 			this.metadata = actual.metadata();
 			this.config = new DisposedChannelConfig(this);
 			this.localAddress = actual.localAddress();
@@ -818,6 +821,60 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		public ChannelConfig setAutoRead(boolean autoRead) {
 			// no-op
 			return this;
+		}
+	}
+
+	static final class DisposedChannelId implements ChannelId {
+
+		private static final long serialVersionUID = -6954006384144106645L;
+
+		final String id;
+
+		DisposedChannelId(String id) {
+			this.id = Objects.requireNonNull(id);
+		}
+
+		@Override
+		public String asShortText() {
+			return id;
+		}
+
+		@Override
+		public String asLongText() {
+			return id;
+		}
+
+		@Override
+		public int compareTo(ChannelId o) {
+			if (this == o) {
+				return 0;
+			}
+			if (o instanceof DisposedChannelId) {
+				return id.compareTo(((DisposedChannelId) o).id);
+			}
+			return asLongText().compareTo(o.asLongText());
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (!(o instanceof DisposedChannelId)) {
+				return false;
+			}
+			DisposedChannelId that = (DisposedChannelId) o;
+			return Objects.equals(id, that.id);
+		}
+
+		@Override
+		public int hashCode() {
+			return id.hashCode();
+		}
+
+		@Override
+		public String toString() {
+			return id;
 		}
 	}
 
