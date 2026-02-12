@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -930,7 +930,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
 						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, uriTagValue));
 			}
-			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, http2FrameCodec)
+			pipeline.addAfter(ctx.name(), NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
+			        .addAfter(NettyPipeline.H2Flush, NettyPipeline.HttpCodec, http2FrameCodec)
 			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler);
 			if (pipeline.get(NettyPipeline.HttpDecompressor) != null) {
 				pipeline.remove(NettyPipeline.HttpDecompressor);

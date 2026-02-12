@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.Connection;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -986,5 +987,44 @@ class Http2Tests extends BaseHttpTest {
 			//no-op
 		}
 		return result;
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
+	void testFlushConsolidationHandlerH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestFlushConsolidationHandler(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testFlushConsolidationHandlerH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		doTestFlushConsolidationHandler(createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols));
+	}
+
+	private void doTestFlushConsolidationHandler(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) -> res.sendString(Mono.just("doTestFlushConsolidationHandler")))
+				      .bindNow();
+
+		AtomicBoolean handlerExists = new AtomicBoolean(false);
+		client.doOnResponse((res, conn) -> handlerExists.set(conn.channel().parent().pipeline().get(NettyPipeline.H2Flush) != null))
+		      .get()
+		      .uri("/")
+		      .responseContent()
+		      .aggregate()
+		      .asString()
+		      .as(StepVerifier::create)
+		      .expectNext("doTestFlushConsolidationHandler")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+
+		assertThat(handlerExists.get()).isTrue();
 	}
 }
