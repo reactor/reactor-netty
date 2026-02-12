@@ -864,7 +864,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			if (!alreadyReserved) {
 				// Increment concurrency BEFORE deactivate so that canOpenStream() is correct for other threads
 				poolSlot.slot.incrementConcurrencyAndGet();
-				poolSlot.slot.deactivate();
+				if (!poolSlot.slot.isH2cUpgrade()) {
+					poolSlot.slot.deactivate();
+				}
 			}
 			if (get()) {
 				//CANCELLED or timeout reached
@@ -1139,6 +1141,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, -maxConcurrentStreams);
 				maxConcurrentStreams = 0;
 			}
+		}
+
+		boolean isH2cUpgrade() {
+			return h2cUpgradeHandlerCtx() != null && http2MultiplexHandlerCtx() == null;
 		}
 
 		@Override

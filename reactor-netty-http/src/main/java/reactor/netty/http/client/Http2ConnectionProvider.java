@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -512,11 +512,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		}
 
 		boolean isH2cUpgrade() {
-			Channel channel = pooledRef.poolable().channel();
 			Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
-			if (http2PooledRef.slot.h2cUpgradeHandlerCtx() != null &&
-					http2PooledRef.slot.http2MultiplexHandlerCtx() == null) {
-				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+			if (http2PooledRef.slot.isH2cUpgrade()) {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(http2PooledRef.poolable().channel());
 				if (ops != null) {
 					sink.success(ops);
 					return true;
