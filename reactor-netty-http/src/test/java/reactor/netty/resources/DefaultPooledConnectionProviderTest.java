@@ -586,7 +586,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
 	void testMinConnectionsH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
-		doTestMinConnections("testMinConnectionsH2cUpgrade", serverProtocols, clientProtocols);
+		doTestMinConnections("testMinConnectionsH2C", serverProtocols, clientProtocols);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -618,7 +618,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 						.build();
 		AtomicInteger counter = new AtomicInteger();
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-
 		HttpClient client =
 				createClient(provider, disposableServer.port())
 				        .wiretap(false)
