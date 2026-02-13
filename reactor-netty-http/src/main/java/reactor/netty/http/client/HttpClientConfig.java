@@ -941,6 +941,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 			if (http2PooledRef != null) {
 				http2PooledRef.slot.initMaxConcurrentStreams();
+				http2PooledRef.slot.deactivate();
 			}
 		}
 	}

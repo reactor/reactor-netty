@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -579,60 +579,84 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	//https://github.com/reactor/reactor-netty/issues/1808
 	@Test
-	@SuppressWarnings("deprecation")
-	void testMinConnections() throws Exception {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
-		Http2SslContextSpec clientCtx =
-				Http2SslContextSpec.forClient()
-				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+	void testMinConnectionsH2() throws Exception {
+		doTestMinConnections("testMinConnectionsH2", new HttpProtocol[] {HttpProtocol.H2}, new HttpProtocol[] {HttpProtocol.H2});
+	}
 
-		disposableServer =
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testMinConnectionsH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestMinConnections("testMinConnectionsH2C", serverProtocols, clientProtocols);
+	}
+
+	@SuppressWarnings("deprecation")
+	private void doTestMinConnections(String testName, HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		boolean isSecure = Arrays.asList(serverProtocols).contains(HttpProtocol.H2);
+
+		HttpServer server =
 				createServer()
 				        .wiretap(false)
-				        .protocol(HttpProtocol.H2)
-				        .secure(spec -> spec.sslContext(serverCtx))
-				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())))
-				        .bindNow();
+				        .protocol(serverProtocols)
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())));
+
+		if (isSecure) {
+			Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+			server = server.secure(spec -> spec.sslContext(serverCtx));
+		}
+		else {
+			server = server.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256));
+		}
+
+		disposableServer = server.bindNow();
 
 		int requestsNum = 100;
 		CountDownLatch latch = new CountDownLatch(1);
+		int minConnections = 5;
 		DefaultPooledConnectionProvider provider =
-				(DefaultPooledConnectionProvider) ConnectionProvider.builder("testMinConnections")
-						.allocationStrategy(Http2AllocationStrategy.builder().maxConnections(20).minConnections(5).build())
+				(DefaultPooledConnectionProvider) ConnectionProvider.builder(testName)
+						.allocationStrategy(Http2AllocationStrategy.builder().maxConnections(20).minConnections(minConnections).build())
 						.build();
 		AtomicInteger counter = new AtomicInteger();
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		HttpClient client =
 				createClient(provider, disposableServer.port())
 				        .wiretap(false)
-				        .protocol(HttpProtocol.H2)
-				        .secure(spec -> spec.sslContext(clientCtx))
-				        .metrics(true, Function.identity())
-				        .doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
-				        .observe((conn, state) -> {
-				            if (state == STREAM_CONFIGURED) {
-				                counter.incrementAndGet();
-				                conn.onTerminate()
-				                    .subscribe(null,
-				                            t -> conn.channel().eventLoop().execute(() -> {
-				                                if (counter.decrementAndGet() == 0) {
-				                                    latch.countDown();
-				                                }
-				                            }),
-				                            () -> conn.channel().eventLoop().execute(() -> {
-				                                if (counter.decrementAndGet() == 0) {
-				                                    latch.countDown();
-				                                }
-				                            }));
-				            }
-				        });
+				        .protocol(clientProtocols);
+
+		if (isSecure) {
+			Http2SslContextSpec clientCtx =
+					Http2SslContextSpec.forClient()
+					                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+			client = client.secure(spec -> spec.sslContext(clientCtx));
+		}
+
+		client = client.metrics(true, Function.identity())
+				       .doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
+				       .observe((conn, state) -> {
+				           if (state == STREAM_CONFIGURED) {
+				               counter.incrementAndGet();
+				               conn.onTerminate()
+				                   .subscribe(null,
+				                           t -> conn.channel().eventLoop().execute(() -> {
+				                               if (counter.decrementAndGet() == 0) {
+				                                   latch.countDown();
+				                               }
+				                           }),
+				                           () -> conn.channel().eventLoop().execute(() -> {
+				                               if (counter.decrementAndGet() == 0) {
+				                                   latch.countDown();
+				                               }
+				                           }));
+				           }
+				       });
 
 		try {
+			HttpClient finalClient = client;
 			Flux.range(0, requestsNum)
 			    .flatMap(i ->
-			        client.post()
+			        finalClient.post()
 			              .uri("/")
-			              .send(ByteBufMono.fromString(Mono.just("testMinConnections")))
+			              .send(ByteBufMono.fromString(Mono.just(testName)))
 			              .responseContent()
 			              .aggregate()
 			              .asString())
@@ -645,12 +669,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			String address = sa.getHostString() + ":" + sa.getPort();
 
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "http2.testMinConnections").hasValueEqualTo(0);
+					REMOTE_ADDRESS, address, NAME, "http2." + testName).hasValueEqualTo(0);
 			double idleConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "http2.testMinConnections");
+					REMOTE_ADDRESS, address, NAME, "http2." + testName);
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "testMinConnections")
-					.hasValueLessThan(10)
+					REMOTE_ADDRESS, address, NAME, testName)
+					.hasValueEqualTo(minConnections)
 					.hasValueEqualTo(idleConn);
 		}
 		finally {
