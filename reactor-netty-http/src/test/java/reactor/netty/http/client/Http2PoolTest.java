@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import org.jspecify.annotations.Nullable;
@@ -55,6 +56,153 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class Http2PoolTest {
+
+	@Test
+	void acquiredCountCorrectWhenDeliverRejectedNoStrictReuse() {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(2)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		try {
+			// Acquire first stream and keep it active (concurrency stays at 1)
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			http2Pool.acquire().doOnNext(acquired::add).block(Duration.ofSeconds(1));
+			assertThat(acquired).hasSize(1);
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) acquired.get(0)).slot;
+			assertThat(slot.concurrency()).as("concurrency after first stream").isEqualTo(1);
+
+			// Submit a second acquire. drainLoop() finds the connection, increments ACQUIRED to 2,
+			// and schedules deliver() on the event loop without pre-reserving concurrency (no strict reuse).
+			http2Pool.acquire().subscribe(acquired::add);
+
+			assertThat(acquired).as("second deliver should not have run yet").hasSize(1);
+			assertThat(http2Pool.activeStreams()).as("ACQUIRED: 1 active + 1 from drainLoop").isEqualTo(2);
+			// No pre-reservation in non-strict mode, concurrency stays at 1
+			assertThat(slot.concurrency()).as("concurrency not pre-reserved (no strict reuse)").isEqualTo(1);
+
+			// Simulate the remote peer lowering max concurrent streams to 1 (via SETTINGS frame)
+			// BEFORE the deliver() task run on the event loop.
+			// deliver() calls updateMaxConcurrentStreams() which re-reads from the codec.
+			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
+			frameCodec.connection().local().maxActiveStreams(1);
+
+			// Run pending tasks - the deliver() is rejected
+			channel.runPendingTasks();
+
+			// The second borrower should have been re-added to pending (deliver rejected it)
+			assertThat(acquired).as("second deliver should have been rejected").hasSize(1);
+			// ACQUIRED must be 1 - the rejected deliver() must have rolled back its pre-reserved increment
+			assertThat(http2Pool.activeStreams()).as("activeStreams: 1 active, 1 rolled back").isEqualTo(1);
+			// Concurrency unchanged at 1 (from the first active stream only, no pre-reservation was done)
+			assertThat(slot.concurrency()).as("concurrency unchanged at 1 (first active stream)").isEqualTo(1);
+
+			// Release the successfully acquired stream to bring concurrency down to 0
+			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+
+			channel.runPendingTasks();
+
+			// The rejected borrower was re-added to pending and drain() was triggered.
+			// deliver() runs and serves the borrower.
+			assertThat(acquired).as("both borrowers should now be served").hasSize(2);
+			assertThat(http2Pool.activeStreams()).as("activeStreams after second served").isEqualTo(1);
+
+			acquired.get(1).invalidate().block(Duration.ofSeconds(1));
+
+			assertThat(http2Pool.activeStreams()).as("activeStreams after invalidation").isEqualTo(0);
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void acquiredCountCorrectWhenDeliverRejectedStrictReuse() {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(2)
+				.strictConnectionReuse(true)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		try {
+			// Allocate a connection and cache it
+			PooledRef<Connection> warm = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(warm).isNotNull();
+
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) warm).slot;
+			assertThat(slot.concurrency()).as("concurrency after warm-up").isEqualTo(1);
+
+			warm.release().block(Duration.ofSeconds(1));
+			assertThat(slot.concurrency()).as("concurrency after release").isEqualTo(0);
+
+			// Submit two concurrent acquires. With strict reuse and maxConcurrentStreams=2,
+			// drainLoop() will pre-reserve concurrency for both and increment ACQUIRED by 2.
+			// Both deliver() tasks are queued on the event loop.
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			http2Pool.acquire().subscribe(acquired::add);
+			http2Pool.acquire().subscribe(acquired::add);
+
+			assertThat(acquired).as("deliver() tasks should not have run yet").isEmpty();
+			assertThat(http2Pool.activeStreams()).as("ACQUIRED pre-reserved for 2 borrowers").isEqualTo(2);
+			// Concurrency was pre-reserved for both borrowers
+			assertThat(slot.concurrency()).as("concurrency pre-reserved for 2 borrowers").isEqualTo(2);
+
+			// Simulate the remote peer lowering max concurrent streams to 1 (via SETTINGS frame)
+			// BEFORE the deliver() tasks run on the event loop.
+			// deliver() calls updateMaxConcurrentStreams() which re-reads from the codec.
+			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
+			frameCodec.connection().local().maxActiveStreams(1);
+
+			// Run pending tasks - first deliver() is rejected, second deliver() succeeds
+			channel.runPendingTasks();
+
+			// Only one borrower should have been served
+			assertThat(acquired).as("only one borrower should be served").hasSize(1);
+			// ACQUIRED must be 1 - the rejected deliver() must have rolled back its pre-reserved increment
+			assertThat(http2Pool.activeStreams()).as("activeStreams: 1 served, 1 rolled back").isEqualTo(1);
+			// Concurrency must be 1 - the rejected deliver() must have rolled back its pre-reserved concurrency
+			assertThat(slot.concurrency()).as("concurrency: 1 served, 1 rolled back").isEqualTo(1);
+
+			// Release the successfully acquired stream to bring concurrency down to 0
+			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+
+			channel.runPendingTasks();
+
+			// The rejected borrower was re-added to pending and drain() was triggered.
+			// deliver() runs and serves the borrower.
+			assertThat(acquired).as("both borrowers should now be served").hasSize(2);
+			assertThat(http2Pool.activeStreams()).as("activeStreams after second served").isEqualTo(1);
+
+			acquired.get(1).invalidate().block(Duration.ofSeconds(1));
+
+			assertThat(http2Pool.activeStreams()).as("activeStreams after invalidation").isEqualTo(0);
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
 
 	@Test
 	void acquireInvalidate() {

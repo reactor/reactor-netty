@@ -857,6 +857,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				else {
 					poolSlot.slot.deactivate();
 				}
+				// ACQUIRED was incremented in drainLoop, rollback
+				ACQUIRED.decrementAndGet(pool);
 				pool.addPending(pool.pending, this, true);
 				return;
 			}
