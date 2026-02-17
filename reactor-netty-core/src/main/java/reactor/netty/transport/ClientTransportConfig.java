@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -242,6 +242,10 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	protected void proxyProviderSupplier(Supplier<ProxyProvider> proxyProviderSupplier) {
 		this.proxyProviderSupplier = proxyProviderSupplier;
+	}
+
+	protected void resolver(AddressResolverGroup<?> resolver) {
+		this.resolver = resolver;
 	}
 
 	protected AddressResolverGroup<?> resolverInternal() {

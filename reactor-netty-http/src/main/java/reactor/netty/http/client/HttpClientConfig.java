@@ -517,6 +517,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
+	protected void resolver(AddressResolverGroup<?> resolver) {
+		super.resolver(resolver);
+	}
+
+	@Override
 	protected AddressResolverGroup<?> resolverInternal() {
 		return super.resolverInternal();
 	}

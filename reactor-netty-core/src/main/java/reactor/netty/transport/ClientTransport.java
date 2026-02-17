@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -247,6 +247,9 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 
 	/**
 	 * Remove any previously applied Proxy configuration customization.
+	 * <p>
+	 * If the resolver was automatically set to {@link NoopAddressResolverGroup#INSTANCE}
+	 * when the proxy was configured, it is reset to {@code null} so that the default resolver is used.
 	 *
 	 * @return a new {@link ClientTransport} reference
 	 */
@@ -277,9 +280,18 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 
 	/**
 	 * Apply a proxy configuration.
+	 * <p>
+	 * When a proxy is configured and no custom {@link AddressResolverGroup} has been set via
+	 * {@link #resolver(AddressResolverGroup)} or {@link #resolver(Consumer)},
+	 * {@link NoopAddressResolverGroup#INSTANCE} is used automatically to skip client-side DNS resolution
+	 * and delegate it to the proxy. If a custom {@link AddressResolverGroup} has already been configured,
+	 * it is not overridden and the configured resolver must be able to resolve the target hostname
+	 * on the client side.
 	 *
 	 * @param proxyOptions the proxy configuration callback
 	 * @return a new {@link ClientTransport} reference
+	 * @see #resolver(AddressResolverGroup)
+	 * @see #resolver(Consumer)
 	 */
 	public T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		Objects.requireNonNull(proxyOptions, "proxyOptions");
@@ -316,8 +328,16 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * instance returned by this method behaves as if there is no proxy settings,
 	 * regardless of configuration of the original {@link ClientTransport} instance.
 	 * <p>
+	 * When a proxy is configured and no custom {@link AddressResolverGroup} has been set,
+	 * {@link NoopAddressResolverGroup#INSTANCE} is used automatically to skip client-side DNS resolution
+	 * and delegate it to the proxy. If a custom {@link AddressResolverGroup} has already been configured,
+	 * it is not overridden and the configured resolver must be able to resolve the target hostname
+	 * on the client side.
+	 *
 	 * @return a new {@link ClientTransport} reference
 	 * @since 1.0.8
+	 * @see #resolver(AddressResolverGroup)
+	 * @see #resolver(Consumer)
 	 */
 	public final T proxyWithSystemProperties() {
 		return proxyWithSystemProperties(System.getProperties());
@@ -363,6 +383,12 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 
 	/**
 	 * Assign an {@link AddressResolverGroup}.
+	 * <p>
+	 * <strong>Note:</strong> When a proxy is configured (via {@link #proxy(Consumer)} or
+	 * {@link #proxyWithSystemProperties()}), the resolver set by this method will be used as-is
+	 * and will not be replaced by {@link NoopAddressResolverGroup#INSTANCE}. This means the
+	 * configured resolver must be able to resolve the target hostname on the client side,
+	 * even when using a proxy.
 	 *
 	 * @param resolver the new {@link AddressResolverGroup}
 	 * @return a new {@link ClientTransport} reference
@@ -377,6 +403,12 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 
 	/**
 	 * Apply a name resolver configuration.
+	 * <p>
+	 * <strong>Note:</strong> When a proxy is configured (via {@link #proxy(Consumer)} or
+	 * {@link #proxyWithSystemProperties()}), the resolver set by this method will be used as-is
+	 * and will not be replaced by {@link NoopAddressResolverGroup#INSTANCE}. This means the
+	 * configured resolver must be able to resolve the target hostname on the client side,
+	 * even when using a proxy.
 	 *
 	 * @param nameResolverSpec the name resolver callback
 	 * @return a new {@link ClientTransport} reference
