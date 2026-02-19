@@ -59,6 +59,7 @@ import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.Http2SettingsFrame;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
@@ -707,6 +708,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE))
+		 // This handler must be placed after Http2MultiplexHandler in the pipeline
+		 // so that it only sees connection-level frames (SETTINGS, GOAWAY, etc.) and not the
+		 // high-volume stream-level frames (DATA, HEADERS) which are consumed by Http2MultiplexHandler.
+		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MaxStreamsHandler, H2MaxConcurrentStreamsHandler.INSTANCE)
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 	}
 
@@ -937,7 +942,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 			pipeline.addAfter(ctx.name(), NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
 			        .addAfter(NettyPipeline.H2Flush, NettyPipeline.HttpCodec, http2FrameCodec)
-			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler);
+			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler)
+			        // This handler must be placed after Http2MultiplexHandler in the pipeline
+			        // so that it only sees connection-level frames (SETTINGS, GOAWAY, etc.) and not the
+			        // high-volume stream-level frames (DATA, HEADERS) which are consumed by Http2MultiplexHandler.
+			        .addAfter(NettyPipeline.H2MultiplexHandler, NettyPipeline.H2MaxStreamsHandler, H2MaxConcurrentStreamsHandler.INSTANCE);
 			if (pipeline.get(NettyPipeline.HttpDecompressor) != null) {
 				pipeline.remove(NettyPipeline.HttpDecompressor);
 			}
@@ -1024,6 +1033,40 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 */
 	static final class H2InboundStreamHandler extends ChannelHandlerAdapter {
 		static final ChannelHandler INSTANCE = new H2InboundStreamHandler();
+
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
+	}
+
+	/**
+	 * Handler that updates the {@link Http2Pool.Slot#maxConcurrentStreams} when a
+	 * {@link Http2SettingsFrame} is received from the remote peer.
+	 */
+	static final class H2MaxConcurrentStreamsHandler extends ChannelInboundHandlerAdapter {
+
+		static final H2MaxConcurrentStreamsHandler INSTANCE = new H2MaxConcurrentStreamsHandler();
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
+			if (msg instanceof Http2SettingsFrame) {
+				Long maxConcurrentStreams = ((Http2SettingsFrame) msg).settings().maxConcurrentStreams();
+				if (maxConcurrentStreams != null) {
+					ConnectionObserver owner = ctx.channel().attr(Http2ConnectionProvider.OWNER).get();
+					if (owner instanceof Http2ConnectionProvider.DisposableAcquire) {
+						Http2Pool.Http2PooledRef ref =
+								Http2ConnectionProvider.http2PooledRef(((Http2ConnectionProvider.DisposableAcquire) owner).pooledRef);
+						ref.slot.updateMaxConcurrentStreams(maxConcurrentStreams);
+						if (log.isDebugEnabled()) {
+							log.debug(format(ctx.channel(),
+									"Received SETTINGS frame, updated maxConcurrentStreams to {}"), ref.slot.maxConcurrentStreams);
+						}
+					}
+				}
+			}
+			ctx.fireChannelRead(msg);
+		}
 
 		@Override
 		public boolean isSharable() {

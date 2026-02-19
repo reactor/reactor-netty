@@ -846,7 +846,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		void deliver(Http2PooledRef poolSlot, boolean alreadyReserved) {
 			assert poolSlot.slot.connection.channel().eventLoop().inEventLoop();
-			poolSlot.slot.updateMaxConcurrentStreams();
 
 			int effectiveConcurrency = poolSlot.slot.concurrency() - (alreadyReserved ? 1 : 0);
 			if (!poolSlot.slot.canOpenStream(effectiveConcurrency)) {
@@ -1039,8 +1038,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, newMaxConcurrentStreams);
 		}
 
-		void updateMaxConcurrentStreams() {
-			long newMaxConcurrentStreams = computeMaxConcurrentStreams();
+		void updateMaxConcurrentStreams(long remoteMaxConcurrentStreams) {
+			long maxActiveStreams = Math.min(remoteMaxConcurrentStreams, Integer.MAX_VALUE);
+			long newMaxConcurrentStreams = pool.maxConcurrentStreams == -1 ?
+					maxActiveStreams : Math.min(pool.maxConcurrentStreams, maxActiveStreams);
 			long diff = newMaxConcurrentStreams - maxConcurrentStreams;
 			if (diff != 0) {
 				maxConcurrentStreams = newMaxConcurrentStreams;

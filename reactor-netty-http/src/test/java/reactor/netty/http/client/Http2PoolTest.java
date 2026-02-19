@@ -94,9 +94,9 @@ class Http2PoolTest {
 
 			// Simulate the remote peer lowering max concurrent streams to 1 (via SETTINGS frame)
 			// BEFORE the deliver() task run on the event loop.
-			// deliver() calls updateMaxConcurrentStreams() which re-reads from the codec.
 			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
 			frameCodec.connection().local().maxActiveStreams(1);
+			slot.updateMaxConcurrentStreams(1);
 
 			// Run pending tasks - the deliver() is rejected
 			channel.runPendingTasks();
@@ -170,9 +170,9 @@ class Http2PoolTest {
 
 			// Simulate the remote peer lowering max concurrent streams to 1 (via SETTINGS frame)
 			// BEFORE the deliver() tasks run on the event loop.
-			// deliver() calls updateMaxConcurrentStreams() which re-reads from the codec.
 			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
 			frameCodec.connection().local().maxActiveStreams(1);
+			slot.updateMaxConcurrentStreams(1);
 
 			// Run pending tasks - first deliver() is rejected, second deliver() succeeds
 			channel.runPendingTasks();
