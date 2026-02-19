@@ -92,6 +92,13 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2MaxConcurrentStreamsHandler"
+		},
+		"name": "reactor.netty.http.client.HttpClientConfig$H2MaxConcurrentStreamsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2OrHttp11Codec"
 		},
 		"name": "reactor.netty.http.client.HttpClientConfig$H2OrHttp11Codec",
