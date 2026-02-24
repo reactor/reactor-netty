@@ -308,7 +308,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	Slot createSlot(Connection connection) {
-		return new Slot(this, connection);
+		return new Slot(this, connection, poolConfig.generateMaxLifeTimeMs());
 	}
 
 	Mono<Void> destroyPoolable(Http2PooledRef ref) {
@@ -1009,6 +1009,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		final long creationTimestamp;
 		final Http2Pool pool;
 		final @Nullable String applicationProtocol;
+		final long maxLifeTimeMs;
 
 		long idleTimestamp;
 		volatile long maxConcurrentStreams;
@@ -1017,10 +1018,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		volatile @Nullable ChannelHandlerContext http2MultiplexHandlerCtx;
 		volatile @Nullable ChannelHandlerContext h2cUpgradeHandlerCtx;
 
-		Slot(Http2Pool pool, Connection connection) {
+		Slot(Http2Pool pool, Connection connection, long maxLifeTimeMs) {
 			this.connection = connection;
 			this.creationTimestamp = pool.clock.millis();
 			this.pool = pool;
+			this.maxLifeTimeMs = maxLifeTimeMs;
 			SslHandler handler = connection.channel().pipeline().get(SslHandler.class);
 			if (handler != null) {
 				this.applicationProtocol = handler.applicationProtocol() != null ?
@@ -1177,6 +1179,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		@Override
 		public long allocationTimestamp() {
 			return creationTimestamp;
+		}
+
+		@Override
+		public long maxLifeTimeMs() {
+			return maxLifeTimeMs;
 		}
 
 	}

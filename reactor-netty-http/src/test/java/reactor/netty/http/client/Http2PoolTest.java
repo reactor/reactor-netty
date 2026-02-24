@@ -24,6 +24,8 @@ import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -1108,6 +1110,146 @@ class Http2PoolTest {
 			if (connection2 != null) {
 				((EmbeddedChannel) connection2.channel()).finishAndReleaseAll();
 				connection2.dispose();
+			}
+		}
+	}
+
+	@Test
+	void maxLifeTimeWithVariance() {
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               Channel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build());
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1)
+				           .maxLifeTime(Duration.ofMillis(100))
+				           .maxLifeTimeVariance(10);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		Connection connection1 = null;
+		try {
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(acquired1).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			connection1 = acquired1.poolable();
+
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+			assertThat(connections.size()).isEqualTo(1);
+			Http2Pool.Slot slot = connections.peek();
+			assertThat(slot).isNotNull();
+			assertThat(slot.maxLifeTimeMs).isBetween(90L, 100L);
+
+			acquired1.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			if (connection1 != null) {
+				((EmbeddedChannel) connection1.channel()).finishAndReleaseAll();
+				connection1.dispose();
+			}
+		}
+	}
+
+	@Test
+	void maxLifeTimeWithVarianceEviction() throws Exception {
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               Channel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build());
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1)
+				           .maxLifeTime(Duration.ofMillis(50))
+				           .maxLifeTimeVariance(10);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		Connection connection1 = null;
+		Connection connection2 = null;
+		try {
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(acquired1).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			connection1 = acquired1.poolable();
+
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+			assertThat(connections.size()).isEqualTo(1);
+
+			Thread.sleep(60);
+
+			acquired1.invalidate().block(Duration.ofSeconds(1));
+
+			assertThat(http2Pool.activeStreams()).isEqualTo(0);
+			assertThat(connections.size()).isEqualTo(0);
+
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(acquired2).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			connection2 = acquired2.poolable();
+
+			assertThat(connection1.channel().id()).isNotEqualTo(connection2.channel().id());
+
+			assertThat(connections.size()).isEqualTo(1);
+
+			acquired2.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			if (connection1 != null) {
+				((EmbeddedChannel) connection1.channel()).finishAndReleaseAll();
+				connection1.dispose();
+			}
+			if (connection2 != null) {
+				((EmbeddedChannel) connection2.channel()).finishAndReleaseAll();
+				connection2.dispose();
+			}
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(longs = {0, 60_000})
+	void slotMaxLifeTimeMsWithoutVariance(long maxLifeTimeMs) {
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               Channel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build());
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		if (maxLifeTimeMs > 0) {
+			poolBuilder = poolBuilder.maxLifeTime(Duration.ofMillis(maxLifeTimeMs));
+		}
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		Connection connection = null;
+		try {
+			PooledRef<Connection> acquired = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(acquired).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			connection = acquired.poolable();
+
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+			assertThat(connections.size()).isEqualTo(1);
+			Http2Pool.Slot slot = connections.peek();
+			assertThat(slot).isNotNull();
+			assertThat(slot.maxLifeTimeMs).isEqualTo(maxLifeTimeMs);
+
+			acquired.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			if (connection != null) {
+				((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
+				connection.dispose();
 			}
 		}
 	}

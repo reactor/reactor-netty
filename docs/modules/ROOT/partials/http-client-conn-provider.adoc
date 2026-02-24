@@ -24,12 +24,13 @@ When you need to change the default settings, you can configure the `ConnectionP
 {examples-link}/pool/config/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/pool/config/Application.java[lines=18..50]
+include::{examples-dir}/pool/config/Application.java[lines=18..51]
 ----
 <1> Configures the maximum time for a connection to stay idle to 20 seconds.
 <2> Configures the maximum time for a connection to stay alive to 60 seconds.
-<3> Configures the maximum time for the pending acquire operation to 60 seconds.
-<4> Every two minutes, the connection pool is regularly checked for connections that are applicable for removal.
+<3> Configures a 2.5% variance on the max lifetime, so connections expire between 58.5s and 60s.
+<4> Configures the maximum time for the pending acquire operation to 60 seconds.
+<5> Every two minutes, the connection pool is regularly checked for connections that are applicable for removal.
 
 NOTE: Notice that only the default `HttpClient` (`HttpClient.create()`) uses `500` as the maximum number of active channels. In the example above, when
 instantiating a custom `ConnectionProvider`, we are changing this value to `50` using `maxConnections`. Also, if you don't set this parameter the
@@ -62,6 +63,11 @@ the next acquire operation will get the `Most Recently Used` connection
 2 * available number of processors (but with a minimum value of 16).
 | `maxIdleTime` | The time after which the channel is eligible to be closed when idle (resolution: ms). Default: max idle time is not specified.
 | `maxLifeTime` | The total life time after which the channel is eligible to be closed (resolution: ms). Default: max life time is not specified.
+| `maxLifeTimeVariance` | A variance percentage for `maxLifeTime`, introducing per-connection jitter to prevent
+simultaneous expiry of connections created around the same time. The effective max lifetime for each connection will be
+in the range `[maxLifeTime * (1 - variance/100), maxLifeTime]`. For example, with a `maxLifeTime` of 60 seconds and a
+variance of 2.5%, connections would expire between 58.5s and 60s. Only meaningful when `maxLifeTime` is configured.
+Default: 0 (no variance).
 | `metrics` | Enables/disables built-in integration with Micrometer. `ConnectionProvider.MeterRegistrar` can be provided
 for integration with another metrics system. By default, metrics are not enabled.
 | `pendingAcquireMaxCount` | The maximum number of extra attempts at acquiring a connection to keep in a pending queue.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package reactor.netty.resources;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.Disposable;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -31,6 +33,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class ConnectionProviderTest {
 
@@ -88,12 +91,49 @@ class ConnectionProviderTest {
 		else if (BiPredicate.class == clazz) {
 			field.set(builder, TEST_BI_PREDICATE);
 		}
+		else if (double.class == clazz) {
+			field.setDouble(builder, 5.0);
+		}
 		else if (Scheduler.class == clazz) {
 			field.set(builder, Schedulers.parallel());
 		}
 		else {
 			throw new IllegalArgumentException("Unknown field type " + clazz);
 		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(doubles = {0, 2.5, 100})
+	void maxLifeTimeVariance(double maxLifeTimeVariance) {
+		ConnectionProvider provider =
+				ConnectionProvider.builder("maxLifeTimeVariance")
+				                  .maxLifeTime(Duration.ofSeconds(60))
+				                  .maxLifeTimeVariance(maxLifeTimeVariance)
+				                  .build();
+		try {
+			ConnectionProvider.Builder builder = provider.mutate();
+			assertThat(builder).isNotNull();
+			assertThat(builder.maxLifeTimeVariance).isEqualTo(maxLifeTimeVariance);
+		}
+		finally {
+			provider.disposeLater().block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void maxLifeTimeVarianceNegative() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> ConnectionProvider.builder("maxLifeTimeVarianceNegative")
+				                                    .maxLifeTimeVariance(-1))
+				.withMessageContaining("maxLifeTimeVariance must be between 0 and 100");
+	}
+
+	@Test
+	void maxLifeTimeVarianceAbove100() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> ConnectionProvider.builder("maxLifeTimeVarianceAbove100")
+				                                    .maxLifeTimeVariance(101))
+				.withMessageContaining("maxLifeTimeVariance must be between 0 and 100");
 	}
 
 	static final class TestAllocationStrategy implements ConnectionProvider.AllocationStrategy<TestAllocationStrategy> {

@@ -645,8 +645,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			Http2SettingsSpec http2SettingsSpec = this.config.http2SettingsSpec();
 			if (poolFactory.evictionPredicate() == null && poolFactory.maxIdleTime() != -1 &&
 					http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null) {
-				Http11EvictionPredicate http11EvictionPredicate =
-						new Http11EvictionPredicate(poolFactory.maxIdleTime(), poolFactory.maxLifeTime());
+				Http11EvictionPredicate http11EvictionPredicate = new Http11EvictionPredicate(poolFactory.maxIdleTime());
 				Http2EvictionPredicate http2EvictionPredicate = new Http2EvictionPredicate(poolFactory.maxLifeTime());
 				this.parent = parent.mutate().evictionPredicate(http11EvictionPredicate).build();
 				poolConfigFunction = poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy(),
@@ -678,11 +677,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		static final class Http11EvictionPredicate implements BiPredicate<Connection, ConnectionMetadata> {
 			final long maxIdleTime;
-			final long maxLifeTime;
 
-			Http11EvictionPredicate(long maxIdleTime, long maxLifeTime) {
+			Http11EvictionPredicate(long maxIdleTime) {
 				this.maxIdleTime = maxIdleTime;
-				this.maxLifeTime = maxLifeTime;
 			}
 
 			@Override
@@ -694,8 +691,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
 					isNotHttp2 = frameCodec == null;
 				}
-				return (isNotHttp2 && maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-						|| (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime);
+				return isNotHttp2 && maxIdleTime != -1 && meta.idleTime() >= maxIdleTime;
 			}
 		}
 
@@ -708,7 +704,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 			@Override
 			public boolean test(Connection connection, PooledRefMetadata meta) {
-				return maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime;
+				long effectiveMaxLifeTime = meta.maxLifeTimeMs() > 0 ? meta.maxLifeTimeMs() : maxLifeTime;
+				return effectiveMaxLifeTime > 0 && meta.lifeTime() >= effectiveMaxLifeTime;
 			}
 		}
 	}
