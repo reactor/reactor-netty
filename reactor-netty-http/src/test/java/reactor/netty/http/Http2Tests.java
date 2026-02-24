@@ -16,9 +16,15 @@
 package reactor.netty.http;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http2.DefaultHttp2SettingsFrame;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
+import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.Http2SettingsFrame;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
@@ -997,34 +1003,162 @@ class Http2Tests extends BaseHttpTest {
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-		doTestFlushConsolidationHandler(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
-				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+		doTestForSpecificHandler(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)),
+				NettyPipeline.H2Flush);
 	}
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
 	void testFlushConsolidationHandlerH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
-		doTestFlushConsolidationHandler(createServer().protocol(serverProtocols),
-				createClient(() -> disposableServer.address()).protocol(clientProtocols));
+		doTestForSpecificHandler(createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols),
+				NettyPipeline.H2Flush);
 	}
 
-	private void doTestFlushConsolidationHandler(HttpServer server, HttpClient client) {
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
+	void testH2MaxStreamsHandlerH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestForSpecificHandler(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)),
+				NettyPipeline.H2MaxStreamsHandler);
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testH2MaxStreamsHandlerH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		doTestForSpecificHandler(createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols),
+				NettyPipeline.H2MaxStreamsHandler);
+	}
+
+	private void doTestForSpecificHandler(HttpServer server, HttpClient client, String handlerName) {
 		disposableServer =
-				server.handle((req, res) -> res.sendString(Mono.just("doTestFlushConsolidationHandler")))
+				server.handle((req, res) -> res.sendString(Mono.just("doTestForSpecificHandler")))
 				      .bindNow();
 
 		AtomicBoolean handlerExists = new AtomicBoolean(false);
-		client.doOnResponse((res, conn) -> handlerExists.set(conn.channel().parent().pipeline().get(NettyPipeline.H2Flush) != null))
+		client.doOnResponse((res, conn) -> handlerExists.set(conn.channel().parent().pipeline().get(handlerName) != null))
 		      .get()
 		      .uri("/")
 		      .responseContent()
 		      .aggregate()
 		      .asString()
 		      .as(StepVerifier::create)
-		      .expectNext("doTestFlushConsolidationHandler")
+		      .expectNext("doTestForSpecificHandler")
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
 
 		assertThat(handlerExists.get()).isTrue();
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
+	void testMaxConcurrentStreamsDynamicUpdateH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestMaxConcurrentStreamsDynamicUpdate(
+				server -> server.protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testMaxConcurrentStreamsDynamicUpdateH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestMaxConcurrentStreamsDynamicUpdate(
+				server -> server.protocol(serverProtocols),
+				client -> client.protocol(clientProtocols));
+	}
+
+	private void doTestMaxConcurrentStreamsDynamicUpdate(
+			Function<HttpServer, HttpServer> serverCustomizer,
+			Function<HttpClient, HttpClient> clientCustomizer) throws Exception {
+		AtomicReference<Channel> serverParentChannel = new AtomicReference<>();
+		disposableServer =
+				serverCustomizer.apply(
+				        createServer()
+				                .http2Settings(setting -> setting.maxConcurrentStreams(100))
+				                .handle((req, res) ->
+				                    res.withConnection(conn -> {
+				                        Channel parentChannel = conn.channel().parent();
+				                        if (serverParentChannel.compareAndSet(null, parentChannel)) {
+				                            Http2Settings settings = new Http2Settings().maxConcurrentStreams(1);
+				                            parentChannel.writeAndFlush(new DefaultHttp2SettingsFrame(settings));
+				                        }
+				                    })
+				                    .sendString(Mono.just("testMaxConcurrentStreamsDynamicUpdate")
+				                                    .delayElement(Duration.ofMillis(100)))))
+				        .bindNow();
+
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testMaxConcurrentStreamsDynamicUpdate")
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofMillis(50))
+				                  .build();
+		try {
+			CountDownLatch settingsReceivedLatch = new CountDownLatch(1);
+			HttpClient client =
+					clientCustomizer.apply(
+					        createClient(provider, () -> disposableServer.address())
+					                .doOnChannelInit((obs, ch, addr) -> ch.pipeline().addLast(
+					                    "testMaxConcurrentStreamsDynamicUpdate",
+					                    new ChannelInboundHandlerAdapter() {
+					                        @Override
+					                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+					                            if (msg instanceof Http2SettingsFrame) {
+					                                settingsReceivedLatch.countDown();
+					                            }
+					                            ctx.fireChannelRead(msg);
+					                        }
+					                    })));
+
+			client.get()
+			      .uri("/")
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .as(StepVerifier::create)
+			      .expectNext("testMaxConcurrentStreamsDynamicUpdate")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(30));
+
+			assertThat(settingsReceivedLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			List<? extends Signal<? extends String>> results =
+					Flux.range(0, 2)
+					    .flatMapDelayError(i ->
+					            client.get()
+					                  .uri("/")
+					                  .responseContent()
+					                  .aggregate()
+					                  .asString()
+					                  .materialize(),
+					            256, 32)
+					    .collectList()
+					    .block(Duration.ofSeconds(30));
+
+			assertThat(results).isNotNull().hasSize(2);
+
+			long successCount = results.stream().filter(Signal::isOnNext).count();
+			long errorCount = results.stream()
+			        .filter(Signal::isOnError)
+			        .filter(s -> s.getThrowable() instanceof PoolAcquireTimeoutException)
+			        .count();
+
+			assertThat(successCount).isEqualTo(1);
+			assertThat(errorCount).isEqualTo(1);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 }
