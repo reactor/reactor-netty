@@ -45,7 +45,7 @@ final class Http3Pool extends Http2Pool {
 
 	@Override
 	Slot createSlot(Connection connection) {
-		return new Slot(this, connection);
+		return new Slot(this, connection, poolConfig.generateMaxLifeTimeMs());
 	}
 
 	@Override
@@ -74,8 +74,8 @@ final class Http3Pool extends Http2Pool {
 	static final class Slot extends Http2Pool.Slot {
 		volatile @Nullable ChannelHandlerContext http3ClientConnectionHandlerCtx;
 
-		Slot(Http2Pool pool, Connection connection) {
-			super(pool, connection);
+		Slot(Http2Pool pool, Connection connection, long maxLifeTimeMs) {
+			super(pool, connection, maxLifeTimeMs);
 		}
 
 		@Override
