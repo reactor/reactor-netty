@@ -1147,9 +1147,9 @@ class Http2Tests extends BaseHttpTest {
 
 			assertThat(results).isNotNull().hasSize(2);
 
-			long successCount = results.stream().filter(Signal::isOnNext).count();
+			long successCount = results.stream().filter(s -> s.isOnNext()).count();
 			long errorCount = results.stream()
-			        .filter(Signal::isOnError)
+			        .filter(s -> s.isOnError())
 			        .filter(s -> s.getThrowable() instanceof PoolAcquireTimeoutException)
 			        .count();
 
