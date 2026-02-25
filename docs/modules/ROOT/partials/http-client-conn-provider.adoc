@@ -113,6 +113,12 @@ Default: `-1` (use the remote peer configuration).
 connections have not reached their max concurrent streams limit. When enabled, the pool will maximize
 `HTTP/2` multiplexing. This is automatically enabled when `minConnections` is greater than zero.
 Default: `false`.
+| `streamBatchSize` | The maximum number of streams that can be opened at once when a suitable connection
+is found in the pool. Instead of opening only one stream and then re-evaluating the available connections,
+the pool will attempt to open up to `streamBatchSize` streams on that connection, limited by the connection's
+available capacity. This setting only takes effect when strict connection reuse is active
+(either by enabling `strictConnectionReuse(true)` or by setting `minConnections` to a value greater than zero).
+Default: `1` (open one stream at a time).
 |=======
 
 The following example shows how to configure the `HTTP/2` connection pool:
