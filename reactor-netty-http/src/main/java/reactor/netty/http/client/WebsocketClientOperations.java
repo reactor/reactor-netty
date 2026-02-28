@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -59,7 +60,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Stephane Maldini
  * @author Simon Baslé
- * @author raccoonback
+ * @author LivingLikeKrillin
  */
 class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
@@ -67,6 +68,8 @@ class WebsocketClientOperations extends HttpClientOperations
 	WebSocketClientHandshaker handshakerHttp11;
 	final Sinks.One<WebSocketCloseStatus> onCloseState;
 	final boolean proxyPing;
+
+	@Nullable MicrometerWebSocketClientMetricsHandler micrometerWsHandler;
 
 	volatile int closeSent;
 
@@ -85,7 +88,7 @@ class WebsocketClientOperations extends HttpClientOperations
 		// Returned value is deliberately ignored
 		addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-		removeHandler(NettyPipeline.HttpMetricsHandler);
+		swapMetricsHandler(currentURI);
 
 		if (websocketClientSpec.compress()) {
 			requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
@@ -148,11 +151,18 @@ class WebsocketClientOperations extends HttpClientOperations
 			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
 					handshakerHttp11.finishHandshake(channel(), response);
+					if (micrometerWsHandler != null) {
+						micrometerWsHandler.recordHandshakeComplete(channel(),
+								String.valueOf(response.status().code()));
+					}
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {
+					if (micrometerWsHandler != null) {
+						micrometerWsHandler.recordHandshakeFailure(channel(), "ERROR");
+					}
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.close();
@@ -222,6 +232,45 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	boolean isHandshakeComplete() {
 		return handshakerHttp11.isHandshakeComplete();
+	}
+
+	void swapMetricsHandler(URI currentURI) {
+		Channel channel = channel();
+		ChannelHandler existingHandler = channel.pipeline().get(NettyPipeline.HttpMetricsHandler);
+		if (existingHandler instanceof AbstractHttpClientMetricsHandler) {
+			AbstractHttpClientMetricsHandler httpHandler = (AbstractHttpClientMetricsHandler) existingHandler;
+			channel.pipeline().remove(NettyPipeline.HttpMetricsHandler);
+
+			AbstractWebSocketClientMetricsHandler wsHandler;
+			if (httpHandler instanceof MicrometerHttpClientMetricsHandler) {
+				MicrometerWebSocketClientMetricsHandler micrometerHandler = new MicrometerWebSocketClientMetricsHandler(
+						MicrometerWebSocketClientMetricsRecorder.INSTANCE,
+						httpHandler.remoteAddress, httpHandler.proxyAddress, httpHandler.uriTagValue);
+				micrometerHandler.initMetrics(channel.pipeline().context(NettyPipeline.ReactiveBridge));
+				micrometerHandler.startHandshake(channel.pipeline().context(NettyPipeline.ReactiveBridge),
+						currentURI.getPath());
+				this.micrometerWsHandler = micrometerHandler;
+				wsHandler = micrometerHandler;
+			}
+			else if (httpHandler instanceof ContextAwareHttpClientMetricsHandler) {
+				ContextAwareHttpClientMetricsHandler ctxHandler = (ContextAwareHttpClientMetricsHandler) httpHandler;
+				wsHandler = new ContextAwareWebSocketClientMetricsHandler(
+						new DefaultContextAwareWebSocketClientMetricsRecorder(ctxHandler.recorder),
+						httpHandler.remoteAddress, httpHandler.proxyAddress, httpHandler.uriTagValue);
+				wsHandler.initMetrics(channel.pipeline().context(NettyPipeline.ReactiveBridge));
+			}
+			else {
+				wsHandler = new WebSocketClientMetricsHandler(
+						MicrometerWebSocketClientMetricsRecorder.INSTANCE,
+						httpHandler.remoteAddress, httpHandler.proxyAddress, httpHandler.uriTagValue);
+				wsHandler.initMetrics(channel.pipeline().context(NettyPipeline.ReactiveBridge));
+			}
+
+			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.WsMetricsHandler, wsHandler);
+		}
+		else {
+			removeHandler(NettyPipeline.HttpMetricsHandler);
+		}
 	}
 
 	@Override
