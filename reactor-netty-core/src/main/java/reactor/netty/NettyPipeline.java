@@ -132,6 +132,7 @@ public interface NettyPipeline {
 	String TlsMetricsHandler     = LEFT + "tlsMetricsHandler";
 	String WsCompressionHandler  = LEFT + "wsCompressionHandler";
 	String WsFrameAggregator     = LEFT + "wsFrameAggregator";
+	String WsMetricsHandler      = LEFT + "wsMetricsHandler";
 
 	String ReactiveBridge        = RIGHT + "reactiveBridge";
 
