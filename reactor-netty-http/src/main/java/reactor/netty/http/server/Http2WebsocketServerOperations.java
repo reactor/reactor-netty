@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -423,6 +423,11 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 
 		WebsocketServerExtensionHandler(List<WebSocketServerExtensionHandshaker> extensionHandshakers) {
 			this.extensionHandshakers = extensionHandshakers;
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 
 		@Override

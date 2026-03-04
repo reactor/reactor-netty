@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,5 +86,10 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 		else {
 			super.channelRead(ctx, msg);
 		}
+	}
+
+	@Override
+	public boolean isSharable() {
+		return false;
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -397,6 +397,11 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 		}
 
 		@Override
+		public boolean isSharable() {
+			return false;
+		}
+
+		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
 			if (ctx.channel().isActive()) {
 				Connection c = Connection.from(ctx.channel());
@@ -465,6 +470,11 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 		}
 
 		@Override
+		public boolean isSharable() {
+			return true;
+		}
+
+		@Override
 		protected void initChannel(QuicStreamChannel ch) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(ch, "Created a new QUIC stream."));
@@ -474,11 +484,11 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 				ch.pipeline().addLast(loggingHandler);
 			}
 			if (inbound) {
-				ch.pipeline().addLast(new QuicInboundStreamTrafficHandler());
+				ch.pipeline().addLast(QuicInboundStreamTrafficHandler.INSTANCE);
 				ChannelOperations.addReactiveBridge(ch, (conn, observer, msg) -> new QuicInboundStreamOperations(conn, observer), streamListener);
 			}
 			else {
-				ch.pipeline().addLast(new QuicOutboundStreamTrafficHandler());
+				ch.pipeline().addLast(QuicOutboundStreamTrafficHandler.INSTANCE);
 				ChannelOperations.addReactiveBridge(ch, (conn, observer, msg) -> new QuicOutboundStreamOperations(conn, observer), streamListener);
 			}
 		}
