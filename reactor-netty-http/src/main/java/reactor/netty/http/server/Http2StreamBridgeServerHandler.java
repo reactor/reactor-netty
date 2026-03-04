@@ -239,6 +239,11 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 		}
 	}
 
+	@Override
+	public boolean isSharable() {
+		return false;
+	}
+
 	void finalizeResponse(ChannelHandlerContext ctx) {
 		pendingResponse = false;
 		ctx.read();

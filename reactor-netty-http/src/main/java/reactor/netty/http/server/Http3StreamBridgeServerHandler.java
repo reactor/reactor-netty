@@ -221,6 +221,11 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 		}
 	}
 
+	@Override
+	public boolean isSharable() {
+		return false;
+	}
+
 	void finalizeResponse(ChannelHandlerContext ctx, ChannelFuture f) {
 		pendingResponse = false;
 		f.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);

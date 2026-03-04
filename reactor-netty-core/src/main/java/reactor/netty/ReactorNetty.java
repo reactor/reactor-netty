@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -833,6 +833,11 @@ public final class ReactorNetty {
 			}
 			super.channelIdle(ctx, evt);
 		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
+		}
 	}
 
 	static final class InboundIdleStateHandler extends IdleStateHandler {
@@ -851,6 +856,11 @@ public final class ReactorNetty {
 				onReadIdle.run();
 			}
 			super.channelIdle(ctx, evt);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 	}
 
@@ -896,7 +906,6 @@ public final class ReactorNetty {
 	 * @author Stephane Maldini
 	 * @author Simon Baslé
 	 */
-	@ChannelHandler.Sharable
 	static final class ExtractorHandler extends ChannelInboundHandlerAdapter {
 
 
@@ -910,6 +919,10 @@ public final class ReactorNetty {
 			extractor.accept(ctx, msg);
 		}
 
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
 	}
 
 	static final class ChannelDisposer extends BaseSubscriber<Void> {

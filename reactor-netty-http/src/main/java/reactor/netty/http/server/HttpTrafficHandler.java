@@ -669,6 +669,11 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		}
 	}
 
+	@Override
+	public boolean isSharable() {
+		return false;
+	}
+
 	boolean shouldKeepAlive() {
 		return pendingResponses != 0 && persistentConnection;
 	}

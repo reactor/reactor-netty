@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,11 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 		this.quicChannelInitializer = quicChannelInitializer;
 		this.remoteAddress = remoteAddress;
 		this.sslProvider = config.sslProvider;
+	}
+
+	@Override
+	public boolean isSharable() {
+		return true;
 	}
 
 	@Override
@@ -132,6 +137,11 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 				listener.onStateChange(c, ConnectionObserver.State.CONNECTED);
 				listener.onStateChange(c, ConnectionObserver.State.CONFIGURED);
 			}
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 	}
 }

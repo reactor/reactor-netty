@@ -157,6 +157,7 @@ dependencies {
 	testFixturesApi("ch.qos.logback:logback-classic:$logbackVersion")
 	testFixturesApi("io.micrometer:micrometer-core:$micrometerVersion")
 	testFixturesApi("org.assertj:assertj-core:$assertJVersion")
+	testFixturesApi("org.reflections:reflections:$reflectionsVersion")
 
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package reactor.netty.http.server;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -996,7 +995,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
-	static final class H2CleartextCodec extends ChannelHandlerAdapter {
+	static final class H2CleartextCodec implements ChannelHandler {
 
 		final Http11OrH2CleartextCodec upgrader;
 		final boolean addHttp2FrameCodec;
@@ -1069,6 +1068,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 								HttpConnectionLiveness.CLOSE);
 			}
 		}
+
+		@Override
+		public void handlerRemoved(ChannelHandlerContext ctx) {
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
+		}
 	}
 
 	static final class H2Codec extends ChannelInitializer<Channel> {
@@ -1139,6 +1148,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.readTimeout = readTimeout;
 			this.requestTimeout = requestTimeout;
 			this.uriTagValue = uriTagValue;
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 
 		@Override
@@ -1262,6 +1276,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.uriTagValue = uriTagValue;
 			this.idleTimeout = idleTimeout;
 			this.http2SettingsSpec = http2SettingsSpec;
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 
 		/**
@@ -1403,6 +1422,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			}
 
 			throw new IllegalStateException("unknown protocol: " + protocol);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 	}
 
@@ -1730,6 +1754,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			super(sourceCodec, upgradeCodecFactory, maxContentLength);
 			this.readTimeout = readTimeout;
 			this.requestTimeout = requestTimeout;
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 
 		@Override

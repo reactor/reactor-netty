@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -634,10 +633,14 @@ public final class ProxyProvider {
 		}
 	}
 
-	@ChannelHandler.Sharable
 	static final class UnvoidHandler extends ChannelOutboundHandlerAdapter {
 
 		static final UnvoidHandler INSTANCE = new UnvoidHandler();
+
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
 
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")

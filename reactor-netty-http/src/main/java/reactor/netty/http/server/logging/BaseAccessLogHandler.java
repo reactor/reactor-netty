@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,11 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 
 	BaseAccessLogHandler(@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog) {
 		this.accessLog = accessLog == null ? DEFAULT_ACCESS_LOG : accessLog;
+	}
+
+	@Override
+	public boolean isSharable() {
+		return false;
 	}
 
 	static String applyAddress(@Nullable SocketAddress socketAddress) {

@@ -32,7 +32,6 @@ import java.util.regex.Pattern;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -627,7 +626,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, HTTP2_STREAM_FRAME_TO_HTTP_OBJECT)
-				.addLast(NettyPipeline.HttpTrafficHandler, HTTP_2_STREAM_BRIDGE_CLIENT_HANDLER);
+				.addLast(NettyPipeline.HttpTrafficHandler, Http2StreamBridgeClientHandler.INSTANCE);
 
 		if (acceptGzip) {
 			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
@@ -873,9 +872,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static final Http2StreamFrameToHttpObjectCodec HTTP2_STREAM_FRAME_TO_HTTP_OBJECT =
 			new Http2StreamFrameToHttpObjectCodec(false);
 
-	static final Http2StreamBridgeClientHandler HTTP_2_STREAM_BRIDGE_CLIENT_HANDLER =
-			new Http2StreamBridgeClientHandler();
-
 	static final Logger log = Loggers.getLogger(HttpClientConfig.class);
 
 	static final LoggingHandler LOGGING_HANDLER =
@@ -888,7 +884,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_CLIENT_DEBUG, "false"));
 
-	static final class H2CleartextCodec extends ChannelHandlerAdapter {
+	static final class H2CleartextCodec implements ChannelHandler {
 
 		final boolean acceptGzip;
 		final Http2FrameCodec http2FrameCodec;
@@ -958,6 +954,16 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				http2PooledRef.slot.deactivate();
 			}
 		}
+
+		@Override
+		public void handlerRemoved(ChannelHandlerContext ctx) {
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
+		}
 	}
 
 	static final class H2Codec extends ChannelInitializer<Channel> {
@@ -1008,6 +1014,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		@Override
+		public boolean isSharable() {
+			return true;
+		}
+
+		@Override
 		protected void initChannel(Channel ch) {
 			if (observer != null && opsFactory != null && owner != null) {
 				Http2ConnectionProvider.registerClose(ch, owner);
@@ -1031,12 +1042,21 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * Handle inbound streams (server pushes).
 	 * This feature is not supported and disabled.
 	 */
-	static final class H2InboundStreamHandler extends ChannelHandlerAdapter {
+	static final class H2InboundStreamHandler implements ChannelHandler {
 		static final ChannelHandler INSTANCE = new H2InboundStreamHandler();
 
 		@Override
-		public boolean isSharable() {
-			return true;
+		public void handlerAdded(ChannelHandlerContext ctx) {
+		}
+
+		@Override
+		public void handlerRemoved(ChannelHandlerContext ctx) {
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
 		}
 	}
 
@@ -1124,6 +1144,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			else {
 				throw new IllegalStateException("Cannot determine negotiated application-level protocol.");
 			}
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 	}
 
@@ -1272,6 +1297,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		ReactorNettyHttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec, int maxContentLength) {
 			super(sourceCodec, upgradeCodec, maxContentLength);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 
 		@Override
