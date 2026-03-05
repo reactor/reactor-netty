@@ -18,7 +18,6 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -177,9 +176,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			secure = ctx.channel().pipeline().get(SslHandler.class) != null;
 		}
 		if (remoteAddress == null) {
-			remoteAddress =
-					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel()))
-					        .orElse(ctx.channel().remoteAddress());
+			SocketAddress proxyAddress = HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel());
+			remoteAddress = proxyAddress != null ? proxyAddress : ctx.channel().remoteAddress();
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {

@@ -18,7 +18,6 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -130,9 +129,8 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 			secured = ctx.channel().parent().pipeline().get(SslHandler.class) != null;
 		}
 		if (remoteAddress == null) {
-			remoteAddress =
-					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel().parent()))
-					        .orElse(ctx.channel().parent().remoteAddress());
+			SocketAddress proxyAddress = HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel().parent());
+			remoteAddress = proxyAddress != null ? proxyAddress : ctx.channel().parent().remoteAddress();
 		}
 		if (msg instanceof HttpRequest) {
 			HttpRequest request = (HttpRequest) msg;
