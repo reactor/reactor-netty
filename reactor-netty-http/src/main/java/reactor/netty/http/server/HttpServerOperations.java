@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -205,7 +205,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
 		this.currentContext = Context.empty();
 		this.formDecoderProvider = formDecoderProvider;
-		this.is100ContinueExpected = HttpUtil.is100ContinueExpected(nettyRequest);
+		this.is100ContinueExpected = nettyRequest.headers().get(HttpHeaderNames.EXPECT) != null &&
+				HttpUtil.is100ContinueExpected(nettyRequest);
 		this.isHttp2 = isHttp2;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
