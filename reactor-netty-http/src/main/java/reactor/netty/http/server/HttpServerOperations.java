@@ -223,7 +223,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
 		this.responseHeaders = nettyResponse.headers();
-		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+		this.responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		this.scheme = secured ? "https" : "http";
 		this.timestamp = timestamp;
 		this.validateHeaders = validateHeaders;
