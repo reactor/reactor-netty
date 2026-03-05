@@ -208,7 +208,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
 		this.currentContext = Context.empty();
 		this.formDecoderProvider = formDecoderProvider;
-		this.is100ContinueExpected = HttpUtil.is100ContinueExpected(nettyRequest);
+		this.is100ContinueExpected = nettyRequest.headers().get(HttpHeaderNames.EXPECT) != null &&
+				HttpUtil.is100ContinueExpected(nettyRequest);
 		this.isHttp2 = isHttp2;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
