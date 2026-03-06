@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -245,7 +245,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
-			if (channelGroup != null && newState == State.CONNECTED) {
+			if (newState == State.CONNECTED && channelGroup != null) {
 				Channel channel = connection.channel();
 				channelGroup.add(channel);
 				Channel parent = channel.parent();
@@ -255,7 +255,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 				}
 				return;
 			}
-			if (doOnConnection != null && newState == State.CONFIGURED) {
+			if (newState == State.CONFIGURED && doOnConnection != null) {
 				try {
 					doOnConnection.accept(connection);
 				}

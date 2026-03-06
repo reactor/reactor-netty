@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -195,15 +195,15 @@ public final class UdpServerConfig extends TransportConfig {
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (channelGroup != null && newState == State.CONNECTED) {
+			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());
 				return;
 			}
-			if (doOnBound != null && newState == State.CONFIGURED) {
+			if (newState == State.CONFIGURED && doOnBound != null) {
 				doOnBound.accept(connection);
 				return;
 			}
-			if (doOnUnbound != null && newState == State.DISCONNECTING) {
+			if (newState == State.DISCONNECTING && doOnUnbound != null) {
 				connection.onDispose(() -> doOnUnbound.accept(connection));
 			}
 		}

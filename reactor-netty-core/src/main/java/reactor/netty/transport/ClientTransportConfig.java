@@ -313,11 +313,11 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (channelGroup != null && newState == State.CONNECTED) {
+			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());
 				return;
 			}
-			if (doOnConnected != null && newState == State.CONFIGURED) {
+			if (newState == State.CONFIGURED && doOnConnected != null) {
 				doOnConnected.accept(connection);
 				return;
 			}

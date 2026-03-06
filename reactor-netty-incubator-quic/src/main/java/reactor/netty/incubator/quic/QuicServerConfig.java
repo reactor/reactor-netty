@@ -301,11 +301,11 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
-			if (channelGroup != null && newState == State.CONNECTED) {
+			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());
 				return;
 			}
-			if (doOnConnection != null && newState == State.CONFIGURED) {
+			if (newState == State.CONFIGURED && doOnConnection != null) {
 				try {
 					doOnConnection.accept((QuicConnection) connection);
 				}

@@ -1203,23 +1203,23 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (doOnRequest != null && newState == HttpClientState.REQUEST_PREPARED) {
+			if (newState == HttpClientState.REQUEST_PREPARED && doOnRequest != null) {
 				doOnRequest.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doAfterResponseSuccess != null && newState == HttpClientState.RESPONSE_COMPLETED) {
+			if (newState == HttpClientState.RESPONSE_COMPLETED && doAfterResponseSuccess != null) {
 				doAfterResponseSuccess.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doAfterRequest != null && newState == HttpClientState.REQUEST_SENT) {
+			if (newState == HttpClientState.REQUEST_SENT && doAfterRequest != null) {
 				doAfterRequest.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doOnResponse != null && newState == HttpClientState.RESPONSE_RECEIVED) {
+			if (newState == HttpClientState.RESPONSE_RECEIVED && doOnResponse != null) {
 				doOnResponse.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doOnResponseError != null && newState == HttpClientState.RESPONSE_INCOMPLETE) {
+			if (newState == HttpClientState.RESPONSE_INCOMPLETE && doOnResponseError != null) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
 				if (ops == null) {
 					return;

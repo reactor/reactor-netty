@@ -552,11 +552,11 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (doOnBound != null && newState == State.CONFIGURED) {
+			if (newState == State.CONFIGURED && doOnBound != null) {
 				doOnBound.accept(connection);
 				return;
 			}
-			if (doOnUnbound != null && newState == State.DISCONNECTING) {
+			if (newState == State.DISCONNECTING && doOnUnbound != null) {
 				connection.onDispose(() -> doOnUnbound.accept(connection));
 			}
 		}
