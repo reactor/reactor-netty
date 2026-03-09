@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -235,12 +235,7 @@ public interface LoopResources extends Disposable {
 	 * @return a {@link Channel} instance
 	 */
 	default <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
-		DefaultLoop channelFactory =
-				DefaultLoopNativeDetector.INSTANCE.supportGroup(group) ?
-						DefaultLoopNativeDetector.INSTANCE :
-						DefaultLoopNativeDetector.NIO;
-
-		return channelFactory.getChannel(channelType);
+		return DefaultLoopNativeDetector.forGroup(group).getChannel(channelType);
 	}
 
 	/**
@@ -252,12 +247,7 @@ public interface LoopResources extends Disposable {
 	 * @return a {@link Channel} class
 	 */
 	default <CHANNEL extends Channel> Class<? extends CHANNEL> onChannelClass(Class<CHANNEL> channelType, EventLoopGroup group) {
-		DefaultLoop channelFactory =
-				DefaultLoopNativeDetector.INSTANCE.supportGroup(group) ?
-						DefaultLoopNativeDetector.INSTANCE :
-						DefaultLoopNativeDetector.NIO;
-
-		return channelFactory.getChannelClass(channelType);
+		return DefaultLoopNativeDetector.forGroup(group).getChannelClass(channelType);
 	}
 
 	/**

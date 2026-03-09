@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +77,11 @@ public final class IdleTimeoutHandler extends IdleStateHandler {
 		httpConnectionLiveness.cancel();
 
 		super.handlerRemoved(ctx);
+	}
+
+	@Override
+	public boolean isSharable() {
+		return false;
 	}
 
 	/**

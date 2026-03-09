@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,7 @@ package reactor.netty.http.server;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.util.Optional;
+import java.time.Instant;
 import java.util.Queue;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -50,7 +49,6 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpConnectionLiveness;
 import reactor.netty.http.IdleTimeoutHandler;
@@ -178,9 +176,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			secure = ctx.channel().pipeline().get(SslHandler.class) != null;
 		}
 		if (remoteAddress == null) {
-			remoteAddress =
-					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel()))
-					        .orElse(ctx.channel().remoteAddress());
+			SocketAddress proxyAddress = HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel());
+			remoteAddress = proxyAddress != null ? proxyAddress : ctx.channel().remoteAddress();
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
@@ -245,7 +242,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 				}
 
 				HttpServerOperations ops;
-				ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+				Instant timestamp = Instant.now();
 				ConnectionInfo connectionInfo = null;
 				try {
 					connectionInfo = ConnectionInfo.from(
@@ -379,7 +376,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		sendDecodingFailures(t, msg, null, null, validateHeaders);
 	}
 
-	void sendDecodingFailures(Throwable t, Object msg, @Nullable ZonedDateTime timestamp, @Nullable ConnectionInfo connectionInfo, boolean validateHeaders) {
+	void sendDecodingFailures(Throwable t, Object msg, @Nullable Instant timestamp, @Nullable ConnectionInfo connectionInfo, boolean validateHeaders) {
 		persistentConnection = false;
 		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, timestamp, connectionInfo,
 				remoteAddress, validateHeaders);
@@ -670,6 +667,11 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		}
 	}
 
+	@Override
+	public boolean isSharable() {
+		return false;
+	}
+
 	boolean shouldKeepAlive() {
 		return pendingResponses != 0 && persistentConnection;
 	}
@@ -715,11 +717,11 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	static final class HttpRequestHolder {
 		final HttpRequest request;
-		final ZonedDateTime timestamp;
+		final Instant timestamp;
 
 		HttpRequestHolder(HttpRequest request) {
 			this.request = request;
-			this.timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+			this.timestamp = Instant.now();
 		}
 	}
 }

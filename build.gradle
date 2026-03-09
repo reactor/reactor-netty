@@ -23,7 +23,7 @@ buildscript {
 		maven { url "https://repo.spring.io/plugins-release" }
 	}
 	dependencies {
-		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.35.5' //applied in individual submodules
+		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.35.6' //applied in individual submodules
 	}
 }
 
@@ -32,16 +32,16 @@ plugins {
 	id 'com.google.osdetector' version '1.7.3'
 	id 'org.gradle.test-retry' version '1.6.4'
 	id 'io.spring.nohttp' version '0.0.11'
-	id 'com.gradleup.shadow' version '8.3.9' apply false
+	id 'com.gradleup.shadow' version '8.3.10' apply false
 	//we now need version of Artifactory gradle plugin deployed on Maven Central, see above
 	id 'me.champeau.gradle.japicmp' version '0.4.6' apply false
-	id 'de.undercouch.download' version '5.6.0' apply false
+	id 'de.undercouch.download' version '5.7.0' apply false
 	id 'io.spring.javadoc' version '0.0.1' apply false
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
 	id 'biz.aQute.bnd.builder' version '6.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.9.25' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
-	id 'net.ltgt.errorprone' version '4.3.0' apply false
+	id 'net.ltgt.errorprone' version '5.1.0' apply false
 	id 'me.champeau.mrjar' version '0.1.1' apply false
 }
 
@@ -109,7 +109,7 @@ ext {
 	logbackVersion = '1.2.13'
 
 	// Netty
-	nettyDefaultVersion = '4.2.9.Final'
+	nettyDefaultVersion = '4.2.10.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -121,18 +121,18 @@ ext {
 
 	// Testing
 	brotli4jVersion = '1.20.0'
-	zstdJniVersion = '1.5.7-6'
-	jacksonDatabindVersion = '2.20.1'
+	zstdJniVersion = '1.5.7-7'
+	jacksonDatabindVersion = '2.21.1'
 	testAddonVersion = reactorCoreVersion
-	assertJVersion = '3.27.6'
+	assertJVersion = '3.27.7'
 	awaitilityVersion = '4.3.0'
 	hoverflyJavaVersion = '0.19.1'
-	tomcatVersion = '9.0.113'
-	boringSslVersion = '2.0.74.Final'
-	junitVersion = '5.14.2'
-	junitPlatformLauncherVersion = '1.14.2'
+	tomcatVersion = '9.0.115'
+	boringSslVersion = '2.0.75.Final'
+	junitVersion = '5.14.3'
+	junitPlatformLauncherVersion = '1.14.3'
 	mockitoVersion = '4.11.0'
-	blockHoundVersion = '1.0.15.RELEASE'
+	blockHoundVersion = '1.0.16.RELEASE'
 	reflectionsVersion = '0.10.2'
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
@@ -148,7 +148,7 @@ ext {
 					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.2/api/",
-					"https://projectreactor.io/docs/netty/$project.version/api/"] as String[]
+					"https://projectreactor.io/docs/netty/release/api/"] as String[]
 }
 
 nohttp {

@@ -11,6 +11,13 @@ Sometimes this might be the reason for not being able to connect to the proxy. C
 whether it supports or needs an additional configuration in order to support `CONNECT` method.
 // end::proxy-connect-method[]
 
+NOTE: When a proxy is configured and no custom DNS resolver has been specified, Reactor Netty automatically uses
+{nettyjavadoc}/io/netty/resolver/NoopAddressResolverGroup.html[`NoopAddressResolverGroup`] to skip client-side DNS
+resolution and delegate it to the proxy. If a custom DNS resolver is explicitly configured (e.g. the JVM built-in resolver
+via `DefaultAddressResolverGroup.INSTANCE` or via the `resolver(...)` method), Reactor Netty respects that configuration
+and does not override it. In that case, the configured resolver must be able to resolve the target hostname on the client side,
+even when using a proxy.
+
 The following example uses `ProxyProvider`:
 
 {examples-link}/proxy/Application.java

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -512,11 +512,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		}
 
 		boolean isH2cUpgrade() {
-			Channel channel = pooledRef.poolable().channel();
 			Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
-			if (http2PooledRef.slot.h2cUpgradeHandlerCtx() != null &&
-					http2PooledRef.slot.http2MultiplexHandlerCtx() == null) {
-				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+			if (http2PooledRef.slot.isH2cUpgrade()) {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(http2PooledRef.poolable().channel());
 				if (ops != null) {
 					sink.success(ops);
 					return true;
@@ -647,8 +645,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			Http2SettingsSpec http2SettingsSpec = this.config.http2SettingsSpec();
 			if (poolFactory.evictionPredicate() == null && poolFactory.maxIdleTime() != -1 &&
 					http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null) {
-				Http11EvictionPredicate http11EvictionPredicate =
-						new Http11EvictionPredicate(poolFactory.maxIdleTime(), poolFactory.maxLifeTime());
+				Http11EvictionPredicate http11EvictionPredicate = new Http11EvictionPredicate(poolFactory.maxIdleTime());
 				Http2EvictionPredicate http2EvictionPredicate = new Http2EvictionPredicate(poolFactory.maxLifeTime());
 				this.parent = parent.mutate().evictionPredicate(http11EvictionPredicate).build();
 				poolConfigFunction = poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy(),
@@ -680,11 +677,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		static final class Http11EvictionPredicate implements BiPredicate<Connection, ConnectionMetadata> {
 			final long maxIdleTime;
-			final long maxLifeTime;
 
-			Http11EvictionPredicate(long maxIdleTime, long maxLifeTime) {
+			Http11EvictionPredicate(long maxIdleTime) {
 				this.maxIdleTime = maxIdleTime;
-				this.maxLifeTime = maxLifeTime;
 			}
 
 			@Override
@@ -696,8 +691,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
 					isNotHttp2 = frameCodec == null;
 				}
-				return (isNotHttp2 && maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-						|| (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime);
+				return isNotHttp2 && maxIdleTime != -1 && meta.idleTime() >= maxIdleTime;
 			}
 		}
 
@@ -710,7 +704,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 			@Override
 			public boolean test(Connection connection, PooledRefMetadata meta) {
-				return maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime;
+				long effectiveMaxLifeTime = meta.maxLifeTimeMs() > 0 ? meta.maxLifeTimeMs() : maxLifeTime;
+				return effectiveMaxLifeTime > 0 && meta.lifeTime() >= effectiveMaxLifeTime;
 			}
 		}
 	}

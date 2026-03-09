@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,11 +61,56 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 
 		/**
 		 * Configures the minimum number of live connections to keep in the pool (can be the best effort).
+		 * When configured with a value greater than zero, the pool will also enable
+		 * {@link #strictConnectionReuse(boolean) strict connection reuse}.
 		 * Default to {@code 0}.
 		 *
+		 * @param minConnections the minimum number of live connections to keep in the pool
 		 * @return {@code this}
+		 * @see #strictConnectionReuse(boolean)
 		 */
 		Builder minConnections(int minConnections);
+
+		/**
+		 * Configures whether the HTTP/2 pool should avoid opening additional connections as long as
+		 * existing connections have not reached their max concurrent streams limit.
+		 * When enabled, the pool may operate with fewer connections (even a single one) and will only
+		 * allocate a new connection when all existing connections have reached their max concurrent streams.
+		 * <p>
+		 * This behavior is automatically enabled when {@link #minConnections(int)} is configured with a value
+		 * greater than zero. Use this option to enable the same behavior without setting a minimum connections constraint.
+		 * <p>
+		 * Default to {@code false}.
+		 *
+		 * @param strictConnectionReuse whether strict connection reuse should be enabled
+		 * @return {@code this}
+		 * @since 1.3.3
+		 */
+		default Builder strictConnectionReuse(boolean strictConnectionReuse) {
+			return this;
+		}
+
+		/**
+		 * Configures the maximum number of streams that can be opened at once when a suitable connection
+		 * is found in the pool. When the pool finds a connection that can be used for opening a stream,
+		 * instead of opening only one stream and then re-evaluating the available connections,
+		 * the pool will attempt to open up to {@code streamBatchSize} streams on that connection
+		 * (limited by the connection's available capacity, i.e. max concurrent streams minus current active streams).
+		 * <p>
+		 * This setting takes effect when strict connection reuse is active, either by enabling
+		 * {@code strictConnectionReuse(true)} or by setting {@code minConnections} to a value greater than zero.
+		 * <p>
+		 * Default to {@code 1} - open one stream at a time.
+		 *
+		 * @param streamBatchSize the maximum number of streams to open at once per connection
+		 * @return {@code this}
+		 * @since 1.3.4
+		 * @see #strictConnectionReuse(boolean)
+		 * @see #minConnections(int)
+		 */
+		default Builder streamBatchSize(int streamBatchSize) {
+			return this;
+		}
 	}
 
 	/**
@@ -112,6 +157,26 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		return maxConcurrentStreams;
 	}
 
+	/**
+	 * Returns the configured stream batch size.
+	 *
+	 * @return the configured stream batch size
+	 * @since 1.3.4
+	 */
+	public int streamBatchSize() {
+		return streamBatchSize;
+	}
+
+	/**
+	 * Returns whether strict HTTP/2 connection reuse (multiplexing) is enabled.
+	 *
+	 * @return whether strict connection reuse is enabled
+	 * @since 1.3.3
+	 */
+	public boolean strictConnectionReuse() {
+		return strictConnectionReuse;
+	}
+
 	@Override
 	public int permitGranted() {
 		return maxConnections - PERMITS.get(this);
@@ -144,6 +209,8 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 	final long maxConcurrentStreams;
 	final int maxConnections;
 	final int minConnections;
+	final int streamBatchSize;
+	final boolean strictConnectionReuse;
 
 	volatile int permits;
 	static final AtomicIntegerFieldUpdater<Http2AllocationStrategy> PERMITS = AtomicIntegerFieldUpdater.newUpdater(Http2AllocationStrategy.class, "permits");
@@ -152,6 +219,8 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		this.maxConcurrentStreams = build.maxConcurrentStreams;
 		this.maxConnections = build.maxConnections;
 		this.minConnections = build.minConnections;
+		this.streamBatchSize = build.streamBatchSize;
+		this.strictConnectionReuse = build.strictConnectionReuse;
 		PERMITS.lazySet(this, this.maxConnections);
 	}
 
@@ -159,6 +228,8 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		this.maxConcurrentStreams = copy.maxConcurrentStreams;
 		this.maxConnections = copy.maxConnections;
 		this.minConnections = copy.minConnections;
+		this.streamBatchSize = copy.streamBatchSize;
+		this.strictConnectionReuse = copy.strictConnectionReuse;
 		PERMITS.lazySet(this, this.maxConnections);
 	}
 
@@ -166,10 +237,14 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		static final long DEFAULT_MAX_CONCURRENT_STREAMS = -1;
 		static final int DEFAULT_MAX_CONNECTIONS = Integer.MAX_VALUE;
 		static final int DEFAULT_MIN_CONNECTIONS = 0;
+		static final int DEFAULT_STREAM_BATCH_SIZE = 1;
+		static final boolean DEFAULT_STRICT_CONNECTION_REUSE = false;
 
 		long maxConcurrentStreams = DEFAULT_MAX_CONCURRENT_STREAMS;
 		int maxConnections = DEFAULT_MAX_CONNECTIONS;
 		int minConnections = DEFAULT_MIN_CONNECTIONS;
+		int streamBatchSize = DEFAULT_STREAM_BATCH_SIZE;
+		boolean strictConnectionReuse = DEFAULT_STRICT_CONNECTION_REUSE;
 
 		@Override
 		public Http2AllocationStrategy build() {
@@ -204,6 +279,21 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 				throw new IllegalArgumentException("minConnections must be positive or zero");
 			}
 			this.minConnections = minConnections;
+			return this;
+		}
+
+		@Override
+		public Builder streamBatchSize(int streamBatchSize) {
+			if (streamBatchSize < 1) {
+				throw new IllegalArgumentException("streamBatchSize must be strictly positive");
+			}
+			this.streamBatchSize = streamBatchSize;
+			return this;
+		}
+
+		@Override
+		public Builder strictConnectionReuse(boolean strictConnectionReuse) {
+			this.strictConnectionReuse = strictConnectionReuse;
 			return this;
 		}
 	}

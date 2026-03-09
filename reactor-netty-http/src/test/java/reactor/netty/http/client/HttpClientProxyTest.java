@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -551,6 +551,47 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 		assertThat(resolver.get()).isNotNull();
 		assertThat(resolver.get()).isInstanceOf(NoopAddressResolverGroup.class);
+	}
+
+	@Test
+	void proxyWhenShouldUseNoopAddressResolverGroup(Hoverfly hoverfly) {
+		AtomicReference<@Nullable AddressResolverGroup<?>> resolver = new AtomicReference<>();
+		HttpClient.create()
+		          .proxyWhen((config, spec) ->
+		                  Mono.just(spec.type(ProxyProvider.Proxy.HTTP)
+		                                .host("localhost")
+		                                .port(hoverfly.getHoverflyConfig().getProxyPort()))
+		                      .doFinally(signalType -> resolver.set(config.resolver())))
+		          .get()
+		          .uri("http://localhost:" + port + "/")
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(resolver.get()).isNotNull()
+			.isEqualTo(NoopAddressResolverGroup.INSTANCE);
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void proxyWhenShouldNotResolveTargetHostname(Hoverfly hoverfly) {
+		Http11SslContextSpec clientCtx =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		HttpClient.create()
+		          .secure(spec -> spec.sslContext(clientCtx))
+		          .proxyWhen((config, spec) ->
+		                  Mono.just(spec.type(ProxyProvider.Proxy.HTTP)
+		                                .host("localhost")
+		                                .port(hoverfly.getHoverflyConfig().getProxyPort())))
+		          .get()
+		          .uri(LOCALLY_NOT_RESOLVABLE_ADDRESS)
+		          .responseSingle((response, body) -> body.asString())
+		          .as(StepVerifier::create)
+		          .expectNextMatches(("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS)::equals)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
 	}
 
 	@Test

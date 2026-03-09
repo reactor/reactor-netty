@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,9 @@ public class Application {
 				                  .maxConnections(50)
 				                  .maxIdleTime(Duration.ofSeconds(20))           //<1>
 				                  .maxLifeTime(Duration.ofSeconds(60))           //<2>
-				                  .pendingAcquireTimeout(Duration.ofSeconds(60)) //<3>
-				                  .evictInBackground(Duration.ofSeconds(120))    //<4>
+				                  .maxLifeTimeVariance(2.5)                      //<3>
+				                  .pendingAcquireTimeout(Duration.ofSeconds(60)) //<4>
+				                  .evictInBackground(Duration.ofSeconds(120))    //<5>
 				                  .build();
 
 		HttpClient client = HttpClient.create(provider);

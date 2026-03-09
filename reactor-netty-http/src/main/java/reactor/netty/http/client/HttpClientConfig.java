@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import java.util.regex.Pattern;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -59,6 +58,7 @@ import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.Http2SettingsFrame;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
@@ -513,6 +513,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
+	protected void resolver(AddressResolverGroup<?> resolver) {
+		super.resolver(resolver);
+	}
+
+	@Override
 	protected AddressResolverGroup<?> resolverInternal() {
 		return super.resolverInternal();
 	}
@@ -621,7 +626,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, HTTP2_STREAM_FRAME_TO_HTTP_OBJECT)
-				.addLast(NettyPipeline.HttpTrafficHandler, HTTP_2_STREAM_BRIDGE_CLIENT_HANDLER);
+				.addLast(NettyPipeline.HttpTrafficHandler, Http2StreamBridgeClientHandler.INSTANCE);
 
 		if (acceptGzip) {
 			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
@@ -702,6 +707,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE))
+		 // This handler must be placed after Http2MultiplexHandler in the pipeline
+		 // so that it only sees connection-level frames (SETTINGS, GOAWAY, etc.) and not the
+		 // high-volume stream-level frames (DATA, HEADERS) which are consumed by Http2MultiplexHandler.
+		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MaxStreamsHandler, H2MaxConcurrentStreamsHandler.INSTANCE)
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 	}
 
@@ -863,9 +872,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static final Http2StreamFrameToHttpObjectCodec HTTP2_STREAM_FRAME_TO_HTTP_OBJECT =
 			new Http2StreamFrameToHttpObjectCodec(false);
 
-	static final Http2StreamBridgeClientHandler HTTP_2_STREAM_BRIDGE_CLIENT_HANDLER =
-			new Http2StreamBridgeClientHandler();
-
 	static final Logger log = Loggers.getLogger(HttpClientConfig.class);
 
 	static final LoggingHandler LOGGING_HANDLER =
@@ -878,7 +884,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_CLIENT_DEBUG, "false"));
 
-	static final class H2CleartextCodec extends ChannelHandlerAdapter {
+	static final class H2CleartextCodec implements ChannelHandler {
 
 		final boolean acceptGzip;
 		final Http2FrameCodec http2FrameCodec;
@@ -930,8 +936,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
 						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, uriTagValue));
 			}
-			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, http2FrameCodec)
-			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler);
+			pipeline.addAfter(ctx.name(), NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
+			        .addAfter(NettyPipeline.H2Flush, NettyPipeline.HttpCodec, http2FrameCodec)
+			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler)
+			        // This handler must be placed after Http2MultiplexHandler in the pipeline
+			        // so that it only sees connection-level frames (SETTINGS, GOAWAY, etc.) and not the
+			        // high-volume stream-level frames (DATA, HEADERS) which are consumed by Http2MultiplexHandler.
+			        .addAfter(NettyPipeline.H2MultiplexHandler, NettyPipeline.H2MaxStreamsHandler, H2MaxConcurrentStreamsHandler.INSTANCE);
 			if (pipeline.get(NettyPipeline.HttpDecompressor) != null) {
 				pipeline.remove(NettyPipeline.HttpDecompressor);
 			}
@@ -940,7 +951,18 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 			if (http2PooledRef != null) {
 				http2PooledRef.slot.initMaxConcurrentStreams();
+				http2PooledRef.slot.deactivate();
 			}
+		}
+
+		@Override
+		public void handlerRemoved(ChannelHandlerContext ctx) {
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
 		}
 	}
 
@@ -992,6 +1014,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		@Override
+		public boolean isSharable() {
+			return true;
+		}
+
+		@Override
 		protected void initChannel(Channel ch) {
 			if (observer != null && opsFactory != null && owner != null) {
 				Http2ConnectionProvider.registerClose(ch, owner);
@@ -1015,8 +1042,51 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * Handle inbound streams (server pushes).
 	 * This feature is not supported and disabled.
 	 */
-	static final class H2InboundStreamHandler extends ChannelHandlerAdapter {
+	static final class H2InboundStreamHandler implements ChannelHandler {
 		static final ChannelHandler INSTANCE = new H2InboundStreamHandler();
+
+		@Override
+		public void handlerAdded(ChannelHandlerContext ctx) {
+		}
+
+		@Override
+		public void handlerRemoved(ChannelHandlerContext ctx) {
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
+		}
+	}
+
+	/**
+	 * Handler that updates the {@link Http2Pool.Slot#maxConcurrentStreams} when a
+	 * {@link Http2SettingsFrame} is received from the remote peer.
+	 */
+	static final class H2MaxConcurrentStreamsHandler extends ChannelInboundHandlerAdapter {
+
+		static final H2MaxConcurrentStreamsHandler INSTANCE = new H2MaxConcurrentStreamsHandler();
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
+			if (msg instanceof Http2SettingsFrame) {
+				Long maxConcurrentStreams = ((Http2SettingsFrame) msg).settings().maxConcurrentStreams();
+				if (maxConcurrentStreams != null) {
+					ConnectionObserver owner = ctx.channel().attr(Http2ConnectionProvider.OWNER).get();
+					if (owner instanceof Http2ConnectionProvider.DisposableAcquire) {
+						Http2Pool.Http2PooledRef ref =
+								Http2ConnectionProvider.http2PooledRef(((Http2ConnectionProvider.DisposableAcquire) owner).pooledRef);
+						ref.slot.updateMaxConcurrentStreams(maxConcurrentStreams);
+						if (log.isDebugEnabled()) {
+							log.debug(format(ctx.channel(),
+									"Received SETTINGS frame, updated maxConcurrentStreams to {}"), ref.slot.maxConcurrentStreams);
+						}
+					}
+				}
+			}
+			ctx.fireChannelRead(msg);
+		}
 
 		@Override
 		public boolean isSharable() {
@@ -1074,6 +1144,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			else {
 				throw new IllegalStateException("Cannot determine negotiated application-level protocol.");
 			}
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 	}
 
@@ -1168,23 +1243,23 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (doOnRequest != null && newState == HttpClientState.REQUEST_PREPARED) {
+			if (newState == HttpClientState.REQUEST_PREPARED && doOnRequest != null) {
 				doOnRequest.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doAfterResponseSuccess != null && newState == HttpClientState.RESPONSE_COMPLETED) {
+			if (newState == HttpClientState.RESPONSE_COMPLETED && doAfterResponseSuccess != null) {
 				doAfterResponseSuccess.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doAfterRequest != null && newState == HttpClientState.REQUEST_SENT) {
+			if (newState == HttpClientState.REQUEST_SENT && doAfterRequest != null) {
 				doAfterRequest.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doOnResponse != null && newState == HttpClientState.RESPONSE_RECEIVED) {
+			if (newState == HttpClientState.RESPONSE_RECEIVED && doOnResponse != null) {
 				doOnResponse.accept(connection.as(HttpClientOperations.class), connection);
 				return;
 			}
-			if (doOnResponseError != null && newState == HttpClientState.RESPONSE_INCOMPLETE) {
+			if (newState == HttpClientState.RESPONSE_INCOMPLETE && doOnResponseError != null) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
 				if (ops == null) {
 					return;
@@ -1222,6 +1297,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		ReactorNettyHttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec, int maxContentLength) {
 			super(sourceCodec, upgradeCodec, maxContentLength);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 
 		@Override

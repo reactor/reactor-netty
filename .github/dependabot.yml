@@ -83,6 +83,9 @@ updates:
   - dependency-name: org.junit.platform:junit-platform-launcher
     versions:
     - "[6.a, 7]"
+  - dependency-name: gradle-wrapper
+    versions:
+    - "[8.5.a, 10]"
   rebase-strategy: disabled
 - package-ecosystem: gradle
   directory: "/"
@@ -134,6 +137,8 @@ updates:
   - dependency-name: org.slf4j:*
   - dependency-name: org.graalvm.buildtools.native
   - dependency-name: com.gradleup.shadow
+  - dependency-name: gradle-wrapper
+  - dependency-name: de.undercouch.download
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"

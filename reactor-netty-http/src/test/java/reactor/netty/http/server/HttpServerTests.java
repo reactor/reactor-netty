@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -136,7 +136,6 @@ import reactor.netty.FutureMono;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
-import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http11SslContextSpec;
@@ -2257,7 +2256,7 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				null,
 				false,
-				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM),
+				Instant.now(),
 				true);
 		ops.status(status);
 		HttpMessage response = ops.newFullBodyMessage(Unpooled.EMPTY_BUFFER);
@@ -3316,7 +3315,7 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				null,
 				false,
-				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM),
+				Instant.now(),
 				true);
 		assertThat(ops.isFormUrlencoded()).isEqualTo(expectation);
 		// "FutureReturnValueIgnored" is suppressed deliberately

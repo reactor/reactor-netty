@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,13 @@ import static reactor.netty.ReactorNetty.format;
  */
 final class QuicInboundStreamTrafficHandler extends ChannelInboundHandlerAdapter {
 
+	static final QuicInboundStreamTrafficHandler  INSTANCE = new QuicInboundStreamTrafficHandler();
 	static final Logger log = Loggers.getLogger(QuicInboundStreamTrafficHandler.class);
+
+	@Override
+	public boolean isSharable() {
+		return true;
+	}
 
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {

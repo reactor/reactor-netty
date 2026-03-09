@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -55,7 +55,7 @@ final class Http3ServerOperations extends HttpServerOperations {
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			boolean secured,
-			ZonedDateTime timestamp) {
+			Instant timestamp) {
 		super(c, listener, nettyRequest, compressionOptions, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
 				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, secured, timestamp, true);
 	}

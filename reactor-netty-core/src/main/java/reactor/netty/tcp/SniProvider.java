@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,6 +103,11 @@ final class SniProvider {
 		SniHandler(AsyncMapping<String, SslProvider> mappings, long handshakeTimeoutMillis) {
 			super(handshakeTimeoutMillis);
 			this.mappings = mappings;
+		}
+
+		@Override
+		public boolean isSharable() {
+			return false;
 		}
 
 		@Override

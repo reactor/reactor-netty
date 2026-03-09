@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -533,6 +533,7 @@ public interface ConnectionProvider extends Disposable {
 		Duration pendingAcquireTimeout  = Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT);
 		@Nullable Duration maxIdleTime;
 		@Nullable Duration maxLifeTime;
+		double   maxLifeTimeVariance;
 		boolean  metricsEnabled;
 		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
 		@Nullable Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
@@ -560,6 +561,7 @@ public interface ConnectionProvider extends Disposable {
 			this.pendingAcquireTimeout = copy.pendingAcquireTimeout;
 			this.maxIdleTime = copy.maxIdleTime;
 			this.maxLifeTime = copy.maxLifeTime;
+			this.maxLifeTimeVariance = copy.maxLifeTimeVariance;
 			this.metricsEnabled = copy.metricsEnabled;
 			this.leasingStrategy = copy.leasingStrategy;
 			this.registrar = copy.registrar;
@@ -654,6 +656,37 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC maxLifeTime(Duration maxLifeTime) {
 			this.maxLifeTime = Objects.requireNonNull(maxLifeTime);
+			return get();
+		}
+
+		/**
+		 * Set a variance percentage for {@link #maxLifeTime(Duration)}, introducing per-connection
+		 * jitter to prevent simultaneous expiry of connections created around the same time.
+		 * <p>
+		 * The effective max lifetime for each connection will be in the range:
+		 * {@code [maxLifeTime * (1 - variance/100), maxLifeTime]}, spreading connection renewal over
+		 * a window instead of a single point in time.
+		 * <p>
+		 * For example, with a {@code maxLifeTime} of 60 seconds and a variance of 2.5%, connections
+		 * would expire between 58.5s and 60s.
+		 * <p>
+		 * Only meaningful when {@link #maxLifeTime(Duration)} is configured.
+		 * Defaults to 0 (no variance — all connections expire at exactly {@code maxLifeTime}).
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
+		 *
+		 * @param variancePercent percentage of maxLifeTime to use as the variance range (0–100)
+		 * @return {@literal this}
+		 * @throws IllegalArgumentException if variancePercent is not between 0 and 100
+		 * @since 1.3.4
+		 * @see #maxLifeTime(Duration)
+		 */
+		public final SPEC maxLifeTimeVariance(double variancePercent) {
+			if (variancePercent < 0 || variancePercent > 100) {
+				throw new IllegalArgumentException(
+						"maxLifeTimeVariance must be between 0 and 100, was " + variancePercent);
+			}
+			this.maxLifeTimeVariance = variancePercent;
 			return get();
 		}
 

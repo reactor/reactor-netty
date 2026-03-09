@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
+import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.NoopAddressResolverGroup;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -1677,10 +1679,18 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * <p>When proxyWhen(...) is set, calls to proxy(...) and noProxy() methods are ignored.</p>
 	 * <p>This method allows dynamic determination of proxy settings, applying or skipping the proxy based on the configured conditions.</p>
+	 * <p>When a proxy is configured and no custom {@link AddressResolverGroup} has been set via
+	 * {@link #resolver(AddressResolverGroup)} or {@link #resolver(Consumer)},
+	 * {@link NoopAddressResolverGroup#INSTANCE} is used automatically to skip client-side DNS resolution
+	 * and delegate it to the proxy. If a custom {@link AddressResolverGroup} has already been configured,
+	 * it is not overridden and the configured resolver must be able to resolve the target hostname
+	 * on the client side.</p>
 	 *
 	 * @param proxyBuilder a deferred builder for proxy configuration
 	 * @return a new {@link HttpClient} reference
 	 * @since 1.2.3
+	 * @see #resolver(AddressResolverGroup)
+	 * @see #resolver(Consumer)
 	 */
 	public final HttpClient proxyWhen(
 			BiFunction<HttpClientConfig, ? super ProxyProvider.TypeSpec, Mono<? extends ProxyProvider.Builder>> proxyBuilder) {
@@ -1694,6 +1704,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 			return mono.map(builder -> {
 				config.proxyProvider(builder.build());
+				if (config.resolver() == null) {
+					config.resolver(NoopAddressResolverGroup.INSTANCE);
+				}
 				return config;
 			});
 		});

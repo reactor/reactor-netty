@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -203,6 +203,11 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		}
 
 		@Override
+		public boolean isSharable() {
+			return true;
+		}
+
+		@Override
 		protected void initChannel(Channel channel) {
 			QuicServerCodecBuilder quicServerCodecBuilder = new QuicServerCodecBuilder();
 			quicServerCodecBuilder.ackDelayExponent(ackDelayExponent)
@@ -294,11 +299,11 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
-			if (channelGroup != null && newState == State.CONNECTED) {
+			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());
 				return;
 			}
-			if (doOnConnection != null && newState == State.CONFIGURED) {
+			if (newState == State.CONFIGURED && doOnConnection != null) {
 				try {
 					doOnConnection.accept((QuicConnection) connection);
 				}

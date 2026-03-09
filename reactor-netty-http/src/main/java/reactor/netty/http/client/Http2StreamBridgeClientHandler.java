@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package reactor.netty.http.client;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
@@ -31,12 +30,18 @@ import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-@ChannelHandler.Sharable
 final class Http2StreamBridgeClientHandler extends ChannelDuplexHandler {
+
+	static final Http2StreamBridgeClientHandler INSTANCE = new Http2StreamBridgeClientHandler();
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
 		ctx.read();
+	}
+
+	@Override
+	public boolean isSharable() {
+		return true;
 	}
 
 	@Override

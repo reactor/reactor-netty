@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -506,6 +506,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final int maxConnections;
 		final long maxIdleTime;
 		final long maxLifeTime;
+		final @Nullable Duration maxLifeTimeDuration;
+		final double maxLifeTimeVariance;
 		final boolean metricsEnabled;
 		final int pendingAcquireMaxCount;
 		final long pendingAcquireTimeout;
@@ -528,6 +530,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.maxConnections = conf.maxConnections;
 			this.maxIdleTime = conf.maxIdleTime != null ? conf.maxIdleTime.toMillis() : -1;
 			this.maxLifeTime = conf.maxLifeTime != null ? conf.maxLifeTime.toMillis() : -1;
+			this.maxLifeTimeDuration = conf.maxLifeTime;
+			this.maxLifeTimeVariance = conf.maxLifeTimeVariance;
 			this.metricsEnabled = conf.metricsEnabled;
 			this.pendingAcquireMaxCount = conf.pendingAcquireMaxCount == PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED ?
 					2 * conf.maxConnections : conf.pendingAcquireMaxCount;
@@ -614,14 +618,18 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				poolBuilder = poolBuilder.evictInBackground(evictionInterval);
 			}
 
+			if (maxLifeTimeDuration != null) {
+				poolBuilder = poolBuilder.maxLifeTime(maxLifeTimeDuration);
+				poolBuilder = poolBuilder.maxLifeTimeVariance(maxLifeTimeVariance);
+			}
+
 			if (this.evictionPredicate != null) {
 				poolBuilder = poolBuilder.evictionPredicate(
 						(poolable, meta) -> this.evictionPredicate.test(poolable, new PooledConnectionMetadata(meta)));
 			}
 			else {
 				poolBuilder = poolBuilder.evictionPredicate(defaultEvictionPredicate.or((poolable, meta) ->
-						(maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-								|| (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)));
+					maxIdleTime != -1 && meta.idleTime() >= maxIdleTime));
 			}
 
 			if (DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE <= 1d
@@ -687,6 +695,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					", maxConnections=" + maxConnections +
 					", maxIdleTime=" + maxIdleTime +
 					", maxLifeTime=" + maxLifeTime +
+					", maxLifeTimeVariance=" + maxLifeTimeVariance +
 					", metricsEnabled=" + metricsEnabled +
 					", pendingAcquireMaxCount=" + pendingAcquireMaxCount +
 					", pendingAcquireTimeout=" + pendingAcquireTimeout +

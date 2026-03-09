@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ final class Http3Pool extends Http2Pool {
 
 	@Override
 	Slot createSlot(Connection connection) {
-		return new Slot(this, connection);
+		return new Slot(this, connection, poolConfig.generateMaxLifeTimeMs());
 	}
 
 	@Override
@@ -74,8 +74,8 @@ final class Http3Pool extends Http2Pool {
 	static final class Slot extends Http2Pool.Slot {
 		volatile @Nullable ChannelHandlerContext http3ClientConnectionHandlerCtx;
 
-		Slot(Http2Pool pool, Connection connection) {
-			super(pool, connection);
+		Slot(Http2Pool pool, Connection connection, long maxLifeTimeMs) {
+			super(pool, connection, maxLifeTimeMs);
 		}
 
 		@Override
@@ -85,6 +85,11 @@ final class Http3Pool extends Http2Pool {
 
 		@Override
 		boolean canOpenStream() {
+			return true;
+		}
+
+		@Override
+		boolean canOpenStream(int concurrency) {
 			return true;
 		}
 
