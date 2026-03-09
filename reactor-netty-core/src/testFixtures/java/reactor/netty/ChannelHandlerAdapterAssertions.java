@@ -53,11 +53,13 @@ public final class ChannelHandlerAdapterAssertions {
 				.isEmpty();
 	}
 
+	@SuppressWarnings("ReturnValueIgnored")
 	static boolean declaresIsSharable(Class<?> clazz) {
 		Class<?> current = clazz;
 		try {
 			while (current != null && current != ChannelHandlerAdapter.class && current != Object.class) {
 				try {
+					// Suppressing "ReturnValueIgnored" is deliberate
 					current.getDeclaredMethod("isSharable");
 					return true;
 				}
