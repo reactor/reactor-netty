@@ -440,6 +440,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 
 	/* https://github.com/reactor/reactor-netty/issues/4126 */
 	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
 	void testIdleConnectionClosedByServerMetricsUpdatedOnNextAcquireOrOnRelease() throws Exception {
 		String poolName = "testIssue4126";
 		ConnectionProvider provider =
@@ -480,6 +481,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
 
 			assertThat(channel.get()).hasSize(1);
+			//"FutureReturnValueIgnored" this is deliberate
 			channel.get().get(0).close();
 			assertThat(connectionClosed1.await(5, TimeUnit.SECONDS)).isTrue();
 
