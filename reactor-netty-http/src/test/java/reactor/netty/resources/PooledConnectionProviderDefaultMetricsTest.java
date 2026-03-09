@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -42,11 +43,14 @@ import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -427,6 +431,82 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 			});
 
 			assertThat(count).hasValue(0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	/* https://github.com/reactor/reactor-netty/issues/4126 */
+	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void testIdleConnectionClosedByServerMetricsUpdatedOnNextAcquireOrOnRelease() throws Exception {
+		String poolName = "testIssue4126";
+		ConnectionProvider provider =
+				ConnectionProvider.builder(poolName)
+				                  .maxConnections(1)
+				                  .metrics(true)
+				                  .build();
+
+		try {
+			AtomicReference<List<Channel>> channel = new AtomicReference<>(new ArrayList<>());
+			disposableServer =
+					createServer()
+					        .route(r ->
+					                r.get("/1", (req, res) ->
+					                     res.withConnection(conn -> channel.get().add(conn.channel()))
+					                        .sendString(Mono.just("response1")))
+					                 .get("/2", (req, res) ->
+					                     res.withConnection(conn -> channel.get().add(conn.channel()))
+					                        .header("Connection", "close").sendString(Mono.just("response2"))))
+					        .bindNow();
+
+			HttpClient client = createClient(provider, disposableServer.port());
+
+			CountDownLatch connectionClosed1 = new CountDownLatch(1);
+			client.doOnRequest((req, conn) -> conn.channel().closeFuture().addListener(f -> connectionClosed1.countDown()))
+			      .get()
+			      .uri("/1")
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .as(StepVerifier::create)
+			      .expectNext("response1")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
+
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+
+			assertThat(channel.get()).hasSize(1);
+			//"FutureReturnValueIgnored" this is deliberate
+			channel.get().get(0).close();
+			assertThat(connectionClosed1.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+
+			CountDownLatch connectionClosed2 = new CountDownLatch(1);
+			client.doOnRequest((res, conn) -> conn.channel().closeFuture().addListener(f -> connectionClosed2.countDown()))
+			      .get()
+			      .uri("/2")
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .as(StepVerifier::create)
+			      .expectNext("response2")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
+
+			assertThat(channel.get()).hasSize(2);
+			assertThat(channel.get().get(0)).isNotSameAs(channel.get().get(1));
+			assertThat(connectionClosed2.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
 		}
 		finally {
 			provider.disposeLater()
