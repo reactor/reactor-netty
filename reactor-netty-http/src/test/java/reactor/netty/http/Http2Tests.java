@@ -1078,6 +1078,7 @@ class Http2Tests extends BaseHttpTest {
 				client -> client.protocol(clientProtocols));
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	private void doTestMaxConcurrentStreamsDynamicUpdate(
 			Function<HttpServer, HttpServer> serverCustomizer,
 			Function<HttpClient, HttpClient> clientCustomizer) throws Exception {
@@ -1091,6 +1092,7 @@ class Http2Tests extends BaseHttpTest {
 				                        Channel parentChannel = conn.channel().parent();
 				                        if (serverParentChannel.compareAndSet(null, parentChannel)) {
 				                            Http2Settings settings = new Http2Settings().maxConcurrentStreams(1);
+				                            //"FutureReturnValueIgnored" this is deliberate
 				                            parentChannel.writeAndFlush(new DefaultHttp2SettingsFrame(settings));
 				                        }
 				                    })
