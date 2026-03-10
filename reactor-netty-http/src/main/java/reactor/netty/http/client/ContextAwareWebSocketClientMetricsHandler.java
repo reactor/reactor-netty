@@ -18,10 +18,10 @@ package reactor.netty.http.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import org.jspecify.annotations.Nullable;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -39,8 +39,10 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 	ContextAwareWebSocketClientMetricsHandler(ContextAwareWebSocketClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
 			@Nullable SocketAddress proxyAddress,
-			@Nullable Function<String, String> uriTagValue) {
-		super(remoteAddress, proxyAddress, uriTagValue);
+			@Nullable String path,
+			@Nullable ContextView contextView,
+			String method) {
+		super(remoteAddress, proxyAddress, path, contextView, method);
 		this.recorder = recorder;
 	}
 
@@ -94,13 +96,13 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 		}
 		if (contextView != null) {
 			if (proxyAddress == null) {
-				recorder.recordDataSentTime(contextView, address, requireNonNull(path), "GET",
+				recorder.recordDataSentTime(contextView, address, requireNonNull(path), method,
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 				recorder.recordDataSent(contextView, address, path, dataSent);
 			}
 			else {
-				recorder.recordDataSentTime(contextView, address, proxyAddress, requireNonNull(path), "GET",
+				recorder.recordDataSentTime(contextView, address, proxyAddress, requireNonNull(path), method,
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 				recorder.recordDataSent(contextView, address, proxyAddress, path, dataSent);
@@ -119,13 +121,13 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 		}
 		if (contextView != null) {
 			if (proxyAddress == null) {
-				recorder.recordDataReceivedTime(contextView, address, requireNonNull(path), "GET", "n/a",
+				recorder.recordDataReceivedTime(contextView, address, requireNonNull(path), method, "n/a",
 						Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 				recorder.recordDataReceived(contextView, address, path, dataReceived);
 			}
 			else {
-				recorder.recordDataReceivedTime(contextView, address, proxyAddress, requireNonNull(path), "GET", "n/a",
+				recorder.recordDataReceivedTime(contextView, address, proxyAddress, requireNonNull(path), method, "n/a",
 						Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 				recorder.recordDataReceived(contextView, address, proxyAddress, path, dataReceived);

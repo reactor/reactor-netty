@@ -16,9 +16,9 @@
 package reactor.netty.http.client;
 
 import org.jspecify.annotations.Nullable;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
-import java.util.function.Function;
 
 /**
  * {@link AbstractWebSocketClientMetricsHandler} for collecting metrics on WebSocket {@link HttpClient} level.
@@ -33,8 +33,10 @@ final class WebSocketClientMetricsHandler extends AbstractWebSocketClientMetrics
 	WebSocketClientMetricsHandler(WebSocketClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
 			@Nullable SocketAddress proxyAddress,
-			@Nullable Function<String, String> uriTagValue) {
-		super(remoteAddress, proxyAddress, uriTagValue);
+			@Nullable String path,
+			@Nullable ContextView contextView,
+			String method) {
+		super(remoteAddress, proxyAddress, path, contextView, method);
 		this.recorder = recorder;
 	}
 

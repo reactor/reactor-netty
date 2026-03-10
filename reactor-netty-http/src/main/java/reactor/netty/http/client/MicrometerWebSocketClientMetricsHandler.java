@@ -20,7 +20,6 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.transport.RequestReplySenderContext;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import org.jspecify.annotations.Nullable;
@@ -29,7 +28,6 @@ import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static reactor.netty.Metrics.HANDSHAKE_TIME;
@@ -67,8 +65,10 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 	MicrometerWebSocketClientMetricsHandler(MicrometerWebSocketClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
 			@Nullable SocketAddress proxyAddress,
-			@Nullable Function<String, String> uriTagValue) {
-		super(remoteAddress, proxyAddress, uriTagValue);
+			@Nullable String path,
+			@Nullable ContextView contextView,
+			String method) {
+		super(remoteAddress, proxyAddress, path, contextView, method);
 		this.recorder = recorder;
 	}
 
@@ -87,15 +87,14 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 		return recorder;
 	}
 
-	void startHandshake(ChannelHandlerContext ctx, String uri) {
-		initMetrics(ctx);
-		String resolvedPath = path != null ? path : uri;
+	void startHandshake(Channel channel) {
+		String resolvedPath = path != null ? path : "unknown";
 
 		handshakeStartTime = System.nanoTime();
 		handshakeTimeHandlerContext = new HandshakeTimeHandlerContext(recorder, resolvedPath, remoteAddress, proxyAddress);
 		handshakeTimeObservation = Observation.createNotStarted(
 				recorder.name() + HANDSHAKE_TIME, handshakeTimeHandlerContext, OBSERVATION_REGISTRY);
-		parentContextView = updateChannelContext(ctx.channel(), handshakeTimeObservation);
+		parentContextView = updateChannelContext(channel, handshakeTimeObservation);
 		handshakeTimeObservation.start();
 	}
 

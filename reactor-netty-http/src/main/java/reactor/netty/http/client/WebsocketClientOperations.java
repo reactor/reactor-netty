@@ -50,6 +50,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
+import reactor.util.context.ContextView;
 
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
@@ -60,6 +61,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Stephane Maldini
  * @author Simon Baslé
+ * @author raccoonback
  * @author LivingLikeKrillin
  */
 class WebsocketClientOperations extends HttpClientOperations
@@ -241,14 +243,17 @@ class WebsocketClientOperations extends HttpClientOperations
 			AbstractHttpClientMetricsHandler httpHandler = (AbstractHttpClientMetricsHandler) existingHandler;
 			channel.pipeline().remove(NettyPipeline.HttpMetricsHandler);
 
+			String rawPath = AbstractWebSocketClientMetricsHandler.resolvePath(this);
+			String resolvedPath = httpHandler.uriTagValue != null ? httpHandler.uriTagValue.apply(rawPath) : rawPath;
+			ContextView ctxView = currentContext();
+			String httpMethod = wsHttpMethod();
+
 			AbstractWebSocketClientMetricsHandler wsHandler;
 			if (httpHandler instanceof MicrometerHttpClientMetricsHandler) {
 				MicrometerWebSocketClientMetricsHandler micrometerHandler = new MicrometerWebSocketClientMetricsHandler(
 						MicrometerWebSocketClientMetricsRecorder.INSTANCE,
-						httpHandler.remoteAddress, httpHandler.proxyAddress, httpHandler.uriTagValue);
-				micrometerHandler.initMetrics(channel.pipeline().context(NettyPipeline.ReactiveBridge));
-				micrometerHandler.startHandshake(channel.pipeline().context(NettyPipeline.ReactiveBridge),
-						currentURI.getPath());
+						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
+				micrometerHandler.startHandshake(channel);
 				this.micrometerWsHandler = micrometerHandler;
 				wsHandler = micrometerHandler;
 			}
@@ -256,14 +261,12 @@ class WebsocketClientOperations extends HttpClientOperations
 				ContextAwareHttpClientMetricsHandler ctxHandler = (ContextAwareHttpClientMetricsHandler) httpHandler;
 				wsHandler = new ContextAwareWebSocketClientMetricsHandler(
 						new DefaultContextAwareWebSocketClientMetricsRecorder(ctxHandler.recorder),
-						httpHandler.remoteAddress, httpHandler.proxyAddress, httpHandler.uriTagValue);
-				wsHandler.initMetrics(channel.pipeline().context(NettyPipeline.ReactiveBridge));
+						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
 			}
 			else {
 				wsHandler = new WebSocketClientMetricsHandler(
 						MicrometerWebSocketClientMetricsRecorder.INSTANCE,
-						httpHandler.remoteAddress, httpHandler.proxyAddress, httpHandler.uriTagValue);
-				wsHandler.initMetrics(channel.pipeline().context(NettyPipeline.ReactiveBridge));
+						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
 			}
 
 			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.WsMetricsHandler, wsHandler);
@@ -271,6 +274,10 @@ class WebsocketClientOperations extends HttpClientOperations
 		else {
 			removeHandler(NettyPipeline.HttpMetricsHandler);
 		}
+	}
+
+	String wsHttpMethod() {
+		return "GET";
 	}
 
 	@Override
