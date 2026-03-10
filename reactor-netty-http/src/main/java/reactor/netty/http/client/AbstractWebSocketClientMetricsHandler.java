@@ -15,8 +15,6 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -25,14 +23,12 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.jspecify.annotations.Nullable;
-import reactor.netty.channel.ChannelOperations;
 import reactor.util.context.ContextView;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.function.Function;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -46,6 +42,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 	private static final Logger log = Loggers.getLogger(AbstractWebSocketClientMetricsHandler.class);
 
+	final String method;
 	final @Nullable SocketAddress proxyAddress;
 	final SocketAddress remoteAddress;
 
@@ -63,13 +60,13 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 	long connectionStartTime;
 
-	final @Nullable Function<String, String> uriTagValue;
-
 	protected AbstractWebSocketClientMetricsHandler(SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress,
-			@Nullable Function<String, String> uriTagValue) {
+			@Nullable String path, @Nullable ContextView contextView, String method) {
+		this.method = method;
+		this.path = path;
+		this.contextView = contextView;
 		this.proxyAddress = proxyAddress;
 		this.remoteAddress = remoteAddress;
-		this.uriTagValue = uriTagValue;
 	}
 
 	protected AbstractWebSocketClientMetricsHandler(AbstractWebSocketClientMetricsHandler copy) {
@@ -79,10 +76,10 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		this.dataReceivedTime = copy.dataReceivedTime;
 		this.dataSent = copy.dataSent;
 		this.dataSentTime = copy.dataSentTime;
+		this.method = copy.method;
 		this.path = copy.path;
 		this.proxyAddress = copy.proxyAddress;
 		this.remoteAddress = copy.remoteAddress;
-		this.uriTagValue = copy.uriTagValue;
 	}
 
 	@Override
@@ -110,11 +107,14 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		try {
-			if (msg instanceof WebSocketFrame && isDataFrame(msg)) {
-				dataSentTime = System.nanoTime();
-				dataSent += extractProcessedDataFromBuffer(msg);
+			if (msg instanceof WebSocketFrame) {
+				WebSocketFrame frame = (WebSocketFrame) msg;
+				if (isDataFrame(frame)) {
+					dataSentTime = System.nanoTime();
+					dataSent += extractProcessedDataFromBuffer(frame);
 
-				recordWrite(remoteAddress);
+					recordWrite(remoteAddress);
+				}
 			}
 		}
 		catch (RuntimeException e) {
@@ -130,12 +130,15 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		try {
-			if (msg instanceof WebSocketFrame && isDataFrame(msg)) {
-				dataReceivedTime = System.nanoTime();
-				long bytes = extractProcessedDataFromBuffer(msg);
-				dataReceived += bytes;
+			if (msg instanceof WebSocketFrame) {
+				WebSocketFrame frame = (WebSocketFrame) msg;
+				if (isDataFrame(frame)) {
+					dataReceivedTime = System.nanoTime();
+					long bytes = extractProcessedDataFromBuffer(frame);
+					dataReceived += bytes;
 
-				recordRead(ctx.channel(), remoteAddress);
+					recordRead(ctx.channel(), remoteAddress);
+				}
 			}
 		}
 		catch (RuntimeException e) {
@@ -161,37 +164,19 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		ctx.fireExceptionCaught(cause);
 	}
 
-	void initMetrics(ChannelHandlerContext ctx) {
-		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-		if (channelOps instanceof HttpClientOperations) {
-			HttpClientOperations ops = (HttpClientOperations) channelOps;
-			path = uriTagValue == null ? resolvePath(ops) : uriTagValue.apply(resolvePath(ops));
-			contextView = ops.currentContextView();
-		}
-	}
-
-	static boolean isDataFrame(Object msg) {
+	static boolean isDataFrame(WebSocketFrame msg) {
 		return !(msg instanceof CloseWebSocketFrame) &&
 				!(msg instanceof PingWebSocketFrame) &&
 				!(msg instanceof PongWebSocketFrame);
 	}
 
-	private static long extractProcessedDataFromBuffer(Object msg) {
-		if (msg instanceof ByteBufHolder) {
-			return ((ByteBufHolder) msg).content().readableBytes();
-		}
-		else if (msg instanceof ByteBuf) {
-			return ((ByteBuf) msg).readableBytes();
-		}
-		return 0;
+	private static long extractProcessedDataFromBuffer(WebSocketFrame msg) {
+		return msg.content().readableBytes();
 	}
 
 	protected abstract WebSocketClientMetricsRecorder recorder();
 
 	protected void recordConnectionClosed(ChannelHandlerContext ctx) {
-		if (path == null) {
-			initMetrics(ctx);
-		}
 		Duration duration = Duration.ofNanos(System.nanoTime() - connectionStartTime);
 		if (proxyAddress == null) {
 			recorder().recordWebSocketConnectionDuration(remoteAddress, path != null ? path : "unknown", duration);
@@ -202,9 +187,6 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	}
 
 	protected void recordException(ChannelHandlerContext ctx) {
-		if (path == null) {
-			initMetrics(ctx);
-		}
 		if (proxyAddress == null) {
 			recorder().incrementErrorsCount(remoteAddress, path != null ? path : "unknown");
 		}
@@ -218,13 +200,13 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 			return;
 		}
 		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(address, path, "GET", "n/a",
+			recorder().recordDataReceivedTime(address, path, method, "n/a",
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder().recordDataReceived(address, path, dataReceived);
 		}
 		else {
-			recorder().recordDataReceivedTime(address, proxyAddress, path, "GET", "n/a",
+			recorder().recordDataReceivedTime(address, proxyAddress, path, method, "n/a",
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
@@ -237,13 +219,13 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 			return;
 		}
 		if (proxyAddress == null) {
-			recorder().recordDataSentTime(address, path, "GET",
+			recorder().recordDataSentTime(address, path, method,
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 			recorder().recordDataSent(address, path, dataSent);
 		}
 		else {
-			recorder().recordDataSentTime(address, proxyAddress, path, "GET",
+			recorder().recordDataSentTime(address, proxyAddress, path, method,
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 			recorder().recordDataSent(address, proxyAddress, path, dataSent);

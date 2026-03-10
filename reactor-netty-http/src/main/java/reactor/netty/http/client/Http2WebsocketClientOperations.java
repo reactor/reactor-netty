@@ -197,6 +197,11 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 	}
 
 	@Override
+	String wsHttpMethod() {
+		return "CONNECT";
+	}
+
+	@Override
 	boolean isHandshakeComplete() {
 		return handshakerHttp2.handshakeComplete;
 	}
