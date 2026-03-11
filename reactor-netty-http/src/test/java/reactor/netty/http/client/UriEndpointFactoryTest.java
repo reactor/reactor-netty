@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -27,6 +28,8 @@ import reactor.netty.transport.AddressUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static reactor.netty.http.client.UriEndpoint.inetSocketAddressHostString;
+import static reactor.netty.http.client.UriEndpoint.toSocketAddressStringWithoutDefaultPort;
 
 class UriEndpointFactoryTest {
 	private final UriEndpointFactoryBuilder builder = new UriEndpointFactoryBuilder();
@@ -322,6 +325,69 @@ class UriEndpointFactoryTest {
 			return factory.createUriEndpoint(url, isWs)
 			              .toExternalForm();
 		}
+	}
+
+	@Test
+	void inetSocketAddressHostStringIPv4() {
+		InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 8080);
+		assertThat(inetSocketAddressHostString(addr)).isEqualTo("127.0.0.1");
+	}
+
+	@Test
+	void inetSocketAddressHostStringIPv6() {
+		InetSocketAddress addr = new InetSocketAddress("::1", 8080);
+		assertThat(inetSocketAddressHostString(addr)).isEqualTo("[::1]");
+	}
+
+	@Test
+	void inetSocketAddressHostStringUnresolved() {
+		InetSocketAddress addr = InetSocketAddress.createUnresolved("example.com", 8080);
+		assertThat(inetSocketAddressHostString(addr)).isEqualTo("example.com");
+	}
+
+	@Test
+	void inetSocketAddressHostStringUnresolvedIPv6WithBrackets() {
+		InetSocketAddress addr = InetSocketAddress.createUnresolved("[::1]", 8080);
+		assertThat(inetSocketAddressHostString(addr)).isEqualTo("[::1]");
+	}
+
+	@Test
+	void toSocketAddressStringWithoutDefaultPortIPv4() {
+		SocketAddress addr80 = new InetSocketAddress("127.0.0.1", 80);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr80, false)).isEqualTo("127.0.0.1");
+
+		SocketAddress addr443 = new InetSocketAddress("127.0.0.1", 443);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr443, true)).isEqualTo("127.0.0.1");
+
+		SocketAddress addr8080 = new InetSocketAddress("127.0.0.1", 8080);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr8080, false)).isEqualTo("127.0.0.1:8080");
+
+		SocketAddress addr8443 = new InetSocketAddress("127.0.0.1", 8443);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr8443, true)).isEqualTo("127.0.0.1:8443");
+	}
+
+	@Test
+	void toSocketAddressStringWithoutDefaultPortIPv6() {
+		SocketAddress addr80 = new InetSocketAddress("::1", 80);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr80, false)).isEqualTo("[::1]");
+
+		SocketAddress addr443 = new InetSocketAddress("::1", 443);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr443, true)).isEqualTo("[::1]");
+
+		SocketAddress addr8080 = new InetSocketAddress("::1", 8080);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr8080, false)).isEqualTo("[::1]:8080");
+	}
+
+	@Test
+	void toSocketAddressStringWithoutDefaultPortUnresolved() {
+		SocketAddress addr80 = InetSocketAddress.createUnresolved("example.com", 80);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr80, false)).isEqualTo("example.com");
+
+		SocketAddress addr443 = InetSocketAddress.createUnresolved("example.com", 443);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr443, true)).isEqualTo("example.com");
+
+		SocketAddress addr8080 = InetSocketAddress.createUnresolved("example.com", 8080);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr8080, false)).isEqualTo("example.com:8080");
 	}
 
 	private static final class UriEndpointFactoryBuilder {
