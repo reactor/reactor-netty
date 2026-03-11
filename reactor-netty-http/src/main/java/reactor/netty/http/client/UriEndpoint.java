@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package reactor.netty.http.client;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -81,18 +83,31 @@ final class UriEndpoint {
 		if (!(address instanceof InetSocketAddress)) {
 			throw new IllegalStateException("Only support InetSocketAddress representation");
 		}
-		String addressString = NetUtil.toSocketAddressString((InetSocketAddress) address);
-		if (secure) {
-			if (addressString.endsWith(":443")) {
-				addressString = addressString.substring(0, addressString.length() - 4);
-			}
+		InetSocketAddress inetAddr = (InetSocketAddress) address;
+		int port = inetAddr.getPort();
+		if ((secure && port == 443) || (!secure && port == 80)) {
+			return inetSocketAddressHostString(inetAddr);
 		}
-		else {
-			if (addressString.endsWith(":80")) {
-				addressString = addressString.substring(0, addressString.length() - 3);
+		return NetUtil.toSocketAddressString(inetAddr);
+	}
+
+	static String inetSocketAddressHostString(InetSocketAddress addr) {
+		if (addr.isUnresolved()) {
+			String hostname = NetUtil.getHostname(addr);
+			if (NetUtil.isValidIpV6Address(hostname)) {
+				if (hostname.charAt(0) == '[') {
+					return hostname;
+				}
+				return '[' + hostname + ']';
 			}
+			return hostname;
 		}
-		return addressString;
+		InetAddress inetAddress = addr.getAddress();
+		String host = NetUtil.toAddressString(inetAddress);
+		if (inetAddress instanceof Inet6Address) {
+			return '[' + host + ']';
+		}
+		return host;
 	}
 
 	@Override
