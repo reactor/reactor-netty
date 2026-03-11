@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -519,13 +519,19 @@ class HttpClientConnect extends HttpClient {
 			if (configuration.uri == null) {
 				String uri = configuration.uriStr;
 
-				uri = uri == null ? "/" : uri;
+				if (uri == null) {
+					uri = "/";
+				}
 
-				if (baseUrl != null && uri.startsWith("/")) {
-					if (baseUrl.endsWith("/")) {
-						baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+				if (baseUrl != null && uri.charAt(0) == '/') {
+					int baseUrlLen = baseUrl.length();
+					if (baseUrlLen > 0 && baseUrl.charAt(baseUrlLen - 1) == '/') {
+						baseUrlLen--;
 					}
-					uri = baseUrl + uri;
+					uri = new StringBuilder(baseUrlLen + uri.length())
+							.append(baseUrl, 0, baseUrlLen)
+							.append(uri)
+							.toString();
 				}
 
 				this.fromURI = this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketClientSpec != null);

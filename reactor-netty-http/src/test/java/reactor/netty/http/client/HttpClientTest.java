@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,6 +97,7 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
@@ -3801,6 +3802,32 @@ class HttpClientTest extends BaseHttpTest {
 		          .as(StepVerifier::create)
 		          .expectErrorMatches(t -> t.getMessage() != null && t.getMessage().startsWith("Failed to resolve [projectreactor.io:443"))
 		          .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedTest
+	@MethodSource("baseUrlCombinations")
+	void testBaseUrlUriCombination(String baseUrl, String uri, String expectedUrl) {
+		HttpClient client = baseUrl != null ? HttpClient.create().baseUrl(baseUrl) : HttpClient.create().port(8080);
+		HttpClientFinalizer finalizer = (HttpClientFinalizer) (uri != null ? client.get().uri(uri) : client.get());
+		HttpClientConnect.HttpClientHandler handler = new HttpClientConnect.HttpClientHandler(finalizer.configuration());
+
+		if (expectedUrl == null) {
+			String host = NetUtil.toSocketAddressString((InetSocketAddress) finalizer.configuration().remoteAddress().get());
+			expectedUrl = "http://" + host + (uri != null ? uri : "/");
+		}
+
+		assertThat(handler.resourceUrl).isEqualTo(expectedUrl);
+	}
+
+	static Object[][] baseUrlCombinations() {
+		return new Object[][]{
+				{"http://localhost:8080", "/api/test", "http://localhost:8080/api/test"},
+				{"http://localhost:8080/", "/api/test", "http://localhost:8080/api/test"},
+				{"http://localhost:8080", null, "http://localhost:8080/"},
+				{"http://should-not-be-used:1234", "http://localhost:8080/absolute", "http://localhost:8080/absolute"},
+				{null, "/no-base", null},
+				{null, null, null}
+		};
 	}
 
 	private static final class EchoAction implements Publisher<HttpContent>, Consumer<HttpContent> {
