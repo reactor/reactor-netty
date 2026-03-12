@@ -120,6 +120,16 @@ Issues related to TCP keep-alive configuration on various load balancers were re
 *** https://github.com/reactor/reactor-netty/issues/764#issuecomment-1011373248
 *** https://github.com/reactor/reactor-netty/issues/1510
 *** https://github.com/reactor/reactor-netty/issues/1843
+* Be aware of a stale cancel signal from a previous request disposing a reused connection.
+** This can occur in a gateway/proxy scenario (e.g. Spring Cloud Gateway) where a client (browser) cancels
+a request while the gateway is still waiting for a response from the upstream server.
+** When the upstream response has already been received and the connection has been returned to the pool and
+reused by a new request, a delayed cancel signal from the previous request may incorrectly call
+`channel().close()` on the channel already in use by the new request, resulting in
+`Connection prematurely closed BEFORE response`.
+** This issue affects reactor-netty versions prior to `1.1.24`.
+It was implicitly fixed in `1.1.24` by https://github.com/reactor/reactor-netty/pull/3459[PR #3459].
+** Consider upgrading to reactor-netty `1.1.24+` (Spring Boot `3.3.x` or later).
 * Check the target server.
 ** Are there configurations related to any of the following?
 *** idle timeout (the connection is closed when there is no incoming data for a certain period of time)
