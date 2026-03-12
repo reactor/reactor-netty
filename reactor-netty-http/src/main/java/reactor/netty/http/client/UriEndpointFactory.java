@@ -86,9 +86,9 @@ final class UriEndpointFactory {
 				cleanPathAndQuery(path + query));
 	}
 
-	static UriEndpoint createUriEndpoint(UriEndpoint from, String to, SocketAddress remoteAddress) {
+	static UriEndpoint createUriEndpoint(UriEndpoint from, String to, SocketAddress connectAddress) {
 		if (to.startsWith("/")) {
-			return new UriEndpoint(from.scheme, from.host, from.port, remoteAddress, to);
+			return new UriEndpoint(from.scheme, from.host, from.port, connectAddress, to);
 		}
 		else {
 			throw new IllegalArgumentException("Must provide a relative address in parameter `to`");
