@@ -539,7 +539,6 @@ class HttpClientOperationsTest extends BaseHttpTest {
 		assertThat(req.cookieDecoder).isSameAs(res.cookieDecoder);
 		assertThat(req.cookieList).isSameAs(res.cookieList);
 		assertThat(req.uriEndpoint).isSameAs(res.uriEndpoint);
-		assertThat(req.path).isSameAs(res.path);
 		assertThat(req.responseTimeout).isSameAs(res.responseTimeout);
 		assertThat(req.is100Continue).isSameAs(res.is100Continue);
 		assertThat(req.trailerHeaders).isSameAs(res.trailerHeaders);

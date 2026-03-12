@@ -119,7 +119,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
 	UriEndpoint                 uriEndpoint;
-	String                      path;
 	Duration                    responseTimeout;
 
 	volatile ResponseState responseState;
@@ -155,7 +154,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieList = replaced.cookieList;
 		this.uriEndpoint = replaced.uriEndpoint;
-		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
 		this.trailerHeaders = replaced.trailerHeaders;
@@ -184,7 +182,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieList = replaced.cookieList;
 		this.uriEndpoint = replaced.uriEndpoint;
-		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
 		this.trailerHeaders = replaced.trailerHeaders;
@@ -615,10 +612,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public final String fullPath() {
-		if (path == null) {
-			path = resolvePath(uri());
-		}
-		return path;
+		return uriEndpoint != null ? uriEndpoint.getPath() : resolvePath(uri());
 	}
 
 	@Override

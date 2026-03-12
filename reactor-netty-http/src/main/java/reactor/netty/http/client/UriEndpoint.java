@@ -19,6 +19,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -40,16 +41,22 @@ final class UriEndpoint {
 	@Nullable
 	final Supplier<? extends SocketAddress> remoteAddressSupplier;
 	final String pathAndQuery;
+	final String fullPath;
 
 	String externalForm;
 
 	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery) {
+		this(scheme, host, port, remoteAddress, pathAndQuery, decodePath(pathAndQuery));
+	}
+
+	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery, String fullPath) {
 		this.host = host;
 		this.port = port;
 		this.scheme = Objects.requireNonNull(scheme, "scheme");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
 		this.remoteAddressSupplier = null;
 		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
+		this.fullPath = fullPath;
 	}
 
 	UriEndpoint(String scheme, String host, int port, Supplier<? extends SocketAddress> remoteAddressSupplier, String pathAndQuery) {
@@ -59,6 +66,19 @@ final class UriEndpoint {
 		this.remoteAddress = null;
 		this.remoteAddressSupplier = Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
+		this.fullPath = decodePath(pathAndQuery);
+	}
+
+	static String decodePath(String pathAndQuery) {
+		String rawPath = pathAndQuery;
+		int queryIndex = rawPath.indexOf('?');
+		if (queryIndex > -1) {
+			rawPath = rawPath.substring(0, queryIndex);
+		}
+		if (rawPath.isEmpty() || rawPath.indexOf('%') == -1) {
+			return rawPath;
+		}
+		return URI.create("http://localhost" + rawPath).getPath();
 	}
 
 	boolean isWs() {
@@ -75,6 +95,10 @@ final class UriEndpoint {
 
 	String getPathAndQuery() {
 		return pathAndQuery;
+	}
+
+	String getPath() {
+		return fullPath;
 	}
 
 	SocketAddress getRemoteAddress() {

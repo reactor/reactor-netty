@@ -328,6 +328,42 @@ class UriEndpointFactoryTest {
 	}
 
 	@Test
+	void getPathAbsoluteUrl() {
+		UriEndpointFactory factory = this.builder.build();
+
+		assertThat(factory.createUriEndpoint("http://localhost/foo/bar", false).getPath()).isEqualTo("/foo/bar");
+		assertThat(factory.createUriEndpoint("http://localhost:8080/test?q=1", false).getPath()).isEqualTo("/test");
+		assertThat(factory.createUriEndpoint("http://localhost:8080/a%20b", false).getPath()).isEqualTo("/a b");
+	}
+
+	@Test
+	void getPathDecodesPercentEncoding() {
+		UriEndpointFactory factory = this.builder.build();
+
+		assertThat(factory.createUriEndpoint("/foo%20bar", false).getPath()).isEqualTo("/foo bar");
+		assertThat(factory.createUriEndpoint("/hello%2Fworld", false).getPath()).isEqualTo("/hello/world");
+		assertThat(factory.createUriEndpoint("/a%20b?q=%20", false).getPath()).isEqualTo("/a b");
+	}
+
+	@Test
+	void getPathSimple() {
+		UriEndpointFactory factory = this.builder.build();
+
+		assertThat(factory.createUriEndpoint("/foo", false).getPath()).isEqualTo("/foo");
+		assertThat(factory.createUriEndpoint("/foo/bar", false).getPath()).isEqualTo("/foo/bar");
+		assertThat(factory.createUriEndpoint("/", false).getPath()).isEqualTo("/");
+	}
+
+	@Test
+	void getPathStripsQuery() {
+		UriEndpointFactory factory = this.builder.build();
+
+		assertThat(factory.createUriEndpoint("/foo?key=val", false).getPath()).isEqualTo("/foo");
+		assertThat(factory.createUriEndpoint("/foo/bar?a=1&b=2", false).getPath()).isEqualTo("/foo/bar");
+		assertThat(factory.createUriEndpoint("/?query", false).getPath()).isEqualTo("/");
+	}
+
+	@Test
 	void inetSocketAddressHostStringIPv4() {
 		InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 8080);
 		assertThat(inetSocketAddressHostString(addr)).isEqualTo("127.0.0.1");
