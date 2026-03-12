@@ -717,7 +717,7 @@ class HttpClientConnect extends HttpClient {
 				}
 			}
 			else {
-				toURITemp = UriEndpointFactory.createUriEndpoint(from, to, () -> address);
+				toURITemp = UriEndpointFactory.createUriEndpoint(from, to, address);
 			}
 			toURI = toURITemp;
 			resourceUrl = toURITemp.toExternalForm();
