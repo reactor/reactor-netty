@@ -384,6 +384,9 @@ class UriEndpointFactoryTest {
 
 		SocketAddress addr8080 = new InetSocketAddress("::1", 8080);
 		assertThat(toSocketAddressStringWithoutDefaultPort(addr8080, false)).isEqualTo("[::1]:8080");
+
+		SocketAddress addr8443 = new InetSocketAddress("::1", 8443);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr8443, true)).isEqualTo("[::1]:8443");
 	}
 
 	@Test
@@ -396,6 +399,9 @@ class UriEndpointFactoryTest {
 
 		SocketAddress addr8080 = InetSocketAddress.createUnresolved("example.com", 8080);
 		assertThat(toSocketAddressStringWithoutDefaultPort(addr8080, false)).isEqualTo("example.com:8080");
+
+		SocketAddress addr8443 = InetSocketAddress.createUnresolved("example.com", 8443);
+		assertThat(toSocketAddressStringWithoutDefaultPort(addr8443, true)).isEqualTo("example.com:8443");
 	}
 
 	private static final class UriEndpointFactoryBuilder {
