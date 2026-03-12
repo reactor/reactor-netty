@@ -563,6 +563,9 @@ class HttpClientConnect extends HttpClient {
 				                        .setProtocolVersion(HttpVersion.HTTP_1_1)
 				                        .headers();
 
+				// Reset to pickup the actual uri()
+				ch.path = null;
+
 				if (!defaultHeaders.isEmpty()) {
 					headers.set(defaultHeaders);
 				}
