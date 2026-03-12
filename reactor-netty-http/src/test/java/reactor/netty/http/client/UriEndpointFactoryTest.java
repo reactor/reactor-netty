@@ -328,6 +328,27 @@ class UriEndpointFactoryTest {
 	}
 
 	@Test
+	void getPathNullForStringBasedUri() {
+		UriEndpointFactory factory = this.builder.build();
+
+		assertThat(factory.createUriEndpoint("/foo", false).getPath()).isNull();
+		assertThat(factory.createUriEndpoint("/foo/bar", false).getPath()).isNull();
+		assertThat(factory.createUriEndpoint("http://localhost/foo/bar", false).getPath()).isNull();
+	}
+
+	@Test
+	void getPathPreComputedFromUri() {
+		UriEndpointFactory factory = this.builder.build();
+
+		assertThat(factory.createUriEndpoint(URI.create("http://localhost/foo/bar"), false).getPath()).isEqualTo("/foo/bar");
+		assertThat(factory.createUriEndpoint(URI.create("http://localhost:8080/test?q=1"), false).getPath()).isEqualTo("/test");
+		assertThat(factory.createUriEndpoint(URI.create("http://localhost:8080/a%20b"), false).getPath()).isEqualTo("/a b");
+		assertThat(factory.createUriEndpoint(URI.create("http://localhost:8080/hello%2Fworld"), false).getPath()).isEqualTo("/hello/world");
+		assertThat(factory.createUriEndpoint(URI.create("http://localhost:8080/a%20b?q=%20"), false).getPath()).isEqualTo("/a b");
+		assertThat(factory.createUriEndpoint(URI.create("http://localhost:8080/"), false).getPath()).isEqualTo("/");
+	}
+
+	@Test
 	void inetSocketAddressHostStringIPv4() {
 		InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 8080);
 		assertThat(inetSocketAddressHostString(addr)).isEqualTo("127.0.0.1");

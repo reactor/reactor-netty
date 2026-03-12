@@ -79,11 +79,16 @@ final class UriEndpointFactory {
 		String scheme = url.getScheme() != null ? validateScheme(url.getScheme().toLowerCase()) : resolveScheme(isWs);
 		String host = cleanHostString(url.getHost());
 		int port = url.getPort() != -1 ? url.getPort() : (UriEndpoint.isSecureScheme(scheme) ? 443 : 80);
-		String path = url.getRawPath() != null ? url.getRawPath() : "";
+		String rawPath = url.getRawPath() != null ? url.getRawPath() : "";
 		String query = url.getRawQuery() != null ? '?' + url.getRawQuery() : "";
+		String pathAndQuery = cleanPathAndQuery(rawPath + query);
+		String decodedPath = url.getPath();
+		if (decodedPath == null || decodedPath.isEmpty()) {
+			decodedPath = "/";
+		}
 		return new UriEndpoint(scheme, host, port,
 				inetSocketAddressFunction.apply(host, port),
-				cleanPathAndQuery(path + query));
+				pathAndQuery, decodedPath);
 	}
 
 	static UriEndpoint createUriEndpoint(UriEndpoint from, String to, SocketAddress connectAddress) {
