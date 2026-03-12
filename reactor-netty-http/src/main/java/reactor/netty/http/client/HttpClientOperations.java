@@ -612,7 +612,13 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public final String fullPath() {
-		return uriEndpoint != null ? uriEndpoint.getPath() : resolvePath(uri());
+		if (uriEndpoint != null) {
+			String path = uriEndpoint.getPath();
+			if (path != null) {
+				return path;
+			}
+		}
+		return resolvePath(uri());
 	}
 
 	@Override

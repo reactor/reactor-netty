@@ -19,7 +19,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URI;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -41,15 +40,17 @@ final class UriEndpoint {
 	@Nullable
 	final Supplier<? extends SocketAddress> remoteAddressSupplier;
 	final String pathAndQuery;
+	@Nullable
 	final String fullPath;
 
 	String externalForm;
 
 	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery) {
-		this(scheme, host, port, remoteAddress, pathAndQuery, decodePath(pathAndQuery));
+		this(scheme, host, port, remoteAddress, pathAndQuery, null);
 	}
 
-	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery, String fullPath) {
+	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery,
+			@Nullable String fullPath) {
 		this.host = host;
 		this.port = port;
 		this.scheme = Objects.requireNonNull(scheme, "scheme");
@@ -66,19 +67,7 @@ final class UriEndpoint {
 		this.remoteAddress = null;
 		this.remoteAddressSupplier = Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
-		this.fullPath = decodePath(pathAndQuery);
-	}
-
-	static String decodePath(String pathAndQuery) {
-		String rawPath = pathAndQuery;
-		int queryIndex = rawPath.indexOf('?');
-		if (queryIndex > -1) {
-			rawPath = rawPath.substring(0, queryIndex);
-		}
-		if (rawPath.isEmpty() || rawPath.indexOf('%') == -1) {
-			return rawPath;
-		}
-		return URI.create("http://localhost" + rawPath).getPath();
+		this.fullPath = null;
 	}
 
 	boolean isWs() {
@@ -97,6 +86,7 @@ final class UriEndpoint {
 		return pathAndQuery;
 	}
 
+	@Nullable
 	String getPath() {
 		return fullPath;
 	}
