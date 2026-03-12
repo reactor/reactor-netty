@@ -40,16 +40,23 @@ final class UriEndpoint {
 	@SuppressWarnings("NullAway")
 	final @Nullable Supplier<? extends SocketAddress> remoteAddressSupplier;
 	final String pathAndQuery;
+	final @Nullable String fullPath;
 
 	@Nullable String externalForm;
 
 	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery) {
+		this(scheme, host, port, remoteAddress, pathAndQuery, null);
+	}
+
+	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery,
+			@Nullable String fullPath) {
 		this.host = host;
 		this.port = port;
 		this.scheme = Objects.requireNonNull(scheme, "scheme");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
 		this.remoteAddressSupplier = null;
 		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
+		this.fullPath = fullPath;
 	}
 
 	UriEndpoint(String scheme, String host, int port, Supplier<? extends SocketAddress> remoteAddressSupplier, String pathAndQuery) {
@@ -59,6 +66,7 @@ final class UriEndpoint {
 		this.remoteAddress = null;
 		this.remoteAddressSupplier = Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
+		this.fullPath = null;
 	}
 
 	boolean isWs() {
@@ -75,6 +83,10 @@ final class UriEndpoint {
 
 	String getPathAndQuery() {
 		return pathAndQuery;
+	}
+
+	@Nullable String getPath() {
+		return fullPath;
 	}
 
 	@SuppressWarnings("NullAway")
