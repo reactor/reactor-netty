@@ -3816,7 +3816,7 @@ class HttpClientTest extends BaseHttpTest {
 			expectedUrl = "http://" + host + (uri != null ? uri : "/");
 		}
 
-		assertThat(handler.resourceUrl).isEqualTo(expectedUrl);
+		assertThat(handler.toURI.toExternalForm()).isEqualTo(expectedUrl);
 	}
 
 	static Object[][] baseUrlCombinations() {

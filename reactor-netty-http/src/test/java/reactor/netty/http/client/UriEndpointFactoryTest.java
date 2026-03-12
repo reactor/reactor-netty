@@ -352,6 +352,14 @@ class UriEndpointFactoryTest {
 	}
 
 	@Test
+	void toExternalFormIsCached() {
+		UriEndpoint endpoint = this.builder.build().createUriEndpoint("http://localhost:8080/foo", false);
+		String first = endpoint.toExternalForm();
+		String second = endpoint.toExternalForm();
+		assertThat(first).isSameAs(second);
+	}
+
+	@Test
 	void toSocketAddressStringWithoutDefaultPortIPv4() {
 		SocketAddress addr80 = new InetSocketAddress("127.0.0.1", 80);
 		assertThat(toSocketAddressStringWithoutDefaultPort(addr80, false)).isEqualTo("127.0.0.1");
