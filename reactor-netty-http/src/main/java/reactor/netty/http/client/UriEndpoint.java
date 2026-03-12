@@ -41,6 +41,8 @@ final class UriEndpoint {
 	final Supplier<? extends SocketAddress> remoteAddressSupplier;
 	final String pathAndQuery;
 
+	String externalForm;
+
 	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery) {
 		this.host = host;
 		this.port = port;
@@ -80,8 +82,19 @@ final class UriEndpoint {
 	}
 
 	String toExternalForm() {
+		if (remoteAddressSupplier != null) {
+			return computeExternalForm(remoteAddressSupplier.get());
+		}
+		String result = externalForm;
+		if (result == null) {
+			result = computeExternalForm(remoteAddress);
+			externalForm = result;
+		}
+		return result;
+	}
+
+	private String computeExternalForm(SocketAddress address) {
 		StringBuilder sb = new StringBuilder();
-		SocketAddress address = getRemoteAddress();
 		if (isDomainSocketAddress(address)) {
 			sb.append(path(address));
 		}

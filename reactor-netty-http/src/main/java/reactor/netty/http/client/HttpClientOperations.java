@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final HttpVersion            version;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
-	String                      resourceUrl;
+	UriEndpoint                 uriEndpoint;
 	String                      path;
 	Duration                    responseTimeout;
 
@@ -154,7 +154,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieList = replaced.cookieList;
-		this.resourceUrl = replaced.resourceUrl;
+		this.uriEndpoint = replaced.uriEndpoint;
 		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
@@ -183,7 +183,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieList = replaced.cookieList;
-		this.resourceUrl = replaced.resourceUrl;
+		this.uriEndpoint = replaced.uriEndpoint;
 		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
@@ -624,7 +624,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	@Nullable
 	public String resourceUrl() {
-		return resourceUrl;
+		return uriEndpoint != null ? uriEndpoint.toExternalForm() : null;
 	}
 
 	@Override

@@ -491,7 +491,6 @@ class HttpClientConnect extends HttpClient {
 		ProxyProvider                 proxyProvider;
 
 		volatile UriEndpoint        toURI;
-		volatile String             resourceUrl;
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
 		volatile boolean            shouldRetry;
@@ -539,7 +538,6 @@ class HttpClientConnect extends HttpClient {
 			else {
 				this.fromURI = this.toURI = uriEndpointFactory.createUriEndpoint(configuration.uri, configuration.websocketClientSpec != null);
 			}
-			this.resourceUrl = toURI.toExternalForm();
 		}
 
 		@Override
@@ -555,10 +553,10 @@ class HttpClientConnect extends HttpClient {
 		@SuppressWarnings("ReferenceEquality")
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
-				ch.resourceUrl = this.resourceUrl;
 				ch.responseTimeout = responseTimeout;
 
 				UriEndpoint uri = toURI;
+				ch.uriEndpoint = uri;
 				HttpHeaders headers = ch.getNettyRequest()
 				                        .setUri(uri.getPathAndQuery())
 				                        .setMethod(method)
@@ -680,7 +678,7 @@ class HttpClientConnect extends HttpClient {
 				try {
 					URI redirectUri = new URI(to);
 					if (!redirectUri.isAbsolute()) {
-						URI requestUri = new URI(resourceUrl);
+						URI requestUri = new URI(from.toExternalForm());
 						redirectUri = requestUri.resolve(redirectUri);
 					}
 					toURITemp = uriEndpointFactory.createUriEndpoint(redirectUri, from.isWs());
@@ -693,7 +691,6 @@ class HttpClientConnect extends HttpClient {
 				toURITemp = UriEndpointFactory.createUriEndpoint(from, to, address);
 			}
 			toURI = toURITemp;
-			resourceUrl = toURITemp.toExternalForm();
 			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
 		}
 
