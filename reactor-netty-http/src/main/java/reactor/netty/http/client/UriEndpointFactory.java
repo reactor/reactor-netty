@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,32 +42,30 @@ final class UriEndpointFactory {
 	}
 
 	UriEndpoint createUriEndpoint(String url, boolean isWs) {
-		return createUriEndpoint(url, isWs, connectAddress);
-	}
-
-	UriEndpoint createUriEndpoint(String url, boolean isWs, Supplier<? extends SocketAddress> connectAddress) {
 		if (url.startsWith("/")) {
 			return new UriEndpoint(resolveScheme(isWs), "localhost", 80, connectAddress, url);
 		}
-		else {
-			Matcher matcher = URL_PATTERN.matcher(url);
-			if (matcher.matches()) {
-				// scheme is optional in pattern. use default if it's not specified
-				String scheme = matcher.group(1) != null ? validateScheme(matcher.group(1).toLowerCase())
-						: resolveScheme(isWs);
-				String host = cleanHostString(matcher.group(2));
+		return createAbsoluteUriEndpoint(url, isWs);
+	}
 
-				String portString = matcher.group(3);
-				int port = portString != null ? Integer.parseInt(portString)
-						: (UriEndpoint.isSecureScheme(scheme) ? 443 : 80);
-				String pathAndQuery = cleanPathAndQuery(matcher.group(4));
-				return new UriEndpoint(scheme, host, port,
-						() -> inetSocketAddressFunction.apply(host, port),
-						pathAndQuery);
-			}
-			else {
-				throw new IllegalArgumentException("Unable to parse url [" + url + "]");
-			}
+	private UriEndpoint createAbsoluteUriEndpoint(String url, boolean isWs) {
+		Matcher matcher = URL_PATTERN.matcher(url);
+		if (matcher.matches()) {
+			// scheme is optional in pattern. use default if it's not specified
+			String scheme = matcher.group(1) != null ? validateScheme(matcher.group(1).toLowerCase())
+					: resolveScheme(isWs);
+			String host = cleanHostString(matcher.group(2));
+
+			String portString = matcher.group(3);
+			int port = portString != null ? Integer.parseInt(portString)
+					: (UriEndpoint.isSecureScheme(scheme) ? 443 : 80);
+			String pathAndQuery = cleanPathAndQuery(matcher.group(4));
+			return new UriEndpoint(scheme, host, port,
+					inetSocketAddressFunction.apply(host, port),
+					pathAndQuery);
+		}
+		else {
+			throw new IllegalArgumentException("Unable to parse url [" + url + "]");
 		}
 	}
 
@@ -84,11 +82,11 @@ final class UriEndpointFactory {
 		String path = url.getRawPath() != null ? url.getRawPath() : "";
 		String query = url.getRawQuery() != null ? '?' + url.getRawQuery() : "";
 		return new UriEndpoint(scheme, host, port,
-				() -> inetSocketAddressFunction.apply(host, port),
+				inetSocketAddressFunction.apply(host, port),
 				cleanPathAndQuery(path + query));
 	}
 
-	static UriEndpoint createUriEndpoint(UriEndpoint from, String to, Supplier<? extends SocketAddress> connectAddress) {
+	static UriEndpoint createUriEndpoint(UriEndpoint from, String to, SocketAddress connectAddress) {
 		if (to.startsWith("/")) {
 			return new UriEndpoint(from.scheme, from.host, from.port, connectAddress, to);
 		}

@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.util.NetUtil;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
 import static reactor.netty.transport.DomainSocketAddressUtils.path;
@@ -31,14 +32,30 @@ final class UriEndpoint {
 	final String scheme;
 	final String host;
 	final int port;
-	final Supplier<? extends SocketAddress> remoteAddress;
+	// Exactly one of remoteAddress or remoteAddressSupplier is non-null.
+	// remoteAddress is used for absolute URLs where the address is derived from the URL itself.
+	// remoteAddressSupplier is used for relative URLs where the address is provided by the user and may change between invocations.
+	@Nullable
+	final SocketAddress remoteAddress;
+	@Nullable
+	final Supplier<? extends SocketAddress> remoteAddressSupplier;
 	final String pathAndQuery;
 
-	UriEndpoint(String scheme, String host, int port, Supplier<? extends SocketAddress> remoteAddress, String pathAndQuery) {
+	UriEndpoint(String scheme, String host, int port, SocketAddress remoteAddress, String pathAndQuery) {
 		this.host = host;
 		this.port = port;
 		this.scheme = Objects.requireNonNull(scheme, "scheme");
-		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddressSupplier");
+		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
+		this.remoteAddressSupplier = null;
+		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
+	}
+
+	UriEndpoint(String scheme, String host, int port, Supplier<? extends SocketAddress> remoteAddressSupplier, String pathAndQuery) {
+		this.host = host;
+		this.port = port;
+		this.scheme = Objects.requireNonNull(scheme, "scheme");
+		this.remoteAddress = null;
+		this.remoteAddressSupplier = Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
 	}
 
@@ -59,12 +76,12 @@ final class UriEndpoint {
 	}
 
 	SocketAddress getRemoteAddress() {
-		return remoteAddress.get();
+		return remoteAddress != null ? remoteAddress : remoteAddressSupplier.get();
 	}
 
 	String toExternalForm() {
 		StringBuilder sb = new StringBuilder();
-		SocketAddress address = remoteAddress.get();
+		SocketAddress address = getRemoteAddress();
 		if (isDomainSocketAddress(address)) {
 			sb.append(path(address));
 		}
@@ -129,6 +146,6 @@ final class UriEndpoint {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getRemoteAddress());
+		return getRemoteAddress().hashCode();
 	}
 }
