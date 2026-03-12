@@ -182,6 +182,73 @@ class HttpClientTest extends BaseHttpTest {
 		        .get(30, TimeUnit.SECONDS);
 	}
 
+	/**
+	 * Regression test for a connection-close race condition.
+	 * A stale dispose() from a previous request must not close a channel
+	 * that has already been reused by a new request.
+	 */
+	@Test
+	void staleDisposeAfterConnectionReuseDoesNotCloseActiveChannel() throws InterruptedException {
+		CountDownLatch requestAConnected = new CountDownLatch(1);
+		AtomicReference<ChannelOperations<?, ?>> opsARef = new AtomicReference<>();
+
+		disposableServer = createServer()
+				.handle((req, res) -> res.sendString(Mono.just("OK").delayElement(Duration.ofMillis(200))))
+				.bindNow();
+
+		ConnectionProvider provider = ConnectionProvider.builder("test-connection-reuse-race")
+				.maxConnections(1) // force connection reuse
+				.build();
+
+		try {
+			HttpClient client = createClient(provider, disposableServer::address);
+
+			// Request A
+			client.doOnConnected(conn -> {
+						ChannelOperations<?, ?> ops = conn.as(ChannelOperations.class);
+						if (ops != null && opsARef.compareAndSet(null, ops)) {
+							requestAConnected.countDown();
+						}
+					})
+					.get()
+					.uri("/")
+					.responseContent()
+					.aggregate()
+					.asString()
+					.block(Duration.ofSeconds(5));
+
+			assertThat(requestAConnected.await(2, TimeUnit.SECONDS)).isTrue();
+			ChannelOperations<?, ?> opsA = opsARef.get();
+			assertThat(opsA).as("ops_A must be captured").isNotNull();
+
+			CountDownLatch disposeExecuted = new CountDownLatch(1);
+
+			// Request B reuses the same connection
+			StepVerifier.create(
+							client.doOnConnected(conn -> {
+										// simulate stale dispose from request A
+										opsA.dispose();
+										disposeExecuted.countDown();
+									})
+									.get()
+									.uri("/")
+									.responseContent()
+									.aggregate()
+									.asString()
+					)
+					.expectNext("OK")
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
+
+			assertThat(disposeExecuted.await(2, TimeUnit.SECONDS))
+					.as("stale dispose should be executed")
+					.isTrue();
+		}
+		finally {
+			provider.dispose();
+		}
+	}
+
 	@Test
 	void abort() {
 		disposableServer =
