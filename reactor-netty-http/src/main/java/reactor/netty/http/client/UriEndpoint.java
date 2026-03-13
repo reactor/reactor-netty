@@ -115,9 +115,7 @@ final class UriEndpoint {
 		else {
 			sb.append(scheme);
 			sb.append("://");
-			sb.append(address != null
-							  ? toSocketAddressStringWithoutDefaultPort(address, isSecure())
-							  : "localhost");
+			sb.append(toSocketAddressStringWithoutDefaultPort(address, isSecure()));
 			sb.append(pathAndQuery);
 		}
 		return sb.toString();
