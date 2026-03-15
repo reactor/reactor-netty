@@ -33,16 +33,11 @@ final class WebSocketClientMetricsHandler extends AbstractWebSocketClientMetrics
 	WebSocketClientMetricsHandler(WebSocketClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
 			@Nullable SocketAddress proxyAddress,
-			@Nullable String path,
-			@Nullable ContextView contextView,
+			String path,
+			ContextView contextView,
 			String method) {
 		super(remoteAddress, proxyAddress, path, contextView, method);
 		this.recorder = recorder;
-	}
-
-	WebSocketClientMetricsHandler(WebSocketClientMetricsHandler copy) {
-		super(copy);
-		this.recorder = copy.recorder;
 	}
 
 	@Override

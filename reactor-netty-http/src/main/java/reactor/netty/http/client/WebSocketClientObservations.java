@@ -42,7 +42,7 @@ enum WebSocketClientObservations implements ObservationDocumentation {
 
 		@Override
 		public String getName() {
-			return "reactor.netty.http.client.websocket.handshake.time";
+			return "reactor.netty.websocket.client.handshake.time";
 		}
 	};
 

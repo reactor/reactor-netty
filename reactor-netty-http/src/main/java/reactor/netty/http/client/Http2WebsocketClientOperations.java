@@ -130,7 +130,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 				}
 				catch (Exception e) {
 					if (micrometerWsHandler != null) {
-						micrometerWsHandler.recordHandshakeFailure(channel(), "ERROR");
+						micrometerWsHandler.recordHandshakeFailure(channel());
 					}
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
@@ -163,7 +163,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					"Websocket version [" + websocketClientSpec.version().toHttpHeaderValue() + "] is not supported.");
 		}
 
-		swapMetricsHandler(currentURI);
+		swapMetricsHandler();
 
 		if (websocketClientSpec.compress()) {
 			requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);

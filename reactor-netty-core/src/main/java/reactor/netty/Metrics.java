@@ -67,7 +67,7 @@ public class Metrics {
 	 *
 	 * @since 1.3.5
 	 */
-	public static final String WEBSOCKET_CLIENT_PREFIX = "reactor.netty.http.client.websocket";
+	public static final String WEBSOCKET_CLIENT_PREFIX = "reactor.netty.websocket.client";
 
 	/**
 	 * Name prefix that will be used for the TCP server's metrics

@@ -65,21 +65,11 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 	MicrometerWebSocketClientMetricsHandler(MicrometerWebSocketClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
 			@Nullable SocketAddress proxyAddress,
-			@Nullable String path,
-			@Nullable ContextView contextView,
+			String path,
+			ContextView contextView,
 			String method) {
 		super(remoteAddress, proxyAddress, path, contextView, method);
 		this.recorder = recorder;
-	}
-
-	MicrometerWebSocketClientMetricsHandler(MicrometerWebSocketClientMetricsHandler copy) {
-		super(copy);
-		this.recorder = copy.recorder;
-
-		this.handshakeTimeHandlerContext = copy.handshakeTimeHandlerContext;
-		this.handshakeTimeObservation = copy.handshakeTimeObservation;
-		this.parentContextView = copy.parentContextView;
-		this.handshakeStartTime = copy.handshakeStartTime;
 	}
 
 	@Override
@@ -88,10 +78,8 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 	}
 
 	void startHandshake(Channel channel) {
-		String resolvedPath = path != null ? path : "unknown";
-
 		handshakeStartTime = System.nanoTime();
-		handshakeTimeHandlerContext = new HandshakeTimeHandlerContext(recorder, resolvedPath, remoteAddress, proxyAddress);
+		handshakeTimeHandlerContext = new HandshakeTimeHandlerContext(recorder, path, remoteAddress, proxyAddress);
 		handshakeTimeObservation = Observation.createNotStarted(
 				recorder.name() + HANDSHAKE_TIME, handshakeTimeHandlerContext, OBSERVATION_REGISTRY);
 		parentContextView = updateChannelContext(channel, handshakeTimeObservation);
@@ -113,9 +101,9 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 		setChannelContext(channel, parentContextView);
 	}
 
-	void recordHandshakeFailure(Channel channel, String status) {
+	void recordHandshakeFailure(Channel channel) {
 		if (handshakeTimeHandlerContext != null) {
-			handshakeTimeHandlerContext.status = status;
+			handshakeTimeHandlerContext.status = "ERROR";
 		}
 		if (handshakeTimeObservation != null) {
 			handshakeTimeObservation.stop();
