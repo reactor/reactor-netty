@@ -33,7 +33,7 @@ enum WebSocketClientMeters implements MeterDocumentation {
 	WEBSOCKET_CLIENT_HANDSHAKE_TIME {
 		@Override
 		public String getName() {
-			return "reactor.netty.http.client.websocket.handshake.time";
+			return "reactor.netty.websocket.client.handshake.time";
 		}
 
 		@Override
@@ -53,7 +53,7 @@ enum WebSocketClientMeters implements MeterDocumentation {
 	WEBSOCKET_CLIENT_DATA_RECEIVED_TIME {
 		@Override
 		public String getName() {
-			return "reactor.netty.http.client.websocket.data.received.time";
+			return "reactor.netty.websocket.client.data.received.time";
 		}
 
 		@Override
@@ -73,7 +73,7 @@ enum WebSocketClientMeters implements MeterDocumentation {
 	WEBSOCKET_CLIENT_DATA_SENT_TIME {
 		@Override
 		public String getName() {
-			return "reactor.netty.http.client.websocket.data.sent.time";
+			return "reactor.netty.websocket.client.data.sent.time";
 		}
 
 		@Override
@@ -93,7 +93,7 @@ enum WebSocketClientMeters implements MeterDocumentation {
 	WEBSOCKET_CLIENT_CONNECTION_DURATION {
 		@Override
 		public String getName() {
-			return "reactor.netty.http.client.websocket.connection.duration";
+			return "reactor.netty.websocket.client.connection.duration";
 		}
 
 		@Override

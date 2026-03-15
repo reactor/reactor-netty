@@ -90,7 +90,7 @@ class WebsocketClientOperations extends HttpClientOperations
 		// Returned value is deliberately ignored
 		addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-		swapMetricsHandler(currentURI);
+		swapMetricsHandler();
 
 		if (websocketClientSpec.compress()) {
 			requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
@@ -163,7 +163,7 @@ class WebsocketClientOperations extends HttpClientOperations
 				}
 				catch (Exception e) {
 					if (micrometerWsHandler != null) {
-						micrometerWsHandler.recordHandshakeFailure(channel(), "ERROR");
+						micrometerWsHandler.recordHandshakeFailure(channel());
 					}
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
@@ -236,14 +236,14 @@ class WebsocketClientOperations extends HttpClientOperations
 		return handshakerHttp11.isHandshakeComplete();
 	}
 
-	void swapMetricsHandler(URI currentURI) {
+	void swapMetricsHandler() {
 		Channel channel = channel();
 		ChannelHandler existingHandler = channel.pipeline().get(NettyPipeline.HttpMetricsHandler);
 		if (existingHandler instanceof AbstractHttpClientMetricsHandler) {
 			AbstractHttpClientMetricsHandler httpHandler = (AbstractHttpClientMetricsHandler) existingHandler;
 			channel.pipeline().remove(NettyPipeline.HttpMetricsHandler);
 
-			String rawPath = AbstractWebSocketClientMetricsHandler.resolvePath(this);
+			String rawPath = resolvePath(this);
 			String resolvedPath = httpHandler.uriTagValue != null ? httpHandler.uriTagValue.apply(rawPath) : rawPath;
 			ContextView ctxView = currentContext();
 			String httpMethod = wsHttpMethod();
@@ -278,6 +278,15 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	String wsHttpMethod() {
 		return "GET";
+	}
+
+	static String resolvePath(HttpClientOperations ops) {
+		try {
+			return ops.fullPath();
+		}
+		catch (Exception e) {
+			return "/bad-request";
+		}
 	}
 
 	@Override
