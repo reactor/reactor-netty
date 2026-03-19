@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.gradle.util.VersionNumber
-
 if (project.name == 'reactor-netty-examples' || project.name == 'reactor-netty-graalvm-smoke-tests' || project.name == 'docs') {
 	return
 }
@@ -41,14 +39,13 @@ task javadocJar(type: Jar) {
 }
 
 static def qualifyVersion(String v) {
-	def versionNumber = VersionNumber.parse(v)
+	def m = v =~ /^(\d+)\.(\d+)\.(\d+)(?:[.\-](.+))?$/
+	if (!m.matches()) return "BAD"
+	def qualifier = m[0][4] ?: ""
 
-	if (versionNumber == VersionNumber.UNKNOWN) return "BAD";
-
-	if (versionNumber.qualifier == null || versionNumber.qualifier.size() == 0) return "RELEASE" //new scheme
-	if (versionNumber.qualifier == "RELEASE") return "RELEASE" //old scheme
-	if (versionNumber.qualifier.matches("(?:M|RC)\\d+")) return "MILESTONE"
-	if (versionNumber.qualifier == "SNAPSHOT" || versionNumber.qualifier == "BUILD-SNAPSHOT") return "SNAPSHOT"
+	if (qualifier.size() == 0) return "RELEASE" //new scheme
+	if (qualifier.matches("(?:M|RC)\\d+")) return "MILESTONE"
+	if (qualifier == "SNAPSHOT") return "SNAPSHOT"
 
 	return "BAD"
 }
@@ -93,7 +90,7 @@ publishing {
 	repositories {
 		maven {
 			name = "mock"
-			url = "${rootProject.buildDir}/mockRepo"
+			url = rootProject.layout.buildDirectory.dir("mockRepo").get().asFile.toURI().toString()
 		}
 		if (qualifyVersion("$version") == "RELEASE") {
 			maven {

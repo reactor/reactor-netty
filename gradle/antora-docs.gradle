@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,10 @@
 apply plugin: 'io.spring.antora.generate-antora-yml'
 
 def isCommandAvailable(String command) {
-	def result = exec {
+	return providers.exec {
 		commandLine 'which', command
 		ignoreExitValue true
-		standardOutput = new ByteArrayOutputStream()
-		errorOutput = new ByteArrayOutputStream()
-	}
-	return result.exitValue == 0
+	}.result.get().exitValue == 0
 }
 
 antora {
@@ -68,7 +65,7 @@ dependencies {
 }
 
 task generateObservabilityDocs(type: JavaExec) {
-	def observationsOutputDir = file("${buildDir}/docs/generated/observation/").absolutePath
+	def observationsOutputDir = layout.buildDirectory.dir("docs/generated/observation/").get().asFile.absolutePath
 	mainClass = "io.micrometer.docs.DocsGeneratorCommand"
 	classpath configurations.adoc
 	outputs.dir(observationsOutputDir)
@@ -80,7 +77,7 @@ tasks.create(name: 'createAntoraPartials', type: Sync) {
 	// Download and include SUPPORT.adoc
 	doLast {
 		def url = 'https://raw.githubusercontent.com/reactor/.github/main/SUPPORT.adoc'
-		def outputFile = file("${buildDir}/generated-antora-resources/modules/ROOT/partials/SUPPORT.adoc")
+		def outputFile = layout.buildDirectory.file("generated-antora-resources/modules/ROOT/partials/SUPPORT.adoc").get().asFile
 		ant.get(src: url, dest: outputFile)
 	}
 	into layout.buildDirectory.dir('generated-antora-resources/modules/ROOT/partials')

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import java.nio.file.Files
-
-apply plugin: 'io.spring.javadoc-aggregate'
-
 dependencies {
 	api project(':reactor-netty-core')
 	api project(':reactor-netty-http')
@@ -46,16 +42,8 @@ task docsZip(type: Zip) {
 	group = 'Distribution'
 	archiveClassifier = 'docs'
 	duplicatesStrategy "fail"
-	def docsDir = file('../docs/build/site')
 
-	if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
-		logger.lifecycle("Adding dependency on :docs:antora (JDK version is >= 17)")
-		dependsOn(':docs:antora')
-	}
-	else if (!docsDir.exists() || !Files.list(docsDir.toPath()).findFirst().isPresent()) {
-		logger.lifecycle("Docs directory does not exist and JDK version is lower than 17. Skipping docsZip task.")
-		enabled = false
-	}
+	dependsOn(':docs:antora')
 
 	def isSnapshot = project.version.endsWith('-SNAPSHOT')
 	def version = isSnapshot ? project.version.takeWhile { it != '-' } : project.version
@@ -80,16 +68,17 @@ task docsZip(type: Zip) {
 	}
 }
 
+def aggregateProjects = [':reactor-netty-core', ':reactor-netty-http', ':reactor-netty-incubator-quic']
+
+task aggregateJavadoc(type: Javadoc) {
+	group = "Documentation"
+	description = "Generates the aggregate Javadoc"
+	dependsOn aggregateProjects.collect { "${it}:jar" }
+	source aggregateProjects.collect { project(it).sourceSets.main.allJava }
+	classpath = files(aggregateProjects.collect { project(it).sourceSets.main.compileClasspath })
+}
+
 javadoc.dependsOn(aggregateJavadoc)
 
 //add docs.zip to the publication
 publishing.publications.mavenJava.artifact(docsZip)
-
-// If current JDK version is lower than JDK17, report errors in case user invokes documentation related tasks
-if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
-	task antora {
-		doLast {
-			throw new GradleException("antora task requires JDK 17 or higher.")
-		}
-	}
-}

@@ -33,26 +33,10 @@ updates:
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
     versions:
     - ">= 10.0.a"
-  # Versions > 6.13 require JDK11+
-  - dependency-name: com.diffplug.spotless
-    versions:
-    - "[6.14.a, 9]"
-  # Versions > 6 require JDK17+
-  - dependency-name: biz.aQute.bnd.builder
-    versions:
-    - "[7.a, 8]"
-  # Versions > 4 require JDK11+
-  - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
-    versions:
-    - "[5.a, 7]"
   # Versions > 4 require JDK11+
   - dependency-name: org.mockito:mockito-core
     versions:
     - "[5.a, 6]"
-  # Versions > 0.9.25 require JDK11+
-  - dependency-name: org.graalvm.buildtools.native
-    versions:
-    - "[0.9.25, 0.12]"
   - dependency-name: ch.qos.logback:logback-classic
     versions:
     - "[1.3.a, 1.6]"
@@ -63,10 +47,6 @@ updates:
   - dependency-name: io.specto:hoverfly-java-junit5
     versions:
     - "[0.20.a, 1]"
-  # Versions > 8 require JDK11+
-  - dependency-name: com.gradleup.shadow
-    versions:
-    - "[9.a, 10]"
   # Versions > 5 require JDK17+
   - dependency-name: org.junit.jupiter:*
     versions:
@@ -75,9 +55,6 @@ updates:
   - dependency-name: org.junit.platform:junit-platform-launcher
     versions:
     - "[6.a, 7]"
-  - dependency-name: gradle-wrapper
-    versions:
-    - "[8.5.a, 10]"
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
