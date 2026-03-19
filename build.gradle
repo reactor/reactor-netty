@@ -222,7 +222,7 @@ subprojects {
 
 	java {
 		toolchain {
-			languageVersion = JavaLanguageVersion.of(name == "docs" ? 17 : 8)
+			languageVersion = JavaLanguageVersion.of((name == "docs" || name == "reactor-netty-graalvm-smoke-tests") ? 17 : 8)
 		}
 	}
 
