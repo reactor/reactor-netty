@@ -17,7 +17,7 @@ import java.text.SimpleDateFormat
 import org.gradle.api.attributes.java.TargetJvmVersion
 
 plugins {
-	id "com.diffplug.spotless" version "8.3.0"
+	id "com.diffplug.spotless" version "8.4.0"
 	id 'com.google.osdetector' version '1.7.3'
 	id 'org.gradle.test-retry' version '1.6.4'
 	id 'io.spring.nohttp' version '0.0.11'
