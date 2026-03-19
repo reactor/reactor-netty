@@ -77,7 +77,7 @@ jobs:
 
     # Manual build to exclude docs project which requires asciidoctor-pdf
     - name: Build with Gradle
-      run: ./gradlew --no-daemon clean testClasses -x :docs:build -x :docs:antora -x :docs:docsZip
+      run: ./gradlew --no-daemon clean testClasses -x :docs:build -x :docs:antora
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
