@@ -271,7 +271,7 @@ subprojects {
 	[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 	sourceSets.test.resources.srcDirs = ["src/test/resources", "src/test/java"]
 
-	configurations.all {
+	configurations.matching { it.isCanBeResolved() }.configureEach {
 		exclude group: 'commons-logging', module: 'commons-logging'
 	}
 
