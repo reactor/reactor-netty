@@ -6,9 +6,6 @@ on:
       - 1.2.x
 permissions: {}
 
-env:
-  DOCS_BUILD_ARTIFACT: docs-build
-
 jobs:
   # General job notes: we DON'T want to cancel any previous runs, especially in the case of a "back to snapshots" build right after a release push
   # We specify the ubuntu version to minimize the chances we have to deal with a migration during a release
@@ -86,42 +83,11 @@ jobs:
         id: reactor-netty-incubator-quic-checks
         run: ./gradlew reactor-netty-incubator-quic:check
 
-  # build antora doc for the current branch, and upload docs/build results to workflow run.
-  # Each deploy job can then download it, in order to let the docs-zip be built properly
-  # (see reactor-netty/build.gradle which includes docs/build/site and optionally docs/assembly/.../pdf into the target docs.zip)
-  build-branch-doc:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Set up Ruby for asciidoctor-pdf
-        uses: ruby/setup-ruby@319994f95fa847cf3fb3cd3dbe89f6dcde9f178f # v1
-        with:
-          ruby-version: 3.3.0
-      - name: Install asciidoctor-pdf / rouge
-        run: gem install asciidoctor-pdf rouge
-      - name: Setup java 17 for antora
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-      - name: Build antora doc for the current branch
-        run: ./gradlew antora
-      - name: Copy the cache to be included in the site
-        run: |-
-          [ -d docs/build/antora/inject-collector-cache-config-extension/.cache ] && cp -rf docs/build/antora/inject-collector-cache-config-extension/.cache docs/build/site/
-      - name: Upload docs/build to current workflow run
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v4
-        with:
-          name: ${{ env.DOCS_BUILD_ARTIFACT }}
-          retention-days: 3
-          if-no-files-found: error
-          path: docs/build
-
   #deploy the snapshot artifacts to Artifactory
   deploySnapshot:
     name: deploySnapshot
     runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
     if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
     steps:
@@ -133,11 +99,6 @@ jobs:
           java-version: |
             8
             17
-      - name: download antora docs/build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
-        with:
-            name: ${{ env.DOCS_BUILD_ARTIFACT }}
-            path: docs/build
       - name: deploy
         env:
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_SNAPSHOT_USERNAME}}
@@ -149,11 +110,17 @@ jobs:
   deployMilestone:
     name: deployMilestone
     runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
     if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
     environment: releases
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Set up Ruby for asciidoctor-pdf
+        uses: ruby/setup-ruby@319994f95fa847cf3fb3cd3dbe89f6dcde9f178f # v1
+        with:
+          ruby-version: 3.3.0
+      - name: Install asciidoctor-pdf / rouge
+        run: gem install asciidoctor-pdf rouge
       - name: setup java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
@@ -161,11 +128,6 @@ jobs:
           java-version: |
             8
             17
-      - name: download antora docs/build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
-        with:
-            name: ${{ env.DOCS_BUILD_ARTIFACT }}
-            path: docs/build
       - name: deploy
         env:
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
@@ -179,11 +141,17 @@ jobs:
   deployRelease:
     name: deployRelease
     runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
     if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
     environment: releases
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Set up Ruby for asciidoctor-pdf
+        uses: ruby/setup-ruby@319994f95fa847cf3fb3cd3dbe89f6dcde9f178f # v1
+        with:
+          ruby-version: 3.3.0
+      - name: Install asciidoctor-pdf / rouge
+        run: gem install asciidoctor-pdf rouge
       - name: setup java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
@@ -191,11 +159,6 @@ jobs:
           java-version: |
             8
             17
-      - name: download antora docs/build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
-        with:
-            name: ${{ env.DOCS_BUILD_ARTIFACT }}
-            path: docs/build
       - name: deploy
         env:
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
@@ -251,23 +214,6 @@ jobs:
           git config --local user.email '32325210+reactorbot@users.noreply.github.com'
           git tag -m "Release version ${{ needs.reactor-netty-core.outputs.fullVersion }}" v${{ needs.reactor-netty-core.outputs.fullVersion }} ${{ github.sha }}
           git push --tags
-
-  cleanup:
-    needs: [ deploySnapshot, tagRelease, tagMilestone ]
-    if: always() && (needs.deploySnapshot.result == 'success' || needs.tagRelease.result == 'success' || needs.tagMilestone.result == 'success')
-    runs-on: ubuntu-22.04
-    permissions:
-        actions: write
-    steps:
-      - name: delete antora docs-build artifact
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |-
-          ARTIFACTS_URL="/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts"
-          ARTIFACT_ID=$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' $ARTIFACTS_URL | jq -r '.artifacts[] | select(.name == "'$DOCS_BUILD_ARTIFACT'") | .id // ""')
-          if [ -n "$ARTIFACT_ID" ]; then
-            gh api --method DELETE -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' /repos/${{github.repository}}/actions/artifacts/$ARTIFACT_ID}
-          fi
 
 # For Gradle configuration of signing, see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
 # publishMavenJavaPublicationToSonatypeRepository only sends to a staging repository

@@ -61,6 +61,7 @@ graalvmNative {
 				runtimeArgs.add("-DforceTransport=$forceTransport")
 			}
 			buildArgs.add('--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl')
+			buildArgs.add('--initialize-at-build-time=org.junit.jupiter.engine.discovery.MethodSegmentResolver')
 		}
 	}
 	metadataRepository {
