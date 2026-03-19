@@ -81,4 +81,6 @@ task aggregateJavadoc(type: Javadoc) {
 javadoc.dependsOn(aggregateJavadoc)
 
 //add docs.zip to the publication
-publishing.publications.mavenJava.artifact(docsZip)
+afterEvaluate {
+	publishing.publications.mavenJava.artifact(docsZip)
+}

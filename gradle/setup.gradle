@@ -103,62 +103,64 @@ publishing {
 			}
 		}
 	}
+}
 
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-			artifact sourcesJar
-			artifact javadocJar
+afterEvaluate {
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+				artifact sourcesJar
+				artifact javadocJar
 
-			//consider adding extra artifacts here, conditionally on submodule's name and perhaps in an afterEvaluate block
+				//consider adding extra artifacts here, conditionally on submodule's name and perhaps in an afterEvaluate block
 
-			pom {
-				afterEvaluate {
+				pom {
 					name = project.description
 					description = project.description
-				}
-				packaging = 'jar' //if not explicitly set, end up as `pom` in output. omitted in output if set as `jar`...
+					packaging = 'jar' //if not explicitly set, end up as `pom` in output. omitted in output if set as `jar`...
 
-				url = 'https://github.com/reactor/reactor-netty'
-				organization {
-					name = 'reactor'
-					url = 'https://github.com/reactor'
-				}
-				licenses {
-					license {
-						name = 'The Apache Software License, Version 2.0'
-						url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-						distribution = 'repo'
-					}
-				}
-				scm {
 					url = 'https://github.com/reactor/reactor-netty'
-					connection = 'scm:git:git://github.com/reactor/reactor-netty'
-					developerConnection = 'scm:git:git://github.com/reactor/reactor-netty'
-				}
-				developers {
-					developer {
-						id = 'simonbasle'
-						name = 'Simon Baslé'
-						email = 'sbasle@vmware.com'
+					organization {
+						name = 'reactor'
+						url = 'https://github.com/reactor'
 					}
-					developer {
-						id = 'violetagg'
-						name = 'Violeta Georgieva'
-						email = 'violetag@vmware.com'
+					licenses {
+						license {
+							name = 'The Apache Software License, Version 2.0'
+							url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+							distribution = 'repo'
+						}
 					}
-				}
-				issueManagement {
-					system = "GitHub Issues"
-					url = "https://github.com/reactor/reactor-netty/issues"
-				}
+					scm {
+						url = 'https://github.com/reactor/reactor-netty'
+						connection = 'scm:git:git://github.com/reactor/reactor-netty'
+						developerConnection = 'scm:git:git://github.com/reactor/reactor-netty'
+					}
+					developers {
+						developer {
+							id = 'simonbasle'
+							name = 'Simon Baslé'
+							email = 'sbasle@vmware.com'
+						}
+						developer {
+							id = 'violetagg'
+							name = 'Violeta Georgieva'
+							email = 'violetag@vmware.com'
+						}
+					}
+					issueManagement {
+						system = "GitHub Issues"
+						url = "https://github.com/reactor/reactor-netty/issues"
+					}
 
-				withXml {
-					//groovy magic incantation to sort dependencies alphabetically (scope/group/name..)
-					def sorted = asNode().dependencies[0].children().collect().sort { it.scope.text() + it.groupId.text() + it.artifactId.text() }
-					asNode().dependencies[0].children().with { deps ->
-						deps.clear()
-						sorted.each { deps.add(it) }
+					withXml {
+						//groovy magic incantation to sort dependencies alphabetically (scope/group/name..)
+						def sorted = asNode().dependencies[0].children().collect().sort { it.scope.text() + it.groupId.text() + it.artifactId.text() }
+						asNode().dependencies[0].children().with { deps ->
+							deps.clear()
+							sorted.each { deps.add(it) }
+						}
 					}
 				}
 			}
@@ -169,8 +171,10 @@ publishing {
 if (rootProject.hasProperty("artifactory_publish_password")) {
 	apply plugin: "com.jfrog.artifactory"
 
-	artifactoryPublish {
-		publications(publishing.publications.mavenJava)
+	afterEvaluate {
+		artifactoryPublish {
+			publications(publishing.publications.mavenJava)
+		}
 	}
 }
 

@@ -32,23 +32,7 @@ plugins {
 	id 'me.champeau.mrjar' version '0.1.1' apply false
 }
 
-// The Artifactory plugin (applied from releaser.gradle) adds maven-publish to subprojects
-// in afterEvaluate, which resets TargetJvmVersion on consumable configurations to the
-// toolchain JDK. This pre-registers a callback to force JVM 8 on those configurations,
-// keeping them consistent with the Java 8 toolchain / options.release = 8.
-subprojects {
-	plugins.withType(JavaPlugin) {
-		configurations.matching { it.name == 'apiElements' || it.name == 'runtimeElements' }.configureEach { conf ->
-			conf.attributes {
-				attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 8)
-			}
-		}
-	}
-}
-
 description = 'Reactive Streams Netty driver'
-
-apply from: "gradle/releaser.gradle"
 
 repositories { //needed at root for nohttp-checkstyle
 	mavenCentral()
@@ -222,6 +206,16 @@ subprojects {
 		}
 	}
 
+	// Force TargetJvmVersion=8 on consumable configurations because the Artifactory
+	// plugin resets it to the toolchain JDK when it adds maven-publish to subprojects.
+	plugins.withType(JavaPlugin) {
+		configurations.matching { it.name == 'apiElements' || it.name == 'runtimeElements' }.configureEach { conf ->
+			conf.attributes {
+				attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 8)
+			}
+		}
+	}
+
 	apply from: "${rootDir}/gradle/setup.gradle"
 	apply from: "${rootDir}/gradle/javadoc.gradle"
 	apply from: "${rootDir}/gradle/errorprone.gradle"
@@ -358,6 +352,8 @@ subprojects {
 
 	check.dependsOn jacocoTestReport
 }
+
+apply from: "gradle/releaser.gradle"
 
 configurations.all {
 	// check for updates every build
