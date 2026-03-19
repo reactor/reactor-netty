@@ -88,12 +88,12 @@ if (project.hasProperty("artifactory_publish_password")) {
 		apply plugin: "com.jfrog.artifactory"
 		def buildNumber = getOrGenerateBuildNumber()
 		artifactory {
-			contextUrl = "${artifactory_publish_contextUrl}"
+			contextUrl = p.findProperty("artifactory_publish_contextUrl")
 			publish {
 				repository {
-					repoKey = "${artifactory_publish_repoKey}"
-					username = "${artifactory_publish_username}"
-					password = "${artifactory_publish_password}"
+					repoKey = p.findProperty("artifactory_publish_repoKey")
+					username = p.findProperty("artifactory_publish_username")
+					password = p.findProperty("artifactory_publish_password")
 				}
 			}
 			clientConfig.includeEnvVars = false
