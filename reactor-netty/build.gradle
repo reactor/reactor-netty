@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import java.nio.file.Files
-
 dependencies {
 	api project(':reactor-netty-core')
 	api project(':reactor-netty-http')
@@ -44,16 +42,8 @@ task docsZip(type: Zip) {
 	group = 'Distribution'
 	archiveClassifier = 'docs'
 	duplicatesStrategy "fail"
-	def docsDir = file('../docs/build/site')
 
-	if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
-		logger.lifecycle("Adding dependency on :docs:antora (JDK version is >= 17)")
-		dependsOn(':docs:antora')
-	}
-	else if (!docsDir.exists() || !Files.list(docsDir.toPath()).findFirst().isPresent()) {
-		logger.lifecycle("Docs directory does not exist and JDK version is lower than 17. Skipping docsZip task.")
-		enabled = false
-	}
+	dependsOn(':docs:antora')
 
 	def isSnapshot = project.version.endsWith('-SNAPSHOT')
 	def version = isSnapshot ? project.version.takeWhile { it != '-' } : project.version
@@ -92,12 +82,3 @@ javadoc.dependsOn(aggregateJavadoc)
 
 //add docs.zip to the publication
 publishing.publications.mavenJava.artifact(docsZip)
-
-// If current JDK version is lower than JDK17, report errors in case user invokes documentation related tasks
-if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
-	task antora {
-		doLast {
-			throw new GradleException("antora task requires JDK 17 or higher.")
-		}
-	}
-}

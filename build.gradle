@@ -227,7 +227,7 @@ subprojects {
 	}
 
 	jacoco {
-		toolVersion = '0.8.13'
+		toolVersion = '0.8.14'
 	}
 
 	jacocoTestReport {
@@ -239,6 +239,7 @@ subprojects {
 
 	checkstyle {
 		configFile = file("${rootDir}/codequality/checkstyle.xml")
+		toolVersion = '9.3'
 	}
 
 	[compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",

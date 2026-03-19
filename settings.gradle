@@ -21,14 +21,6 @@ include 'reactor-netty-incubator-quic'
 include 'reactor-netty-examples'
 include 'reactor-netty-graalvm-smoke-tests'
 
-// check if jdk17 is available
-def javaVersion = System.getProperty("java.specification.version");
-def jdkFeature = Double.parseDouble(javaVersion);
-
-if (jdkFeature >= 17) {
-	include 'docs'
-} else {
-	logger.warn("The current JDK version (${jdkFeature}) is not compatible with Java 17. Documentation won't be built.")
-}
+include 'docs'
 
 include 'reactor-netty'
