@@ -215,16 +215,16 @@ subprojects {
 	apply plugin: 'jacoco'
 	apply plugin: 'checkstyle'
 	apply plugin: 'org.gradle.test-retry'
-	apply from: "${rootDir}/gradle/setup.gradle"
-	apply from: "${rootDir}/gradle/javadoc.gradle"
-	apply from: "${rootDir}/gradle/errorprone.gradle"
-
 
 	java {
 		toolchain {
 			languageVersion = JavaLanguageVersion.of((name == "docs" || name == "reactor-netty-graalvm-smoke-tests") ? 17 : 8)
 		}
 	}
+
+	apply from: "${rootDir}/gradle/setup.gradle"
+	apply from: "${rootDir}/gradle/javadoc.gradle"
+	apply from: "${rootDir}/gradle/errorprone.gradle"
 
 	jacoco {
 		toolVersion = '0.8.14'
