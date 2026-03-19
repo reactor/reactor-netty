@@ -13,36 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.gradle.util.VersionNumber
 import java.text.SimpleDateFormat
-
-buildscript {
-	repositories {
-		mavenCentral()
-		maven { url "https://plugins.gradle.org/m2/" }
-		maven { url "https://repo.spring.io/plugins-release" }
-	}
-	dependencies {
-		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.35.6' //applied in individual submodules
-	}
-}
+import org.gradle.api.attributes.java.TargetJvmVersion
 
 plugins {
-	id "com.diffplug.spotless" version "6.13.0"
+	id "com.diffplug.spotless" version "8.3.0"
 	id 'com.google.osdetector' version '1.7.3'
 	id 'org.gradle.test-retry' version '1.6.4'
 	id 'io.spring.nohttp' version '0.0.11'
 	id 'com.gradleup.shadow' version '8.3.10' apply false
-	//we now need version of Artifactory gradle plugin deployed on Maven Central, see above
+	id 'com.jfrog.artifactory' version '6.0.4' apply false
 	id 'me.champeau.gradle.japicmp' version '0.4.6' apply false
 	id 'de.undercouch.download' version '5.7.0' apply false
-	id 'io.spring.javadoc' version '0.0.1' apply false
-	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
-	id 'biz.aQute.bnd.builder' version '6.4.0' apply false
-	id 'org.graalvm.buildtools.native' version '0.9.25' apply false
+	id 'biz.aQute.bnd.builder' version '7.2.1' apply false
+	id 'org.graalvm.buildtools.native' version '0.11.5' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
 	id 'net.ltgt.errorprone' version '5.1.0' apply false
 	id 'me.champeau.mrjar' version '0.1.1' apply false
+}
+
+// The Artifactory plugin (applied from releaser.gradle) adds maven-publish to subprojects
+// in afterEvaluate, which resets TargetJvmVersion on consumable configurations to the
+// toolchain JDK. This pre-registers a callback to force JVM 8 on those configurations,
+// keeping them consistent with the Java 8 toolchain / options.release = 8.
+subprojects {
+	plugins.withType(JavaPlugin) {
+		configurations.matching { it.name == 'apiElements' || it.name == 'runtimeElements' }.configureEach { conf ->
+			conf.attributes {
+				attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 8)
+			}
+		}
+	}
 }
 
 description = 'Reactive Streams Netty driver'
@@ -51,6 +52,35 @@ apply from: "gradle/releaser.gradle"
 
 repositories { //needed at root for nohttp-checkstyle
 	mavenCentral()
+}
+
+static def parseVersionParts(String v) {
+	def m = v =~ /^(\d+)\.(\d+)\.(\d+)(?:[.\-](.+))?$/
+	if (m.matches()) {
+		return [major: m[0][1] as int, minor: m[0][2] as int, micro: m[0][3] as int, qualifier: m[0][4] ?: ""]
+	}
+	return [major: 0, minor: 0, micro: 0, qualifier: null]
+}
+
+def osgiVersion(String v) {
+	def versionNumber = parseVersionParts(v)
+	def result
+	if (versionNumber.qualifier == null || versionNumber.qualifier.size() == 0) {
+		result = "${v}.RELEASE"
+		println "$v is a release, will use $result for bnd"
+	}
+	else if (versionNumber.qualifier.equalsIgnoreCase("SNAPSHOT")) {
+		def sdf = new SimpleDateFormat("yyyyMMddHHmm");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		def buildTimestamp = sdf.format(new Date())
+		result = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.BUILD-$buildTimestamp"
+		println "$v is a snapshot, will use $result for bnd"
+	}
+	else {
+		result = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.${versionNumber.qualifier}"
+		println "$v is neither release nor snapshot, will use $result for bnd"
+	}
+	return result
 }
 
 ext {
@@ -63,22 +93,7 @@ ext {
 		}
 	}
 
-	versionNumber = VersionNumber.parse(version.toString())
-	if (versionNumber.qualifier == null || versionNumber.qualifier.size() == 0) {
-		osgiVersion = "${version}.RELEASE"
-		println "$version is a release, will use $osgiVersion for bnd"
-	}
-	else if (versionNumber.qualifier.equalsIgnoreCase("SNAPSHOT")) {
-		sdf = new SimpleDateFormat("yyyyMMddHHmm");
-		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-		buildTimestamp = sdf.format(new Date())
-		osgiVersion = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.BUILD-$buildTimestamp"
-		println "$version is a snapshot, will use $osgiVersion for bnd"
-	}
-	else {
-		osgiVersion = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.${versionNumber.qualifier}"
-		println "$version is neither release nor snapshot, will use $osgiVersion for bnd"
-	}
+	osgiVersion = osgiVersion(version.toString())
 
 	os_suffix = ""
 	if (osdetector.classifier in ["linux-x86_64"] || ["osx-x86_64"] || ["osx-aarch_64"] || ["windows-x86_64"]) {
@@ -173,7 +188,7 @@ spotless {
 	}
 	else if (System.getenv ()["GITHUB_ACTION"] != null) {
 		println "[Spotless] GitHub Action detected without explicit branch, not enforcing check"
-		enforceCheck false
+		enforceCheck = false
 	}
 	else {
 		String spotlessBranch = "origin/1.2.x"

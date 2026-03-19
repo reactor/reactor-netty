@@ -21,16 +21,13 @@ jobs:
       fullVersion: ${{ steps.version.outputs.fullVersion }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
-        with:
-            distribution: 'zulu'
-            java-version: '17'
-      - name: Set up JDK 1.8
+      - name: setup java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: |
+            8
+            17
       - name: interpret version
         id: version
         #we only run the qualifyVersionGha task so that no other console printing can hijack this step's output
@@ -50,7 +47,9 @@ jobs:
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: |
+            8
+            17
       - name: run reactor-netty-http checks
         id: reactor-netty-http-checks
         run: ./gradlew reactor-netty-http:check
@@ -64,7 +63,9 @@ jobs:
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: |
+            8
+            17
       - name: run reactor-netty-http-brave checks
         id: reactor-netty-http-brave-checks
         run: ./gradlew reactor-netty-http-brave:check
@@ -78,7 +79,9 @@ jobs:
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: |
+            8
+            17
       - name: run reactor-netty-incubator-quic checks
         id: reactor-netty-incubator-quic-checks
         run: ./gradlew reactor-netty-incubator-quic:check
@@ -123,16 +126,13 @@ jobs:
     environment: snapshots
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
-        with:
-            distribution: 'zulu'
-            java-version: '17'
-      - name: Set up JDK 1.8
+      - name: setup java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: |
+            8
+            17
       - name: download antora docs/build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
         with:
@@ -154,16 +154,13 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
-        with:
-            distribution: 'zulu'
-            java-version: '17'
-      - name: Set up JDK 1.8
+      - name: setup java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: |
+            8
+            17
       - name: download antora docs/build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
         with:
@@ -187,16 +184,13 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
-        with:
-            distribution: 'zulu'
-            java-version: '17'
-      - name: Set up JDK 1.8
+      - name: setup java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: |
+            8
+            17
       - name: download antora docs/build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
         with:

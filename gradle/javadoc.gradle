@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ project.tasks.withType(Javadoc) {
 	}
 
 	maxMemory = "1024m"
-	destinationDir = new File(buildDir, "docs/javadoc")
+	destinationDir = project.layout.buildDirectory.dir("docs/javadoc").get().asFile
 	source sourceSets.main.allJava
 	doFirst {
 		classpath = files(sourceSets.main.compileClasspath)

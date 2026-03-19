@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 import java.nio.file.Files
-
-apply plugin: 'io.spring.javadoc-aggregate'
 
 dependencies {
 	api project(':reactor-netty-core')
@@ -78,6 +76,16 @@ task docsZip(type: Zip) {
 			}
 		}
 	}
+}
+
+def aggregateProjects = [':reactor-netty-core', ':reactor-netty-http', ':reactor-netty-incubator-quic']
+
+task aggregateJavadoc(type: Javadoc) {
+	group = "Documentation"
+	description = "Generates the aggregate Javadoc"
+	dependsOn aggregateProjects.collect { "${it}:jar" }
+	source aggregateProjects.collect { project(it).sourceSets.main.allJava }
+	classpath = files(aggregateProjects.collect { project(it).sourceSets.main.compileClasspath })
 }
 
 javadoc.dependsOn(aggregateJavadoc)
