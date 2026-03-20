@@ -292,8 +292,8 @@ shadowJar {
 		'''.stripIndent())
 	doLast(bundleExtension.buildAction())
 
-	enableRelocation true
-	relocationPrefix "reactor.netty.internal.shaded"
+	enableAutoRelocation = true
+	relocationPrefix = "reactor.netty.internal.shaded"
 	archiveClassifier.set('')
 
 	dependsOn(project.tasks.jar)
@@ -309,10 +309,6 @@ shadowJar {
 	from("${rootDir}/docs/src/docs/dist") {
 		include "LICENSE"
 		into "META-INF"
-	}
-
-	manifest {
-		inheritFrom project.tasks.jar.manifest
 	}
 
 	configurations = [project.configurations.shaded]
@@ -339,10 +335,8 @@ shadowJar {
 	exclude 'META-INF/maven*/**'
 }
 
-//delay the maven publishing so that the OSGi metadata is generated
-//then add shadowJar to the publication
-components.java.withVariantsFromConfiguration(configurations.shadowRuntimeElements) {
-	skip()
+shadow {
+	addShadowVariantIntoJavaComponent = false
 }
 afterEvaluate {
 	publishing.publications.mavenJava.artifact(shadowJar)
