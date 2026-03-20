@@ -140,14 +140,16 @@ ext {
 	// Antora
 	antoraPluginVersion = '1.0.0'
 
-	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
-					// Use Reactive Streams 1.0.3 version for javadoc generation
-					// With Reactive Streams 1.0.4 version there is
-					// javadoc: warning - Error fetching URL: https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/
-					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
+	jdk = JavaVersion.current().majorVersion
+	jdkJavadoc = "https://docs.oracle.com/en/java/javase/$jdk/docs/api/"
+	println "JDK Javadoc link for this build is ${rootProject.jdkJavadoc}"
+
+	javadocLinks = [jdkJavadoc,
+					"https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.2/api/",
-					"https://projectreactor.io/docs/netty/release/api/"] as String[]
+					"https://projectreactor.io/docs/netty/release/api/",
+					"https://javadoc.io/doc/io.micrometer/micrometer-core/${micrometerVersion}/"] as String[]
 }
 
 nohttp {
