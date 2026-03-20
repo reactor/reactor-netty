@@ -66,7 +66,9 @@ jar {
 	manifest {
 		attributes("Automatic-Module-Name": "reactor.netty.http.brave")
 	}
-	bnd(bndOptions)
+	bundle {
+		bnd(bndOptions)
+	}
 }
 
 task downloadBaseline(type: Download) {
@@ -88,7 +90,7 @@ task downloadBaseline(type: Download) {
 	onlyIfNewer true
 	compress true
 	src "${repositories.mavenCentral().url}io/projectreactor/netty/reactor-netty-http-brave/$compatibleVersion/reactor-netty-http-brave-${compatibleVersion}.jar"
-	dest "${buildDir}/baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar"
+	dest layout.buildDirectory.file("baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar").get().asFile
 }
 
 def japicmpReport = tasks.register('japicmpReport') {
@@ -96,7 +98,7 @@ def japicmpReport = tasks.register('japicmpReport') {
 		japicmp.state.failure != null
 	}
 	doLast {
-		def reportFile = file("${project.buildDir}/reports/japi.txt")
+		def reportFile = project.layout.buildDirectory.file("reports/japi.txt").get().asFile
 		if (reportFile.exists()) {
 			println "\n **********************************"
 			println " * /!\\ API compatibility failures *"
@@ -117,7 +119,7 @@ task japicmp(type: JapicmpTask) {
 	finalizedBy(japicmpReport)
 	onlyIf { "$compatibleVersion" != "SKIP" }
 
-	oldClasspath.from(files("${buildDir}/baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar"))
+	oldClasspath.from(files(layout.buildDirectory.file("baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar").get().asFile))
 	newClasspath.from(files(jar.archiveFile))
 	// these onlyXxx parameters result in a report that is slightly too noisy, but better than
 	// onlyBinaryIncompatibleModified = true which masks source-incompatible-only changes
@@ -125,7 +127,7 @@ task japicmp(type: JapicmpTask) {
 	onlyModified = true
 	failOnModification = true
 	failOnSourceIncompatibility = true
-	txtOutputFile = file("${project.buildDir}/reports/japi.txt")
+	txtOutputFile = layout.buildDirectory.file("reports/japi.txt").get().asFile
 	ignoreMissingClasses = true
 	includeSynthetic = true
 

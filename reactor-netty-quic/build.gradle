@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'io.spring.javadoc'
 apply plugin: 'biz.aQute.bnd.builder'
 
 group = 'io.projectreactor.netty'
@@ -55,7 +54,9 @@ jar {
 	manifest {
 		attributes("Automatic-Module-Name": "reactor.netty.quic")
 	}
-	bnd(bndOptions)
+	bundle {
+		bnd(bndOptions)
+	}
 }
 
 description = "QUIC functionality for the Reactor Netty library"
