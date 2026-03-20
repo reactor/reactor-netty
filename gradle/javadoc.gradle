@@ -18,6 +18,10 @@ if (project.name == 'reactor-netty-examples' || project.name == 'reactor-netty-g
 }
 
 project.tasks.withType(Javadoc) {
+	javadocTool = javaToolchains.javadocToolFor {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+
 	dependsOn jar
 	group = "Reactor Netty Javadoc"
 
@@ -29,13 +33,13 @@ project.tasks.withType(Javadoc) {
 	failOnError = true
 
 	options {
+		source = "1.8"
 		addStringOption('Xdoclint:none', '-quiet')
 		addStringOption('charSet', 'UTF-8')
 		memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
 		author = true
 		header = "${project.name}"
 		overview = "$rootDir/docs/api/overview.html"
-		stylesheetFile = file("$rootDir/docs/api/stylesheet.css")
 		links(rootProject.ext.javadocLinks)
 	}
 
