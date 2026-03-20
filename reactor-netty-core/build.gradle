@@ -344,7 +344,9 @@ shadowJar {
 components.java.withVariantsFromConfiguration(configurations.shadowRuntimeElements) {
 	skip()
 }
-publishing.publications.mavenJava.artifact(shadowJar)
+afterEvaluate {
+	publishing.publications.mavenJava.artifact(shadowJar)
+}
 
 task jarFileTest(type: Test) {
 	testClassesDirs = sourceSets.jarFileTest.output.classesDirs
