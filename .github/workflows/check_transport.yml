@@ -62,7 +62,7 @@ jobs:
             8
             17
       - name: Build and test with Java 8
-        run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
+        run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }} -PparallelTests
       - name: Build and test UDS with NIO on Java 17
         if: ${{ ! startsWith(matrix.os, 'windows') && matrix.transport == 'nio' }}
         run: ./gradlew reactor-netty-http:test --tests reactor.netty.http.server.HttpServerTests.testHttpServerWithDomainSockets_HTTP11Post -PtestToolchain=17 --no-daemon -x spotlessCheck -PforceTransport=nio

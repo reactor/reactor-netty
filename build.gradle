@@ -291,6 +291,9 @@ subprojects {
 		if (project.hasProperty("forceTransport")) {
 			systemProperty("forceTransport", forceTransport)
 		}
+		if (project.hasProperty("parallelTests")) {
+			maxParallelForks = Math.max(Runtime.runtime.availableProcessors(), 2)
+		}
 		scanForTestClasses = false
 		include '**/*Tests.*'
 		include '**/*Test.*'
