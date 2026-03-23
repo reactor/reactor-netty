@@ -307,11 +307,11 @@ subprojects {
 		}
 
 		testLogging {
-			showExceptions true
-			exceptionFormat "full"
+			showExceptions = true
+			exceptionFormat = "full"
 		}
 
-		onOutput { descriptor, event ->
+		addTestOutputListener { descriptor, event ->
 			def evMsg = event.message
 			if (evMsg.contains("ResourceLeakDetector")) {
 				if (!evMsg.contains(" -Dio.netty.leakDetection")
@@ -324,7 +324,7 @@ subprojects {
 
 	repositories {
 		mavenCentral()
-		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+		maven { url = "https://oss.sonatype.org/content/repositories/releases/" }
 		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
 			if (System.getenv()["GITHUB_ACTION"] == null) {
 				mavenLocal()
@@ -332,9 +332,9 @@ subprojects {
 			else {
 				println 'GitHub Action detected, avoiding use of mavenLocal()'
 			}
-			maven { url 'https://repo.spring.io/snapshot' }
-			maven { url 'https://central.sonatype.com/repository/maven-snapshots' }
-			maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+			maven { url = 'https://repo.spring.io/snapshot' }
+			maven { url = 'https://central.sonatype.com/repository/maven-snapshots' }
+			maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
 		}
 	}
 

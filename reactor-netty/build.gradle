@@ -38,7 +38,7 @@ description = "Reactor Netty with all modules"
 task docsZip(type: Zip) {
 	group = 'Distribution'
 	archiveClassifier = 'docs'
-	duplicatesStrategy "fail"
+	duplicatesStrategy = "fail"
 
 	dependsOn(':docs:antora')
 
