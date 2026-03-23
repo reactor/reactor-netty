@@ -189,11 +189,6 @@ jar {
 	}
 	bundle {
 		bnd(bndOptions)
-		// workaround for multi-version JARs
-		// see https://github.com/bndtools/bnd/issues/2227
-		bnd '''\
-				-fixupmessages: '^Classes found in the wrong directory: .*'
-			'''.stripIndent()
 	}
 }
 
@@ -281,9 +276,6 @@ shadowJar {
 	def bundleExtension = extensions.findByType(BundleTaskExtension) ?:
 			extensions.create(BundleTaskExtension.NAME, BundleTaskExtension, it)
 	bundleExtension.bnd(bndOptions)
-	bundleExtension.bnd('''\
-			-fixupmessages: '^Classes found in the wrong directory: .*'
-		'''.stripIndent())
 	doLast(bundleExtension.buildAction())
 
 	enableAutoRelocation = true
