@@ -1,0 +1,94 @@
+/*
+ * Copyright (c) 2026 VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+if (project.name in ['reactor-netty-examples', 'reactor-netty-graalvm-smoke-tests', 'reactor-netty-incubator-quic', 'reactor-netty', 'docs']) {
+	return
+}
+
+apply plugin: 'me.champeau.gradle.japicmp'
+apply plugin: 'de.undercouch.download'
+
+ext.baselineJarSuffix = (project.name == 'reactor-netty-core') ? '-original.jar' : '.jar'
+
+def baselineJarName = "${project.name}-${compatibleVersion}${baselineJarSuffix}"
+
+def downloadClass = plugins.getPlugin('de.undercouch.download').getClass().classLoader
+		.loadClass('de.undercouch.gradle.tasks.download.Download')
+def japicmpClass = plugins.getPlugin('me.champeau.gradle.japicmp').getClass().classLoader
+		.loadClass('me.champeau.gradle.japicmp.JapicmpTask')
+
+task downloadBaseline(type: downloadClass) {
+	onlyIf {
+		if (project.gradle.startParameter.isOffline()) {
+			println "Offline: skipping downloading of baseline and JAPICMP"
+			return false
+		}
+		else if ("$compatibleVersion" == "SKIP") {
+			println "SKIP: Instructed to skip the baseline comparison"
+			return false
+		}
+		else {
+			println "Will download and perform baseline comparison with ${compatibleVersion}"
+			return true
+		}
+	}
+
+	onlyIfNewer true
+	compress true
+	src "${repositories.mavenCentral().url}io/projectreactor/netty/${project.name}/$compatibleVersion/${baselineJarName}"
+	dest layout.buildDirectory.file("baselineLibs/${baselineJarName}").get().asFile
+}
+
+def japicmpReport = tasks.register('japicmpReport') {
+	onlyIf {
+		japicmp.state.failure != null
+	}
+	doLast {
+		def reportFile = project.layout.buildDirectory.file("reports/japi.txt").get().asFile
+		if (reportFile.exists()) {
+			println "\n **********************************"
+			println " * /!\\ API compatibility failures *"
+			println " **********************************"
+			println "Japicmp report was filtered and interpreted to find the following incompatibilities:"
+			reportFile.eachLine {
+				if (it.contains("*") && (!it.contains("***") || it.contains("****")))
+					println "source incompatible change: $it"
+				else if (it.contains("!"))
+					println "binary incompatible change: $it"
+			}
+		}
+		else println "No incompatible change to report"
+	}
+}
+
+task japicmp(type: japicmpClass) {
+	finalizedBy(japicmpReport)
+	onlyIf { "$compatibleVersion" != "SKIP" }
+
+	oldClasspath.from(files(layout.buildDirectory.file("baselineLibs/${baselineJarName}").get().asFile))
+	newClasspath.from(files(jar.archiveFile))
+	onlyBinaryIncompatibleModified = false
+	onlyModified = true
+	failOnModification = true
+	failOnSourceIncompatibility = true
+	txtOutputFile = layout.buildDirectory.file("reports/japi.txt").get().asFile
+	ignoreMissingClasses = true
+	includeSynthetic = true
+
+	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
+}
+
+tasks.japicmp.dependsOn(downloadBaseline)
+tasks.check.dependsOn(japicmp)
