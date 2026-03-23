@@ -68,7 +68,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -344,7 +344,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 				}
 				else {
 					// merge with higher precedence to user defined parameters
-					Map<String, String> mergedParameters = new HashMap<>(matchingExtra.parameters());
+					Map<String, String> mergedParameters = new LinkedHashMap<>(matchingExtra.parameters());
 					mergedParameters.putAll(userDefined.parameters());
 					extraExtensions.set(i, new WebSocketExtensionData(matchingExtra.name(), mergedParameters));
 				}
