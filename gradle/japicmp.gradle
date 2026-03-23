@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-if (project.name in ['reactor-netty-examples', 'reactor-netty-graalvm-smoke-tests', 'reactor-netty-incubator-quic', 'reactor-netty', 'docs']) {
+if (project.name in ['reactor-netty-examples', 'reactor-netty-graalvm-smoke-tests', 'reactor-netty', 'docs']) {
 	return
 }
 
