@@ -97,10 +97,15 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 			if (msg instanceof WebSocketFrame) {
 				WebSocketFrame frame = (WebSocketFrame) msg;
 				if (isDataFrame(frame)) {
-					dataSentTime = System.nanoTime();
+					if (dataSentTime == 0) {
+						dataSentTime = System.nanoTime();
+					}
 					dataSent += extractProcessedDataFromBuffer(frame);
 
-					recordWrite(remoteAddress);
+					if (frame.isFinalFragment()) {
+						recordWrite(remoteAddress);
+						dataSentTime = 0;
+					}
 				}
 			}
 		}
@@ -120,11 +125,15 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 			if (msg instanceof WebSocketFrame) {
 				WebSocketFrame frame = (WebSocketFrame) msg;
 				if (isDataFrame(frame)) {
-					dataReceivedTime = System.nanoTime();
-					long bytes = extractProcessedDataFromBuffer(frame);
-					dataReceived += bytes;
+					if (dataReceivedTime == 0) {
+						dataReceivedTime = System.nanoTime();
+					}
+					dataReceived += extractProcessedDataFromBuffer(frame);
 
-					recordRead(ctx.channel(), remoteAddress);
+					if (frame.isFinalFragment()) {
+						recordRead(ctx.channel(), remoteAddress);
+						dataReceivedTime = 0;
+					}
 				}
 			}
 		}
