@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -60,6 +61,8 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 	long connectionStartTime;
 
+	long handshakeStartTime;
+
 	protected AbstractWebSocketClientMetricsHandler(SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress,
 			String path, ContextView contextView, String method) {
 		this.method = method;
@@ -67,6 +70,11 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		this.contextView = contextView;
 		this.proxyAddress = proxyAddress;
 		this.remoteAddress = remoteAddress;
+	}
+
+	@Override
+	public boolean isSharable() {
+		return false;
 	}
 
 	@Override
@@ -79,7 +87,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
 		try {
 			if (connectionStartTime > 0) {
-				recordConnectionClosed(ctx);
+				recordConnectionClosed();
 			}
 		}
 		catch (RuntimeException e) {
@@ -88,6 +96,30 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 			}
 		}
 		super.handlerRemoved(ctx);
+	}
+
+	void startHandshake(Channel channel) {
+		handshakeStartTime = System.nanoTime();
+	}
+
+	void recordHandshakeComplete(Channel channel, String status) {
+		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
+		if (proxyAddress == null) {
+			recorder().recordWebSocketHandshakeTime(remoteAddress, path, status, time);
+		}
+		else {
+			recorder().recordWebSocketHandshakeTime(remoteAddress, proxyAddress, path, status, time);
+		}
+	}
+
+	void recordHandshakeFailure(Channel channel) {
+		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
+		if (proxyAddress == null) {
+			recorder().recordWebSocketHandshakeTime(remoteAddress, path, "ERROR", time);
+		}
+		else {
+			recorder().recordWebSocketHandshakeTime(remoteAddress, proxyAddress, path, "ERROR", time);
+		}
 	}
 
 	@Override
@@ -103,8 +135,19 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 					dataSent += extractProcessedDataFromBuffer(frame);
 
 					if (frame.isFinalFragment()) {
-						recordWrite(remoteAddress);
-						dataSentTime = 0;
+						// VoidChannelPromise does not support addListener, unvoid to ensure the listener fires
+						promise = promise.unvoid();
+						promise.addListener(f -> {
+							try {
+								recordWrite(remoteAddress);
+								dataSentTime = 0;
+							}
+							catch (RuntimeException e) {
+								if (log.isWarnEnabled()) {
+									log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+								}
+							}
+						});
 					}
 				}
 			}
@@ -131,7 +174,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 					dataReceived += extractProcessedDataFromBuffer(frame);
 
 					if (frame.isFinalFragment()) {
-						recordRead(ctx.channel(), remoteAddress);
+						recordRead(remoteAddress);
 						dataReceivedTime = 0;
 					}
 				}
@@ -149,7 +192,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		try {
-			recordException(ctx);
+			recordException();
 		}
 		catch (RuntimeException e) {
 			if (log.isWarnEnabled()) {
@@ -172,7 +215,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 	protected abstract WebSocketClientMetricsRecorder recorder();
 
-	protected void recordConnectionClosed(ChannelHandlerContext ctx) {
+	protected void recordConnectionClosed() {
 		Duration duration = Duration.ofNanos(System.nanoTime() - connectionStartTime);
 		if (proxyAddress == null) {
 			recorder().recordWebSocketConnectionDuration(remoteAddress, path, duration);
@@ -182,7 +225,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		}
 	}
 
-	protected void recordException(ChannelHandlerContext ctx) {
+	protected void recordException() {
 		if (proxyAddress == null) {
 			recorder().incrementErrorsCount(remoteAddress, path);
 		}
@@ -191,7 +234,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		}
 	}
 
-	protected void recordRead(io.netty.channel.Channel channel, SocketAddress address) {
+	protected void recordRead(SocketAddress address) {
 		if (proxyAddress == null) {
 			recorder().recordDataReceivedTime(address, path, method, "n/a",
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));

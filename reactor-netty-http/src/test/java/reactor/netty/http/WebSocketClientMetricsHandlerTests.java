@@ -19,7 +19,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -118,6 +120,10 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 												Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8)),
 										new ContinuationWebSocketFrame(true, 0,
 												Unpooled.copiedBuffer(" world", CharsetUtil.UTF_8))))))
+						.get("/ws-control-frames", (req, res) -> res.sendWebsocket((in, out) ->
+								out.sendObject(Flux.just(
+										new PingWebSocketFrame(Unpooled.copiedBuffer("ping", CharsetUtil.UTF_8)),
+										new TextWebSocketFrame("data")))))
 				);
 
 		provider = ConnectionProvider.create("WebSocketClientMetricsHandlerTests", 1);
@@ -404,6 +410,28 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 				URI, "/ws-fragment")
 				.hasCountEqualTo(1)
 				.hasTotalTimeGreaterThan(0);
+	}
+
+	@Test
+	void testWebSocketControlFramesExcludedFromDataMetrics() {
+		disposableServer = httpServer.bindNow();
+		String serverAddress = formatSocketAddress(disposableServer.address());
+
+		httpClient.websocket()
+		          .uri("/ws-control-frames")
+		          .handle((in, out) -> in.receive().aggregate().asString())
+		          .as(StepVerifier::create)
+		          .expectNext("data")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// Only the TextWebSocketFrame ("data") should be recorded, not the PingWebSocketFrame
+		assertDistributionSummary(registry, WS_DATA_RECEIVED,
+				REMOTE_ADDRESS, serverAddress,
+				PROXY_ADDRESS, NA,
+				URI, "/ws-control-frames")
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo("data".getBytes(CharsetUtil.UTF_8).length);
 	}
 
 	@ParameterizedTest

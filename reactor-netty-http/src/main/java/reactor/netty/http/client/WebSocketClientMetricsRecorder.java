@@ -32,7 +32,7 @@ public interface WebSocketClientMetricsRecorder extends HttpClientMetricsRecorde
 	 * @param remoteAddress The remote peer
 	 * @param uri the requested URI
 	 * @param status the WebSocket handshake status
-	 * @param time the time in nanoseconds that is spent for the handshake
+	 * @param time the time that is spent for the handshake
 	 */
 	void recordWebSocketHandshakeTime(SocketAddress remoteAddress, String uri, String status, Duration time);
 
@@ -43,7 +43,7 @@ public interface WebSocketClientMetricsRecorder extends HttpClientMetricsRecorde
 	 * @param proxyAddress the proxy address
 	 * @param uri the requested URI
 	 * @param status the WebSocket handshake status
-	 * @param time the time in nanoseconds that is spent for the handshake
+	 * @param time the time that is spent for the handshake
 	 */
 	default void recordWebSocketHandshakeTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri,
 			String status, Duration time) {
