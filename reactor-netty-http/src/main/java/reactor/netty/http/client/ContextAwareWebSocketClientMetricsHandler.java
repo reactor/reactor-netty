@@ -16,7 +16,6 @@
 package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import org.jspecify.annotations.Nullable;
 import reactor.util.context.ContextView;
 
@@ -50,7 +49,29 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 	}
 
 	@Override
-	protected void recordConnectionClosed(ChannelHandlerContext ctx) {
+	void recordHandshakeComplete(Channel channel, String status) {
+		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
+		if (proxyAddress == null) {
+			recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, path, status, time);
+		}
+		else {
+			recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, proxyAddress, path, status, time);
+		}
+	}
+
+	@Override
+	void recordHandshakeFailure(Channel channel) {
+		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
+		if (proxyAddress == null) {
+			recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, path, "ERROR", time);
+		}
+		else {
+			recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, proxyAddress, path, "ERROR", time);
+		}
+	}
+
+	@Override
+	protected void recordConnectionClosed() {
 		Duration duration = Duration.ofNanos(System.nanoTime() - connectionStartTime);
 		if (proxyAddress == null) {
 			recorder.recordWebSocketConnectionDuration(contextView, remoteAddress, path, duration);
@@ -61,7 +82,7 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 	}
 
 	@Override
-	protected void recordException(ChannelHandlerContext ctx) {
+	protected void recordException() {
 		if (proxyAddress == null) {
 			recorder().incrementErrorsCount(contextView, remoteAddress, path);
 		}
@@ -88,7 +109,7 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 	}
 
 	@Override
-	protected void recordRead(Channel channel, SocketAddress address) {
+	protected void recordRead(SocketAddress address) {
 		if (proxyAddress == null) {
 			recorder.recordDataReceivedTime(contextView, address, path, method, "n/a",
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));

@@ -71,7 +71,7 @@ class WebsocketClientOperations extends HttpClientOperations
 	final Sinks.One<WebSocketCloseStatus> onCloseState;
 	final boolean proxyPing;
 
-	@Nullable MicrometerWebSocketClientMetricsHandler micrometerWsHandler;
+	@Nullable AbstractWebSocketClientMetricsHandler micrometerWsHandler;
 
 	volatile int closeSent;
 
@@ -250,25 +250,41 @@ class WebsocketClientOperations extends HttpClientOperations
 
 			AbstractWebSocketClientMetricsHandler wsHandler;
 			if (httpHandler instanceof MicrometerHttpClientMetricsHandler) {
-				MicrometerWebSocketClientMetricsHandler micrometerHandler = new MicrometerWebSocketClientMetricsHandler(
+				wsHandler = new MicrometerWebSocketClientMetricsHandler(
 						MicrometerWebSocketClientMetricsRecorder.INSTANCE,
 						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
-				micrometerHandler.startHandshake(channel);
-				this.micrometerWsHandler = micrometerHandler;
-				wsHandler = micrometerHandler;
 			}
 			else if (httpHandler instanceof ContextAwareHttpClientMetricsHandler) {
 				ContextAwareHttpClientMetricsHandler ctxHandler = (ContextAwareHttpClientMetricsHandler) httpHandler;
+				ContextAwareWebSocketClientMetricsRecorder wsRecorder;
+				if (ctxHandler.recorder instanceof ContextAwareWebSocketClientMetricsRecorder) {
+					wsRecorder = (ContextAwareWebSocketClientMetricsRecorder) ctxHandler.recorder;
+				}
+				else {
+					wsRecorder = new DefaultContextAwareWebSocketClientMetricsRecorder(ctxHandler.recorder);
+				}
 				wsHandler = new ContextAwareWebSocketClientMetricsHandler(
-						new DefaultContextAwareWebSocketClientMetricsRecorder(ctxHandler.recorder),
+						wsRecorder,
+						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
+			}
+			else if (httpHandler instanceof HttpClientMetricsHandler) {
+				HttpClientMetricsHandler plainHandler = (HttpClientMetricsHandler) httpHandler;
+				WebSocketClientMetricsRecorder wsRecorder;
+				if (plainHandler.recorder instanceof WebSocketClientMetricsRecorder) {
+					wsRecorder = (WebSocketClientMetricsRecorder) plainHandler.recorder;
+				}
+				else {
+					wsRecorder = new DefaultWebSocketClientMetricsRecorder(plainHandler.recorder);
+				}
+				wsHandler = new WebSocketClientMetricsHandler(
+						wsRecorder,
 						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
 			}
 			else {
-				wsHandler = new WebSocketClientMetricsHandler(
-						MicrometerWebSocketClientMetricsRecorder.INSTANCE,
-						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
+				return;
 			}
-
+			wsHandler.startHandshake(channel);
+			this.micrometerWsHandler = wsHandler;
 			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.WsMetricsHandler, wsHandler);
 		}
 		else {

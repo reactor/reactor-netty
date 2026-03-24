@@ -56,11 +56,15 @@ import static reactor.netty.http.client.WebSocketClientObservations.HandshakeTim
 final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketClientMetricsHandler {
 	final MicrometerWebSocketClientMetricsRecorder recorder;
 
-	@Nullable HandshakeTimeHandlerContext handshakeTimeHandlerContext;
-	@Nullable Observation handshakeTimeObservation;
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
+	HandshakeTimeHandlerContext handshakeTimeHandlerContext;
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
+	Observation handshakeTimeObservation;
 	@Nullable ContextView parentContextView;
-
-	long handshakeStartTime;
 
 	MicrometerWebSocketClientMetricsHandler(MicrometerWebSocketClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
@@ -77,8 +81,9 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 		return recorder;
 	}
 
+	@Override
 	void startHandshake(Channel channel) {
-		handshakeStartTime = System.nanoTime();
+		super.startHandshake(channel);
 		handshakeTimeHandlerContext = new HandshakeTimeHandlerContext(recorder, path, remoteAddress, proxyAddress);
 		handshakeTimeObservation = Observation.createNotStarted(
 				recorder.name() + HANDSHAKE_TIME, handshakeTimeHandlerContext, OBSERVATION_REGISTRY);
@@ -86,6 +91,7 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 		handshakeTimeObservation.start();
 	}
 
+	@Override
 	void recordHandshakeComplete(Channel channel, String status) {
 		if (handshakeTimeHandlerContext != null) {
 			handshakeTimeHandlerContext.status = status;
@@ -101,6 +107,7 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 		setChannelContext(channel, parentContextView);
 	}
 
+	@Override
 	void recordHandshakeFailure(Channel channel) {
 		if (handshakeTimeHandlerContext != null) {
 			handshakeTimeHandlerContext.status = "ERROR";
