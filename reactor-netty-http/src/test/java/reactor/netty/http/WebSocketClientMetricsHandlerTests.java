@@ -18,10 +18,14 @@ package reactor.netty.http;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
+import io.netty.util.CharsetUtil;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.http.client.HttpClient;
@@ -107,6 +112,12 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 								out.sendString(Mono.just("Hello World!"))))
 						.get("/ws-echo", (req, res) -> res.sendWebsocket((in, out) ->
 								out.send(in.receive().retain())))
+						.get("/ws-fragment", (req, res) -> res.sendWebsocket((in, out) ->
+								out.sendObject(Flux.just(
+										new TextWebSocketFrame(false, 0,
+												Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8)),
+										new ContinuationWebSocketFrame(true, 0,
+												Unpooled.copiedBuffer(" world", CharsetUtil.UTF_8))))))
 				);
 
 		provider = ConnectionProvider.create("WebSocketClientMetricsHandlerTests", 1);
@@ -318,6 +329,79 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 				REMOTE_ADDRESS, serverAddress,
 				PROXY_ADDRESS, NA,
 				URI, "/not-ws")
+				.hasCountEqualTo(1)
+				.hasTotalTimeGreaterThan(0);
+	}
+
+	@Test
+	void testWebSocketFragmentedDataSentMetrics() {
+		disposableServer = httpServer.bindNow();
+		String serverAddress = formatSocketAddress(disposableServer.address());
+
+		byte[] part1 = "Hello".getBytes(CharsetUtil.UTF_8);
+		byte[] part2 = " ".getBytes(CharsetUtil.UTF_8);
+		byte[] part3 = "World!".getBytes(CharsetUtil.UTF_8);
+		long expectedTotal = part1.length + part2.length + part3.length;
+
+		httpClient.websocket()
+		          .uri("/ws-echo")
+		          .handle((in, out) ->
+				          out.sendObject(Flux.just(
+						          new TextWebSocketFrame(false, 0, Unpooled.wrappedBuffer(part1)),
+						          new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(part2)),
+						          new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(part3)))))
+		          .as(StepVerifier::create)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// Fragmented frames should be recorded as a single message
+		await().atMost(5, TimeUnit.SECONDS)
+		       .pollInterval(50, TimeUnit.MILLISECONDS)
+		       .untilAsserted(() -> {
+				       assertDistributionSummary(registry, WS_DATA_SENT,
+						       REMOTE_ADDRESS, serverAddress,
+						       PROXY_ADDRESS, NA,
+						       URI, "/ws-echo")
+						       .hasCountEqualTo(1)
+						       .hasTotalAmountGreaterThanOrEqualTo(expectedTotal);
+
+				       assertTimer(registry, WS_DATA_SENT_TIME,
+						       REMOTE_ADDRESS, serverAddress,
+						       PROXY_ADDRESS, NA,
+						       URI, "/ws-echo")
+						       .hasCountEqualTo(1)
+						       .hasTotalTimeGreaterThan(0);
+		       });
+	}
+
+	@Test
+	void testWebSocketFragmentedDataReceivedMetrics() {
+		disposableServer = httpServer.bindNow();
+		String serverAddress = formatSocketAddress(disposableServer.address());
+
+		// Server sends "hello" + " world" as two fragments, then closes
+		long expectedTotal = "hello".getBytes(CharsetUtil.UTF_8).length +
+				" world".getBytes(CharsetUtil.UTF_8).length;
+
+		httpClient.websocket()
+		          .uri("/ws-fragment")
+		          .handle((in, out) -> in.aggregateFrames().receiveFrames().take(1).then())
+		          .as(StepVerifier::create)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// Fragmented frames should be recorded as a single message
+		assertDistributionSummary(registry, WS_DATA_RECEIVED,
+				REMOTE_ADDRESS, serverAddress,
+				PROXY_ADDRESS, NA,
+				URI, "/ws-fragment")
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(expectedTotal);
+
+		assertTimer(registry, WS_DATA_RECEIVED_TIME,
+				REMOTE_ADDRESS, serverAddress,
+				PROXY_ADDRESS, NA,
+				URI, "/ws-fragment")
 				.hasCountEqualTo(1)
 				.hasTotalTimeGreaterThan(0);
 	}
