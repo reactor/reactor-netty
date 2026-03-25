@@ -1097,7 +1097,7 @@ class Http2Tests extends BaseHttpTest {
 				                        }
 				                    })
 				                    .sendString(Mono.just("testMaxConcurrentStreamsDynamicUpdate")
-				                                    .delayElement(Duration.ofMillis(100)))))
+				                                    .delayElement(Duration.ofMillis(500)))))
 				        .bindNow();
 
 		ConnectionProvider provider =
