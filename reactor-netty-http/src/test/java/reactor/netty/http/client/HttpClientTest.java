@@ -1557,6 +1557,34 @@ class HttpClientTest extends BaseHttpTest {
 		pool.dispose();
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = {"", "hello"})
+	void testGetMethodWithFluxBody(String body) {
+		disposableServer =
+				createServer()
+				          .handle((req, res) -> res.sendString(
+				              req.receive()
+				                 .aggregate()
+				                 .asString()
+				                 .defaultIfEmpty("")))
+				          .bindNow();
+
+		Publisher<ByteBuf> content =
+		        Flux.just(body)
+		            .filter(s -> !s.isEmpty())
+		            .map(s -> Unpooled.wrappedBuffer(s.getBytes(StandardCharsets.UTF_8)));
+
+		createClient(disposableServer.port())
+		        .request(HttpMethod.GET)
+		        .uri("/")
+		        .send((req, out) -> out.send(content))
+		        .responseSingle((res, bytes) -> bytes.asString().defaultIfEmpty(""))
+		        .as(StepVerifier::create)
+		        .expectNext(body)
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
+	}
+
 	@Test
 	void testExplicitSendMonoErrorOnGet() {
 		disposableServer =

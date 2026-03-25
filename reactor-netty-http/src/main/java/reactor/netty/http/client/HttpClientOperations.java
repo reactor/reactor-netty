@@ -538,43 +538,29 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			ByteBufAllocator alloc = channel().alloc();
 			return new PostHeadersNettyOutbound(Flux.from(source)
-			                .collectList()
-			                .doOnDiscard(ByteBuf.class, ByteBuf::release)
-			                .flatMap(list -> {
-				                if (markSentHeaderAndBody(list.toArray())) {
-					                if (list.isEmpty()) {
-						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage()));
-					                }
-
-					                ByteBuf output;
-					                int i = list.size();
-					                if (i == 1) {
-						                output = list.get(0);
-					                }
-					                else {
-						                CompositeByteBuf agg = alloc.compositeBuffer(list.size());
-
-						                for (ByteBuf component : list) {
-							                agg.addComponent(true, component);
-						                }
-
-						                output = agg;
-					                }
-
-					                if (output.readableBytes() > 0) {
-						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(output)));
-					                }
-					                output.release();
-					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage()));
-				                }
-				                for (ByteBuf bb : list) {
-				                	if (log.isDebugEnabled()) {
-						                log.debug(format(channel(), "Ignoring accumulated bytebuf on http {} {}"), method(), bb);
-					                }
-				                	bb.release();
-				                }
-				                return Mono.empty();
-			                }), this, null);
+			                .switchOnFirst((signal, flux) -> {
+			                    if (signal.isOnComplete()) {
+			                        return markSentHeaderAndBody() ?
+			                                FutureMono.from(channel().writeAndFlush(newFullBodyMessage())) :
+			                                Mono.empty();
+			                    }
+			                    return flux.collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
+			                               .doOnDiscard(ByteBuf.class, ByteBuf::release)
+			                               .flatMap(output -> {
+			                                   if (markSentHeaderAndBody(output)) {
+			                                       if (output.readableBytes() > 0) {
+			                                           return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(output)));
+			                                       }
+			                                       output.release();
+			                                       return FutureMono.from(channel().writeAndFlush(newFullBodyMessage()));
+			                                   }
+			                                   if (log.isDebugEnabled()) {
+			                                       log.debug(format(channel(), "Ignoring accumulated bytebuf on http {} {}"), method(), output);
+			                                   }
+			                                   output.release();
+			                                   return Mono.empty();
+			                               });
+			                }, false).then(), this, null);
 		}
 
 		return super.send(source);
