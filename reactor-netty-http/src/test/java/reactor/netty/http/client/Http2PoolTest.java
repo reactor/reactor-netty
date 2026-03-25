@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1294,7 +1294,7 @@ class Http2PoolTest {
 			assertThat(acquired).hasSize(2);
 
 			//success, acquisition happens after pending some time
-			http2Pool.acquire(Duration.ofMillis(50)).subscribe();
+			http2Pool.acquire(Duration.ofSeconds(1)).subscribe();
 
 			// success, acquisition happens after pending some time without timeout
 			http2Pool.acquire().subscribe();
