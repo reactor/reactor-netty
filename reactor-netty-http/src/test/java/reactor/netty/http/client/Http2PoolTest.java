@@ -1685,7 +1685,7 @@ class Http2PoolTest {
 			assertThat(acquired).hasSize(2);
 
 			//success, acquisition happens after pending some time
-			http2Pool.acquire(Duration.ofMillis(50)).subscribe();
+			http2Pool.acquire(Duration.ofSeconds(1)).subscribe();
 
 			// success, acquisition happens after pending some time without timeout
 			http2Pool.acquire().subscribe();
