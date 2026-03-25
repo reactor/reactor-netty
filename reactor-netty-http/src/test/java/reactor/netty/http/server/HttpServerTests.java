@@ -3938,13 +3938,17 @@ class HttpServerTests extends BaseHttpTest {
 	void testMaxConnectionsLimit() throws Exception {
 		try {
 			AtomicInteger connectionCount = new AtomicInteger();
+			Sinks.Empty<Void> releaseResponse = Sinks.empty();
+			CountDownLatch rejectedLatch = new CountDownLatch(1);
 
 			disposableServer =
 					HttpServer.create()
 					          .port(0)
 					          .maxConnections(2)
 					          .doOnConnection(connection -> connectionCount.incrementAndGet())
-					          .handle((req, res) -> res.sendString(Mono.just("OK")))
+					          .handle((req, res) ->
+					              releaseResponse.asMono()
+					                             .then(res.sendString(Mono.just("OK")).then()))
 					          .bindNow();
 
 			CountDownLatch latch = new CountDownLatch(3);
@@ -3966,12 +3970,17 @@ class HttpServerTests extends BaseHttpTest {
 				              },
 				              e -> {
 				                  failureCount.incrementAndGet();
+				                  rejectedLatch.countDown();
 				                  latch.countDown();
 				              });
 			}
 
-			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+			assertThat(rejectedLatch.await(3, TimeUnit.SECONDS)).isTrue();
 			assertThat(connectionCount.get()).isEqualTo(2);
+
+			releaseResponse.emitEmpty(Sinks.EmitFailureHandler.FAIL_FAST);
+
+			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
 			assertThat(successCount.get()).isEqualTo(2);
 			assertThat(failureCount.get()).isEqualTo(1);
 		}
