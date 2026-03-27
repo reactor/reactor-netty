@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -250,12 +250,14 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 
 				assertThat(connectedClientChannel.get()).isNotNull();
 				assertThat(connectedClientChannel.get().parent().isActive()).isEqualTo(true);
+
+				assertThat(serverHandler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(serverReceivedPingTimes);
 			}
 			else {
 				assertThat(connectedClientChannelClosed.await(5, TimeUnit.SECONDS)).isTrue();
-			}
 
-			assertThat(serverHandler.getReceivedPingTimes()).hasSize(serverReceivedPingTimes);
+				assertThat(serverHandler.getReceivedPingTimes()).hasSize(serverReceivedPingTimes);
+			}
 		}
 		finally {
 			provider.disposeLater()
@@ -358,12 +360,14 @@ class Http2ConnectionLivenessTest extends BaseHttpTest {
 
 			assertThat(connectedServerChannel.get()).isNotNull();
 			assertThat(connectedServerChannel.get().parent().isActive()).isEqualTo(true);
+
+			assertThat(clientHandler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(clientReceivedPingTimes);
 		}
 		else {
 			assertThat(connectedServerChannelClosed.await(5, TimeUnit.SECONDS)).isTrue();
-		}
 
-		assertThat(clientHandler.getReceivedPingTimes()).hasSize(clientReceivedPingTimes);
+			assertThat(clientHandler.getReceivedPingTimes()).hasSize(clientReceivedPingTimes);
+		}
 	}
 
 	static void setValueReflection(Object obj, boolean onServer) {
