@@ -63,6 +63,10 @@ updates:
   - dependency-name: org.junit.platform:junit-platform-launcher
     versions:
     - "[6.a, 7]"
+  # Version >= 1 support different metadata scheme
+  - dependency-name: org.graalvm.buildtools.native
+    versions:
+    - "[1.a, 2]"
   rebase-strategy: disabled
 - package-ecosystem: gradle
   directory: "/"
