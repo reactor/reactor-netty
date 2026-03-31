@@ -1053,6 +1053,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		void initMaxConcurrentStreams() {
 			int newMaxConcurrentStreams = computeMaxConcurrentStreams();
 			this.maxConcurrentStreams = newMaxConcurrentStreams;
+			log.debug(format(connection.channel(), "Max concurrent streams for this channel [{}]"), newMaxConcurrentStreams);
 			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, newMaxConcurrentStreams);
 		}
 
