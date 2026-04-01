@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.http.websocket;
+package reactor.netty.examples.websocket.echo;
 
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
+import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.server.HttpServer;
 
 /**
@@ -23,19 +26,30 @@ import reactor.netty.http.server.HttpServer;
  * @author Vineeth Yelagandula
  */
 public final class WebsocketServer {
-
-	static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
+	
+	static final boolean SECURE = System.getProperty("secure") != null;
+	static final int PORT = Integer.parseInt(System.getProperty("port", SECURE ? "8443" : "8080"));
 	static final boolean WIRETAP = System.getProperty("wiretap") != null;
-
-	public static void main(String[] args) {
-		HttpServer.create()
+	
+	public static void main(String[] args) throws Exception {
+		HttpServer server = 
+			HttpServer.create()
 		          .port(PORT)
 		          .wiretap(WIRETAP)
 		          .route(r -> r.ws("/ws",
-		                  (inbound, outbound) -> outbound.send(inbound.receive().retain())))
-		          .bindNow()
-		          .onDispose()
-		          .block();
+		                  (inbound, outbound) -> outbound.send(inbound.receive().retain())));
+
+			if (SECURE){ 
+			X509Bundle ssc = new CertificateBuilder()
+					.subject("CN=localhost")
+					.setIsCertificateAuthority(true)
+					.buildSelfSigned();
+			Http11SslContextSpec http11SslContextSpec =
+					Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+			server = server.secure(spec -> spec.sslContext(http11SslContextSpec));
+		}
+		          server.bindNow()
+		          		.onDispose()
+		          		.block();
 	}
 }
-```
