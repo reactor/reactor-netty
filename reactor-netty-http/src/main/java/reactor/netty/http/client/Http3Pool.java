@@ -18,10 +18,14 @@ package reactor.netty.http.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http3.Http3ClientConnectionHandler;
+import io.netty.handler.codec.quic.QuicChannel;
+import io.netty.handler.codec.quic.QuicStreamType;
 import org.jspecify.annotations.Nullable;
 import reactor.netty.Connection;
 import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
 import reactor.netty.resources.ConnectionProvider;
+
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * <p>This class is intended to be used only as {@code HTTP/3} connection pool. It doesn't have generic purpose.
@@ -79,18 +83,44 @@ final class Http3Pool extends Http2Pool {
 		}
 
 		@Override
+		int availableStreams(int concurrency) {
+			int peerAllowed = peerAllowedMaxStreams();
+			if (pool.maxConcurrentStreams != -1) {
+				return Math.min(peerAllowed, Math.max(0, pool.maxConcurrentStreams - concurrency));
+			}
+			return peerAllowed;
+		}
+
+		@Override
 		void initMaxConcurrentStreams() {
-			this.maxConcurrentStreams = pool.maxConcurrentStreams;
+			int peerAllowed = peerAllowedMaxStreams();
+			int newMaxConcurrentStreams = pool.maxConcurrentStreams == -1 ?
+					peerAllowed : Math.min(pool.maxConcurrentStreams, peerAllowed);
+			this.maxConcurrentStreams = newMaxConcurrentStreams;
+			log.debug(format(connection.channel(), "Max streams for this channel [{}]"), newMaxConcurrentStreams);
+			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, newMaxConcurrentStreams);
 		}
 
 		@Override
-		boolean canOpenStream() {
-			return true;
+		void updateMaxConcurrentStreams(@SuppressWarnings("unused") long remoteMaxConcurrentStreams) {
+			int peerAllowed = peerAllowedMaxStreams();
+			int newMaxConcurrentStreams = pool.maxConcurrentStreams == -1 ?
+					peerAllowed : Math.min(pool.maxConcurrentStreams, peerAllowed);
+			int diff = newMaxConcurrentStreams - maxConcurrentStreams;
+			if (diff != 0) {
+				maxConcurrentStreams = newMaxConcurrentStreams;
+				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, diff);
+				pool.drain();
+			}
 		}
 
-		@Override
-		boolean canOpenStream(int concurrency) {
-			return true;
+		private int peerAllowedMaxStreams() {
+			Channel ch = connection.channel();
+			if (ch instanceof QuicChannel) {
+				long allowed = ((QuicChannel) ch).peerAllowedStreams(QuicStreamType.BIDIRECTIONAL);
+				return (int) Math.min(allowed, Integer.MAX_VALUE);
+			}
+			return 0;
 		}
 
 		@Override

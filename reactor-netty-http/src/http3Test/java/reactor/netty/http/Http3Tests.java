@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.http.client.Http2AllocationStrategy;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.HttpClientResponse;
@@ -537,18 +538,12 @@ class Http3Tests {
 
 	void doTestMaxActiveStreams(@Nullable ConnectionProvider provider, int maxActiveStreams, int expectedOnNext, int expectedOnError) throws Exception {
 		disposableServer =
-				createServer()
+				createServer(maxActiveStreams)
 				        .route(routes ->
 				                routes.post("/echo", (req, res) -> res.send(req.receive()
 				                                                               .aggregate()
 				                                                               .retain()
 				                                                               .delayElement(Duration.ofMillis(100)))))
-				        .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5))
-				                                   .maxData(10000000)
-				                                   .maxStreamDataBidirectionalLocal(1000000)
-				                                   .maxStreamDataBidirectionalRemote(1000000)
-				                                   .maxStreamsBidirectional(maxActiveStreams)
-				                                   .tokenHandler(InsecureQuicTokenHandler.INSTANCE))
 				        .bindNow();
 
 		HttpClient client = createClient(provider, disposableServer.port());
@@ -588,6 +583,84 @@ class Http3Tests {
 
 		assertThat(onNext).isEqualTo(expectedOnNext);
 		assertThat(onError).isEqualTo(expectedOnError);
+	}
+
+	@Test
+	void testMaxStreamsExceededServerReplenished() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.create("testMaxStreamsExceededServerReplenished", 1);
+		try {
+			testMaxStreams(provider, 2, 1);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testMaxStreamsMultipleConnectionsNeeded() throws Exception {
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testMaxStreamsMultipleConnectionsNeeded")
+				                  .maxConnections(5)
+				                  .build();
+		try {
+			testMaxStreams(provider, 2, 5);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testMaxStreamsWithCustomPool() throws Exception {
+		Http2AllocationStrategy strategy =
+				Http2AllocationStrategy.builder()
+				                       .maxConcurrentStreams(2)
+				                       .build();
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testMaxStreamsWithCustomPool")
+				                  .maxConnections(1)
+				                  .allocationStrategy(strategy)
+				                  .build();
+		try {
+			testMaxStreams(provider, 100, 1);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	private void testMaxStreams(ConnectionProvider provider, int serverMaxStreams, int expectedDistinctConnections) throws Exception {
+		int totalRequests = 6;
+
+		disposableServer =
+				createServer(serverMaxStreams)
+				        .handle((req, res) -> res.send(req.receive().retain()))
+				        .bindNow();
+
+		AtomicReference<List<Channel>> channels = new AtomicReference<>(new ArrayList<>());
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .doOnConnected(conn -> channels.get().add(conn.channel().parent()));
+
+		Flux.range(0, totalRequests)
+		    .flatMapDelayError(i ->
+		            client.post()
+		                  .uri("/")
+		                  .send(ByteBufFlux.fromString(Mono.just("msg-" + i)))
+		                  .responseContent()
+		                  .aggregate()
+		                  .asString(), 256, 32)
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .assertNext(l -> assertThat(l).allMatch(s -> s.startsWith("msg-")))
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(30));
+
+		long distinctConnections = channels.get().stream().distinct().count();
+		assertThat(distinctConnections).isLessThanOrEqualTo(expectedDistinctConnections);
 	}
 
 	@Test
@@ -1288,6 +1361,10 @@ class Http3Tests {
 	}
 
 	static HttpServer createServer() throws Exception {
+		return createServer(100);
+	}
+
+	static HttpServer createServer(int maxStreams) throws Exception {
 		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
 		return HttpServer.create()
 		                 .port(0)
@@ -1298,7 +1375,7 @@ class Http3Tests {
 		                                            .maxData(10000000)
 		                                            .maxStreamDataBidirectionalLocal(1000000)
 		                                            .maxStreamDataBidirectionalRemote(1000000)
-		                                            .maxStreamsBidirectional(100)
+		                                            .maxStreamsBidirectional(maxStreams)
 		                                            .tokenHandler(InsecureQuicTokenHandler.INSTANCE));
 	}
 
