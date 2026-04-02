@@ -275,7 +275,7 @@ By default, if `OpenSSL` is available, a
 provider is used as a provider. Otherwise, a
 {nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
 You can switch the provider by using
-{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
+{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider(io.netty.handler.ssl.SslProvider)[SslContextBuilder]
 or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
