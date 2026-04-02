@@ -29,7 +29,7 @@ instance that is ready for configuring.
 <2> Connects the client in a blocking fashion and waits for it to finish initializing.
 
 The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
-offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow(java.time.Duration)[`disposeNow()`],
 which shuts the client down in a blocking fashion.
 
 [[host-and-port]]
@@ -85,9 +85,9 @@ include::{examples-dir}/send/Application.java[lines=18..35]
 <1> Sends `hello` string to the endpoint.
 
 When you need more control over the writing process, as an alternative for I/O handler you may use
-{javadoc}/reactor/netty/Connection.html#outbound--[`Connection#outbound`]. As opposed to I/O handler
+{javadoc}/reactor/netty/Connection.html#outbound()[`Connection#outbound`]. As opposed to I/O handler
 where the connection is closed when the provided `Publisher` finishes (in case of finite `Publisher`),
-when using {javadoc}/reactor/netty/Connection.html#outbound--[`Connection#outbound`], you have to invoke explicitly
+when using {javadoc}/reactor/netty/Connection.html#outbound()[`Connection#outbound`], you have to invoke explicitly
 `Connection#dispose` in order to close the connection.
 
 {examples-link}/send/connection/Application.java
@@ -114,9 +114,9 @@ include::{examples-dir}/read/Application.java[lines=18..34]
 <1> Receives data from a given endpoint
 
 When you need more control over the reading process, as an alternative for I/O handler you may use
-{javadoc}/reactor/netty/Connection.html#inbound--[`Connection#inbound`]. As opposed to I/O handler
+{javadoc}/reactor/netty/Connection.html#inbound()[`Connection#inbound`]. As opposed to I/O handler
 where the connection is closed when the provided `Publisher` finishes (in case of finite `Publisher`),
-when using {javadoc}/reactor/netty/Connection.html#inbound--[`Connection#inbound`], you have to invoke explicitly
+when using {javadoc}/reactor/netty/Connection.html#inbound()[`Connection#inbound`], you have to invoke explicitly
 `Connection#dispose` in order to close the connection.
 
 {examples-link}/read/connection/Application.java
@@ -331,7 +331,7 @@ if another behaviour is needed please check https://micrometer.io/docs/contextPr
 For example, you may want to set only some of the `ThreadLocal` values.
 
 NOTE: When you enable Reactor Netty tracing within a framework, you may need to let Reactor Netty use the `ObservationRegistry` created by this framework.
-For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty.Metrics#observationRegistry`].
+For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry(io.micrometer.observation.ObservationRegistry)[`reactor.netty.Metrics#observationRegistry`].
 You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
 [[unix-domain-sockets]]

@@ -30,7 +30,7 @@ instance that is ready for configuring.
 <2> Starts the server in a blocking fashion and waits for it to finish initializing.
 
 The returned {javadoc}/reactor/netty/DisposableServer.html[`DisposableServer`]
-offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow(java.time.Duration)[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 [[host-and-port]]
@@ -300,7 +300,7 @@ if another behaviour is needed please check https://micrometer.io/docs/contextPr
 For example, you may want to set only some of the `ThreadLocal` values.
 
 NOTE: When you enable Reactor Netty tracing within a framework, you may need to let Reactor Netty use the `ObservationRegistry` created by this framework.
-For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty.Metrics#observationRegistry`].
+For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry(io.micrometer.observation.ObservationRegistry)[`reactor.netty.Metrics#observationRegistry`].
 You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
 [[unix-domain-sockets]]
