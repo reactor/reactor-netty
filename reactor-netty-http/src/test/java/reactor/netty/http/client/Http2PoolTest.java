@@ -1300,7 +1300,7 @@ class Http2PoolTest {
 			http2Pool.acquire().subscribe();
 
 			//error, timed out
-			http2Pool.acquire(Duration.ofMillis(1))
+			http2Pool.acquire(Duration.ofMillis(50))
 			         .as(StepVerifier::create)
 			         .expectError(PoolAcquireTimeoutException.class)
 			         .verify(Duration.ofSeconds(1));
