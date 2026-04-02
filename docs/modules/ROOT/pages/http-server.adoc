@@ -30,7 +30,7 @@ instance ready for configuring.
 <2> Starts the server in a blocking fashion and waits for it to finish initializing.
 
 The returned {javadoc}/reactor/netty/DisposableServer.html[`DisposableServer`]
-offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow(java.time.Duration)[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 [[host-and-port]]
@@ -98,7 +98,7 @@ include::{examples-dir}/routing/Application.java[lines=18..41]
 NOTE: The server routes are unique and only the first matching in order of declaration is invoked.
 
 NOTE: If websocket over HTTP/2 is configured, ensure that the HTTP/2 initial setting is enabled
-{javadoc}/reactor/netty/http/Http2SettingsSpec.Builder.html#connectProtocolEnabled-boolean-.
+{javadoc}/reactor/netty/http/Http2SettingsSpec.Builder.html#connectProtocolEnabled(boolean).
 
 [[sse]]
 === SSE
@@ -126,8 +126,8 @@ include::{examples-dir}/staticresources/Application.java[lines=18..37]
 == Writing Data
 
 To send data to a connected client, you must attach an I/O handler by using either
-{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
-{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+{javadoc}/reactor/netty/http/server/HttpServer.html#handle(java.util.function.BiFunction)[`handle(...)`] or
+{javadoc}/reactor/netty/http/server/HttpServer.html#route(java.util.function.Consumer)[`route(...)`].
 The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`],
 to be able to write data. The following example uses the `handle(...)` method:
 
@@ -200,8 +200,8 @@ include::{examples-dir}/compression/Application.java[lines=18..38]
 == Consuming Data
 
 To receive data from a connected client, you must attach an I/O handler by using either
-{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
-{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+{javadoc}/reactor/netty/http/server/HttpServer.html#handle(java.util.function.BiFunction)[`handle(...)`] or
+{javadoc}/reactor/netty/http/server/HttpServer.html#route(java.util.function.Consumer)[`route(...)`].
 The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`],
 to be able to read data.
 
@@ -762,7 +762,7 @@ if another behaviour is needed please check https://micrometer.io/docs/contextPr
 For example, you may want to set only some of the `ThreadLocal` values.
 
 NOTE: When you enable Reactor Netty tracing within a framework, you may need to let Reactor Netty use the `ObservationRegistry` created by this framework.
-For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty.Metrics#observationRegistry`].
+For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry(io.micrometer.observation.ObservationRegistry)[`reactor.netty.Metrics#observationRegistry`].
 You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
 [[unix-domain-sockets]]
@@ -812,7 +812,7 @@ The following listing shows all available connection timeout configuration optio
 
 * `idleTimeout` - The maximum time (resolution: ms) that this connection stays opened and waits for HTTP request.
 Once the timeout is reached, the connection is closed. By default,
-{javadoc}/reactor/netty/http/server/HttpServer.html#idleTimeout-java.time.Duration-[`idleTimeout`] is not specified,
+{javadoc}/reactor/netty/http/server/HttpServer.html#idleTimeout(java.time.Duration)[`idleTimeout`] is not specified,
 this indicates no timeout (i.e. infinite), which means the connection is closed only if one of the peers decides to close it explicitly.
 
 NOTE: It is always a good practice to configure an idle timeout.

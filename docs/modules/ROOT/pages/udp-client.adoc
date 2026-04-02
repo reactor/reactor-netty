@@ -29,7 +29,7 @@ instance that is ready for configuring.
 <2> Connects the client in a blocking fashion and waits for it to finish initializing.
 
 The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
-offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow(java.time.Duration)[`disposeNow()`],
 which shuts the client down in a blocking fashion.
 
 [[host-and-port]]
