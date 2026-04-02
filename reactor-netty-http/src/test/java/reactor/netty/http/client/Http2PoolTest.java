@@ -1642,8 +1642,6 @@ class Http2PoolTest {
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) acquired).slot;
-
 			http2Pool.acquire(Duration.ofMillis(10))
 			         .as(StepVerifier::create)
 			         .expectError(PoolAcquireTimeoutException.class)
@@ -1652,9 +1650,6 @@ class Http2PoolTest {
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
 
 			acquired.invalidate().block(Duration.ofSeconds(1));
-
-			assertThat(slot.canOpenStream()).isFalse();
-			assertThat(slot.availableStreams()).isEqualTo(0);
 
 			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
 			assertThat(connections).isNotNull();

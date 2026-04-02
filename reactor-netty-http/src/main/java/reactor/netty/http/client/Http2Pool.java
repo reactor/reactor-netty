@@ -319,14 +319,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		assert ref.slot.connection.channel().eventLoop().inEventLoop();
 		Mono<Void> mono = Mono.empty();
 		try {
-			// not HTTP/2 request, no need to decrement the concurrency
-			// let it stay to 1 so that no one is able to take this connection
-			if (ref.slot.http2FrameCodecCtx() == null) {
-				ref.slot.invalidate();
-				removeSlot(ref.slot);
-			}
 			// By default, check the connection for removal on acquire and invalidate (only if there are no active streams)
-			else if (ref.slot.decrementConcurrencyAndGet() == 0) {
+			if (ref.slot.decrementConcurrencyAndGet() == 0) {
 				destroyPoolableInternal(ref);
 			}
 		}
@@ -337,8 +331,13 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	void destroyPoolableInternal(Http2PooledRef ref) {
+		// not just a non HTTP/2 connection but also a closed HTTP/2 connection
+		if (ref.slot.http2FrameCodecCtx() == null) {
+			ref.slot.invalidate();
+			removeSlot(ref.slot);
+		}
 		// If there is eviction in background, the background process will remove this connection
-		if (poolConfig.evictInBackgroundInterval().isZero()) {
+		else if (poolConfig.evictInBackgroundInterval().isZero()) {
 			// not active
 			if (!ref.poolable().channel().isActive()) {
 				ref.slot.invalidate();
