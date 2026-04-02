@@ -98,7 +98,7 @@ include::{examples-dir}/routing/Application.java[lines=18..41]
 NOTE: The server routes are unique and only the first matching in order of declaration is invoked.
 
 NOTE: If websocket over HTTP/2 is configured, ensure that the HTTP/2 initial setting is enabled
-{javadoc}/reactor/netty/http/Http2SettingsSpec.Builder.html#connectProtocolEnabled(boolean).
+{javadoc}/reactor/netty/http/Http2SettingsSpec.Builder.html#connectProtocolEnabled(boolean)[`connectProtocolEnabled(boolean)`].
 
 [[sse]]
 === SSE
@@ -429,7 +429,7 @@ By default, if `OpenSSL` is available,
 provider is used as a provider. Otherwise
 {nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
 You can switch the provider by using
-{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider(io.netty.handler.ssl.SslProvider)[`SslContextBuilder`]
 or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
