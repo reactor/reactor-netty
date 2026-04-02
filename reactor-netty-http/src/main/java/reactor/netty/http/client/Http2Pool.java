@@ -319,8 +319,14 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		assert ref.slot.connection.channel().eventLoop().inEventLoop();
 		Mono<Void> mono = Mono.empty();
 		try {
+			// not HTTP/2 request, no need to decrement the concurrency
+			// let it stay to 1 so that no one is able to take this connection
+			if (ref.slot.http2FrameCodecCtx() == null) {
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
 			// By default, check the connection for removal on acquire and invalidate (only if there are no active streams)
-			if (ref.slot.decrementConcurrencyAndGet() == 0) {
+			else if (ref.slot.decrementConcurrencyAndGet() == 0) {
 				destroyPoolableInternal(ref);
 			}
 		}
@@ -331,13 +337,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	void destroyPoolableInternal(Http2PooledRef ref) {
-		// not HTTP/2 request
-		if (ref.slot.http2FrameCodecCtx() == null) {
-			ref.slot.invalidate();
-			removeSlot(ref.slot);
-		}
 		// If there is eviction in background, the background process will remove this connection
-		else if (poolConfig.evictInBackgroundInterval().isZero()) {
+		if (poolConfig.evictInBackgroundInterval().isZero()) {
 			// not active
 			if (!ref.poolable().channel().isActive()) {
 				ref.slot.invalidate();
@@ -574,7 +575,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 			// get the connection
 			Slot slot = pollSlot(resources);
-			if (slot == null) {
+			if (slot == null || slot.get()) {
 				continue;
 			}
 
@@ -873,7 +874,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					// Concurrency was reserved in drainLoop, rollback reservation
 					poolSlot.slot.decrementConcurrencyAndGet();
 				}
-				else {
+				else if (!poolSlot.slot.get()) {
 					poolSlot.slot.deactivate();
 				}
 				// ACQUIRED was incremented in drainLoop, rollback
@@ -1089,6 +1090,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		int availableStreams(int concurrency) {
 			int max = this.maxConcurrentStreams;
+			if (get()) {
+				return 0;
+			}
 			// For non-HTTP/2 connections (max == 0), allow opening a stream if concurrency is 0
 			if (max == 0) {
 				return concurrency == 0 ? 1 : 0;
