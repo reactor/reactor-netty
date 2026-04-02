@@ -407,6 +407,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					EventLoop eventLoop = slot.connection.channel().eventLoop();
 					int dispatched = 0;
 
+					if (log.isDebugEnabled()) {
+						log.debug(format(slot.connection.channel(), "Channel activated"));
+					}
+
 					while (dispatched < batchSize) {
 						Borrower borrower = pollPending(borrowers, true);
 						if (borrower == null) {
@@ -420,6 +424,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 							return;
 						}
 						dispatched++;
+						ACQUIRED.incrementAndGet(this);
+						if (enableStrictReuse) {
+							slot.incrementConcurrencyAndGet();
+						}
 						eventLoop.execute(() -> borrower.deliver(new Http2PooledRef(slot), enableStrictReuse));
 					}
 
@@ -427,12 +435,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 						offerSlot(resources, slot);
 						continue;
 					}
-					if (log.isDebugEnabled()) {
-						log.debug(format(slot.connection.channel(), "Channel activated, batch size: {}"), dispatched);
-					}
-					ACQUIRED.addAndGet(this, dispatched);
 					if (enableStrictReuse) {
-						slot.addConcurrencyAndGet(dispatched);
 						slot.deactivate();
 					}
 					eventLoop.execute(this::drain);
@@ -864,6 +867,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			assert poolSlot.slot.connection.channel().eventLoop().inEventLoop();
 
 			int effectiveConcurrency = poolSlot.slot.concurrency() - (alreadyReserved ? 1 : 0);
+			assert effectiveConcurrency >= 0;
 			if (!poolSlot.slot.canOpenStream(effectiveConcurrency)) {
 				if (alreadyReserved) {
 					// Concurrency was reserved in drainLoop, rollback reservation
@@ -1090,9 +1094,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				return concurrency == 0 ? 1 : 0;
 			}
 			// For HTTP/2 connections, return the number of remaining available streams.
-			// Concurrency can be negative when a stream completes between the reservation
-			// in drainLoop and the delivery check. In that case max - concurrency > max,
-			// which is correct since there is clearly capacity available.
 			return Math.max(0, max - concurrency);
 		}
 
@@ -1163,10 +1164,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		void incrementConcurrencyAndGet() {
 			CONCURRENCY.incrementAndGet(this);
-		}
-
-		void addConcurrencyAndGet(int delta) {
-			CONCURRENCY.addAndGet(this, delta);
 		}
 
 		void invalidate() {
