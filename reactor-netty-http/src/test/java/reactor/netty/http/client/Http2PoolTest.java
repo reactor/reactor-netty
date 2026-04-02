@@ -364,6 +364,46 @@ class Http2PoolTest {
 	}
 
 	@Test
+	void deliverDoesNotDeactivateInvalidatedSlot() {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(), new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(10)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		try {
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			http2Pool.acquire().doOnNext(acquired::add).block(Duration.ofSeconds(1));
+			assertThat(acquired).hasSize(1);
+
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) acquired.get(0)).slot;
+
+			// Second acquire — drainLoop() increments ACQUIRED and schedules deliver()
+			http2Pool.acquire().subscribe(acquired::add);
+
+			// Invalidate the slot BEFORE deliver() runs on the event loop.
+			slot.invalidate();
+
+			channel.runPendingTasks();
+
+			ConcurrentLinkedQueue<Http2Pool.Slot> connections = http2Pool.connections;
+			assertThat(connections).isNotNull();
+			assertThat(connections).doesNotContain(slot);
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
 	void doAcquireNotCalledIfBorrowerInScopeCancelledEarly() {
 		AtomicInteger allocator = new AtomicInteger();
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =

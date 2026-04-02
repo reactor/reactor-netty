@@ -331,7 +331,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	void destroyPoolableInternal(Http2PooledRef ref) {
-		// not HTTP/2 request
+		// not just a non HTTP/2 connection but also a closed HTTP/2 connection
 		if (ref.slot.http2FrameCodecCtx() == null) {
 			ref.slot.invalidate();
 			removeSlot(ref.slot);
@@ -574,7 +574,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 			// get the connection
 			Slot slot = pollSlot(resources);
-			if (slot == null) {
+			if (slot == null || slot.get()) {
 				continue;
 			}
 
@@ -873,7 +873,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					// Concurrency was reserved in drainLoop, rollback reservation
 					poolSlot.slot.decrementConcurrencyAndGet();
 				}
-				else {
+				else if (!poolSlot.slot.get()) {
 					poolSlot.slot.deactivate();
 				}
 				// ACQUIRED was incremented in drainLoop, rollback
@@ -1089,6 +1089,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		int availableStreams(int concurrency) {
 			int max = this.maxConcurrentStreams;
+			if (get()) {
+				return 0;
+			}
 			// For non-HTTP/2 connections (max == 0), allow opening a stream if concurrency is 0
 			if (max == 0) {
 				return concurrency == 0 ? 1 : 0;
