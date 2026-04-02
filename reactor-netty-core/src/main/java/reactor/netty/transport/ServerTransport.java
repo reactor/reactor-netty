@@ -560,7 +560,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				log.debug(format(channel(), "Server is about to be disposed with timeout: {}"), timeout);
 			}
 			dispose();
-			Mono<Void> terminateSignals = Mono.empty();
+			List<Mono<Void>> terminateSignals = new ArrayList<>();
 			if (config.channelGroup != null && config.channelGroup.size() > 0) {
 				HashMap<Channel, List<Mono<Void>>> channelsToMono =
 						new HashMap<>(MapUtils.calculateInitialCapacity(config.channelGroup.size()));
@@ -594,13 +594,13 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 						channel.close();
 					}
 					else {
-						terminateSignals = Mono.when(monos).and(terminateSignals);
+						terminateSignals.addAll(monos);
 					}
 				}
 			}
 
 			try {
-				onDispose().then(terminateSignals)
+				onDispose().then(terminateSignals.isEmpty() ? Mono.empty() : Mono.when(terminateSignals))
 				           .block(timeout);
 			}
 			catch (IllegalStateException e) {
