@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -597,9 +597,13 @@ class Http2WebsocketTest extends WebsocketTest {
 	void websocketOverH2Negative(HttpServer server, HttpClient client,
 			WebsocketClientSpec clientSpec, Predicate<Throwable> predicate, @Nullable String serverError) throws Exception {
 		AtomicReference<Throwable> serverThrowable = new AtomicReference<>();
+		CountDownLatch serverErrorLatch = new CountDownLatch(1);
 		disposableServer =
 				server.handle((req, res) -> res.sendWebsocket((in, out) -> out.sendString(Mono.just("test")))
-				                               .doOnError(serverThrowable::set))
+				                               .doOnError(t -> {
+				                                   serverThrowable.set(t);
+				                                   serverErrorLatch.countDown();
+				                               }))
 				      .bindNow();
 
 		CountDownLatch connClosed = new CountDownLatch(1);
@@ -615,6 +619,7 @@ class Http2WebsocketTest extends WebsocketTest {
 		assertThat(connClosed.await(30, TimeUnit.SECONDS)).isTrue();
 
 		if (serverError != null) {
+			assertThat(serverErrorLatch.await(30, TimeUnit.SECONDS)).isTrue();
 			assertThat(serverThrowable.get())
 					.isNotNull()
 					.hasMessage(serverError);
