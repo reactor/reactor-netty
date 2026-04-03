@@ -57,6 +57,20 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http3ConnectionProvider$PooledConnectionAllocator$Http3ConnectionInitializer"
+		},
+		"name": "reactor.netty.http.client.Http3ConnectionProvider$PooledConnectionAllocator$Http3ConnectionInitializer",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http3ConnectionProvider$PooledConnectionAllocator$Http3MaxStreamsHandler"
+		},
+		"name": "reactor.netty.http.client.Http3ConnectionProvider$PooledConnectionAllocator$Http3MaxStreamsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.client.Http3Codec"
 		},
 		"name": "reactor.netty.http.client.Http3Codec",
