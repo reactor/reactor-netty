@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.HttpConversionUtil;
@@ -1982,7 +1984,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			if (msg instanceof LastHttpContent) {
-				promise.addListener(future -> latchRef.get().countDown());
+				if (!(msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == HttpResponseStatus.CONTINUE.code())) {
+					promise.addListener(future -> latchRef.get().countDown());
+				}
 			}
 
 			ctx.write(msg, promise);
