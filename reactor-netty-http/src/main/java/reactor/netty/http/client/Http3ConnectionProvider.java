@@ -22,7 +22,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.quic.QuicStreamLimitChangedEvent;
-import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.codec.http3.Http3;
 import io.netty.handler.codec.http3.Http3ClientConnectionHandler;
