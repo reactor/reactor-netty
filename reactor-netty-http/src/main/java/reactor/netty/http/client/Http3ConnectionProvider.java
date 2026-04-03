@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,10 @@ package reactor.netty.http.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.codec.quic.QuicStreamLimitChangedEvent;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.codec.http3.Http3;
 import io.netty.handler.codec.http3.Http3ClientConnectionHandler;
@@ -62,6 +65,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
@@ -609,7 +613,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 				MonoSink<Connection> sink) {
 			QuicChannelBootstrap bootstrap =
 					QuicChannel.newBootstrap(channel)
-					           .handler(handler)
+					           .handler(new Http3ConnectionInitializer(handler, sink))
 					           .remoteAddress(remoteAddress);
 			attributes(bootstrap, config.attributes());
 			channelOptions(bootstrap, config.options());
@@ -619,9 +623,6 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 			             if (!f.isSuccess()) {
 			                 sink.error(f.cause());
 			             }
-			             else {
-			                 sink.success(Connection.from((Channel) f.get()));
-			             }
 			         });
 		}
 
@@ -629,5 +630,90 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 				(connection, metadata) -> false;
 
 		static final Function<Connection, Publisher<Void>> DEFAULT_DESTROY_HANDLER = connection -> Mono.empty();
+
+		static final class Http3ConnectionInitializer extends ChannelInitializer<Channel> {
+
+			final ChannelHandler handler;
+			final MonoSink<Connection> sink;
+
+			Http3ConnectionInitializer(ChannelHandler handler, MonoSink<Connection> sink) {
+				this.handler = handler;
+				this.sink = sink;
+			}
+
+			@Override
+			protected void initChannel(Channel ch) {
+				ch.pipeline().addLast(handler, new PooledConnectionAllocator.Http3MaxStreamsHandler(sink));
+			}
+
+			@Override
+			public boolean isSharable() {
+				return true;
+			}
+		}
+
+		static final class Http3MaxStreamsHandler extends ChannelInboundHandlerAdapter {
+
+			volatile int configured;
+			static final AtomicIntegerFieldUpdater<Http3MaxStreamsHandler> CONFIGURED_UPDATER =
+					AtomicIntegerFieldUpdater.newUpdater(Http3MaxStreamsHandler.class, "configured");
+
+			final MonoSink<Connection> sink;
+
+			Http3MaxStreamsHandler(MonoSink<Connection> sink) {
+				this.sink = sink;
+			}
+
+			@Override
+			public void channelInactive(ChannelHandlerContext ctx) {
+				if (CONFIGURED_UPDATER.compareAndSet(this, 0, 1)) {
+					sink.error(new IOException("Connection closed before receiving MAX_STREAMS limit"));
+				}
+				ctx.fireChannelInactive();
+			}
+
+			@Override
+			public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+				if (CONFIGURED_UPDATER.compareAndSet(this, 0, 1)) {
+					sink.error(cause);
+				}
+				ctx.fireExceptionCaught(cause);
+			}
+
+			@Override
+			public boolean isSharable() {
+				return false;
+			}
+
+			@Override
+			public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				if (evt instanceof QuicStreamLimitChangedEvent) {
+					if (CONFIGURED_UPDATER.compareAndSet(this, 0, 1)) {
+						// Wait to receive the first max stream limit from the server, only then emit the Connection
+						sink.success(Connection.from(ctx.channel()));
+					}
+					else {
+						ConnectionObserver owner = ctx.channel().attr(Http3ConnectionProvider.OWNER).get();
+						if (owner instanceof Http3ConnectionProvider.DisposableAcquire) {
+							Http3ConnectionProvider.DisposableAcquire da = (Http3ConnectionProvider.DisposableAcquire) owner;
+							if (da.pooledRef != null) {
+								Http2Pool.Http2PooledRef ref = Http2ConnectionProvider.http2PooledRef(da.pooledRef);
+								ref.slot.updateMaxConcurrentStreams(0);
+								if (log.isDebugEnabled()) {
+									log.debug(format(ctx.channel(),
+											"Received QuicStreamLimitChangedEvent, updated max streams to [{}]"), ref.slot.maxConcurrentStreams);
+								}
+							}
+						}
+						else if (log.isDebugEnabled()) {
+							log.debug(format(ctx.channel(),
+									"Received QuicStreamLimitChangedEvent, owner is [{}]"),
+									owner != null ? owner.getClass().getSimpleName() : "null");
+						}
+					}
+				}
+				ctx.fireUserEventTriggered(evt);
+			}
+		}
 	}
 }
