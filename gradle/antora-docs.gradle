@@ -25,6 +25,14 @@ def isCommandAvailable(String command) {
 antora {
 	options = [clean: true, fetch: !project.gradle.startParameter.offline, stacktrace: true]
 
+	def version = project.version
+	def forcePdf = project.hasProperty('forcePdf')
+
+	if (!version.endsWith("-SNAPSHOT") || forcePdf) {
+		logger.log(LogLevel.DEBUG, "enabling antora pdf-extension")
+		options.add('--extension=pdf-extension')
+	}
+
 	environment = [
 			'ALGOLIA_API_KEY'   : 'd4bf9918bfc7d63ae68fbf92d69c2f49',
 			'ALGOLIA_APP_ID'    : '82SNR5M8HE',
@@ -38,10 +46,7 @@ tasks.named("antora") {
 
 	if (!version.endsWith("-SNAPSHOT") || forcePdf) {
 		doFirst {
-			if (isCommandAvailable('asciidoctor-pdf')) {
-				logger.log(LogLevel.DEBUG, "enabling antora pdf-extension")
-				antora.options.add('--extension=pdf-extension')
-			} else {
+			if (!isCommandAvailable('asciidoctor-pdf')) {
 				throw new GradleException("PDF cannot be generated, asciidoctor-pdf not found from the PATH.")
 			}
 		}
