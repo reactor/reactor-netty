@@ -798,6 +798,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	protected void afterInboundComplete() {
+		if (!isHttp2()) {
+			channel().pipeline().fireUserEventTriggered(HttpServerOperationsTerminatedEvent.INSTANCE);
+		}
+	}
+
+	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		Class<?> msgClass = msg.getClass();
 		if (msgClass == DefaultHttpRequest.class) {
