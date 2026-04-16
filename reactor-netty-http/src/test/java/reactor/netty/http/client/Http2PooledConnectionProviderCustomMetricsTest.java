@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static reactor.netty.http.HttpProtocol.H2;
+import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 
 class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 
@@ -83,7 +84,11 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 				createClient(pool, disposableServer::address)
 				        .protocol(H2)
 				        .secure(spec -> spec.sslContext(sslClient))
-				        .doOnConnected(connection -> latch.countDown());
+				        .observe((conn, state) -> {
+				            if (state == STREAM_CONFIGURED) {
+				                latch.countDown();
+				            }
+				        });
 
 		try {
 			IntStream.range(0, 5)
