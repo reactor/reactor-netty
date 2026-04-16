@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,8 @@ public final class WebsocketServer {
 				Http2SslContextSpec http2SslContextSpec =
 						Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 				server = server.secure(spec -> spec.sslContext(http2SslContextSpec))
-				               .protocol(HttpProtocol.H2);
+				               .protocol(HttpProtocol.H2)
+				               .http2Settings(spec -> spec.connectProtocolEnabled(true));
 			}
 			else {
 				Http11SslContextSpec http11SslContextSpec =
