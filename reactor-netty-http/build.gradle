@@ -192,6 +192,7 @@ dependencies {
 	http3TestImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 	http3TestImplementation "org.assertj:assertj-core:$assertJVersion"
 	http3TestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	http3TestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	http3TestImplementation "io.netty:netty-codec-native-quic:$nettyVersion$os_suffix"
 	http3TestImplementation "io.netty:netty-pkitesting:$nettyVersion"
 	http3TestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
