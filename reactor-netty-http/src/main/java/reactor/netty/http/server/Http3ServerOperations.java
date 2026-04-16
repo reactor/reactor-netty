@@ -83,5 +83,10 @@ final class Http3ServerOperations extends HttpServerOperations {
 		throw new IllegalStateException("request not parsed");
 	}
 
+	@Override
+	protected void afterInboundComplete() {
+		// noop
+	}
+
 	static final HttpVersion H3 = HttpVersion.valueOf("HTTP/3.0");
 }

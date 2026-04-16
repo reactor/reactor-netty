@@ -241,6 +241,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 					return;
 				}
 
+				ChannelOperations<?, ?> existingOps = ChannelOperations.get(ctx.channel());
+				if (existingOps instanceof HttpServerOperations) {
+					if (HttpServerOperations.log.isDebugEnabled()) {
+						HttpServerOperations.log.debug(format(ctx.channel(), "Buffering keep-alive request, previous ops not yet terminated"));
+					}
+					overflow = true;
+					doPipeline(ctx, new HttpRequestHolder(request));
+					return;
+				}
+
 				HttpServerOperations ops;
 				Instant timestamp = Instant.now();
 				ConnectionInfo connectionInfo = null;
@@ -519,6 +529,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		ctx.write(response, promise);
 	}
 
+	@Override
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+		if (evt == HttpServerOperationsTerminatedEvent.INSTANCE) {
+			if (persistentConnection && ctx.channel().isActive()) {
+				resumeRead();
+			}
+		}
+		ctx.fireUserEventTriggered(evt);
+	}
+
 	@SuppressWarnings("FutureReturnValueIgnored")
 	void handleLastHttpContent(Object msg, ChannelPromise promise) {
 		finalizingResponse = true;
@@ -554,6 +574,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			}
 		}
 
+	}
+
+	void resumeRead() {
 		if (pipelined != null && !pipelined.isEmpty()) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
 				HttpServerOperations.log.debug(format(ctx.channel(), "Draining next pipelined " +
