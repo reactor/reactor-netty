@@ -39,6 +39,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.internal.shaded.reactor.pool.PoolBuilder;
@@ -237,8 +239,9 @@ class Http3PoolTest {
 		}
 	}
 
-	@Test
-	void serverReplenishesStreams() {
+	@ParameterizedTest
+	@CsvSource({"1, 1, 1", "2, 2, 2"})
+	void serverReplenishesStreams(int streamsToRelease, int replenishedPeerAllowed, int expectedMaxConcurrentStreams) {
 		TestQuicChannel channel = new TestQuicChannel(2);
 
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
@@ -266,9 +269,12 @@ class Http3PoolTest {
 			assertThat(slot.canOpenStream()).isFalse();
 			assertThat(slot.maxConcurrentStreams).isEqualTo(2);
 
-			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+			for (int i = 0; i < streamsToRelease; i++) {
+				acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+				acquired.remove(0);
+			}
 
-			assertThat(http3Pool.activeStreams()).isEqualTo(1);
+			assertThat(http3Pool.activeStreams()).isEqualTo(2 - streamsToRelease);
 			// In HTTP/3, releasing a stream does NOT replenish peerAllowedStreams.
 			// The peer budget is 0 (both used) and only the server can replenish via MAX_STREAMS.
 			assertThat(slot.canOpenStream()).isFalse();
@@ -280,17 +286,18 @@ class Http3PoolTest {
 			});
 			channel.runPendingTasks();
 
-			assertThat(acquired).hasSize(2);
+			int acquiredBeforeReplenish = acquired.size();
+			assertThat(acquiredBeforeReplenish).isEqualTo(2 - streamsToRelease);
 
 			// Simulate server replenishing streams via MAX_STREAMS
-			channel.setPeerAllowedStreams(QuicStreamType.BIDIRECTIONAL, 1);
+			channel.setPeerAllowedStreams(QuicStreamType.BIDIRECTIONAL, replenishedPeerAllowed);
 			slot.updateMaxConcurrentStreams(0);
 
 			channel.runPendingTasks();
 
-			assertThat(acquired).hasSize(3);
-			assertThat(http3Pool.activeStreams()).isEqualTo(2);
-			assertThat(slot.maxConcurrentStreams).isEqualTo(1);
+			assertThat(acquired).hasSize(acquiredBeforeReplenish + 1);
+			assertThat(http3Pool.activeStreams()).isEqualTo(2 - streamsToRelease + 1);
+			assertThat(slot.maxConcurrentStreams).isEqualTo(expectedMaxConcurrentStreams);
 
 			for (PooledRef<Connection> ref : acquired) {
 				ref.invalidate().block(Duration.ofSeconds(1));

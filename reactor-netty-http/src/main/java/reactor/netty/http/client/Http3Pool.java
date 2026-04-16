@@ -110,8 +110,10 @@ final class Http3Pool extends Http2Pool {
 			if (diff != 0) {
 				maxConcurrentStreams = newMaxConcurrentStreams;
 				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, diff);
-				pool.drain();
 			}
+			// Always drain: even when maxConcurrentStreams hasn't changed, the server
+			// may have replenished peer-allowed streams, so pending borrowers must be woken up.
+			pool.drain();
 		}
 
 		private int peerAllowedMaxStreams() {
