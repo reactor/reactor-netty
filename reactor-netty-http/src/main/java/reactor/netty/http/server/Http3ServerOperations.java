@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,6 +83,11 @@ final class Http3ServerOperations extends HttpServerOperations {
 			return H3;
 		}
 		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	protected void afterInboundComplete() {
+		// noop
 	}
 
 	static final HttpVersion H3 = HttpVersion.valueOf("HTTP/3.0");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3926,4 +3926,86 @@ class HttpServerTests extends BaseHttpTest {
 		public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		}
 	}
+
+	@Test
+	@Timeout(30)
+	void testIssue4188() throws Exception {
+		// https://github.com/reactor/reactor-netty/issues/4188
+		//
+		// Verifies the fix for a TOCTOU race condition in HttpTrafficHandler:
+		//
+		// Before the fix, when a keep-alive request arrived while the previous ops was
+		// still the current channel-bound ops, Connection.from(ctx.channel()) could
+		// return that request-scoped HttpServerOperations. If that ops later terminated,
+		// the new request could inherit an unstable parent chain.
+		//
+		// The fix buffers the next HTTP/1.1 keep-alive request while the previous ops
+		// is still channel-bound, and resumes read processing only after the previous
+		// ops reaches afterInboundComplete() inside terminate(), i.e. after the channel
+		// rebind point and before transition to DisposedConnection.
+
+		Field connectionField = ChannelOperations.class.getDeclaredField("connection");
+		connectionField.setAccessible(true);
+
+		int requestCount = 3;
+		List<Connection> parentConnections = new CopyOnWriteArrayList<>();
+		CountDownLatch latch = new CountDownLatch(requestCount);
+
+		disposableServer = createServer()
+				.doOnConnection(conn -> {
+					try {
+						Connection parent = (Connection) connectionField.get(conn);
+						parentConnections.add(parent);
+						latch.countDown();
+					}
+					catch (IllegalAccessException e) {
+						throw new RuntimeException(e);
+					}
+				})
+				.handle((req, res) -> {
+					// Send response immediately (Content-Length: 0), but delay chain
+					// completion. This keeps the current ops alive in the channel
+					// attribute when the next keep-alive request arrives via
+					// setAutoRead(true), which is the precondition for the TOCTOU race.
+					res.header(HttpHeaderNames.CONTENT_LENGTH, "0");
+					return res.then()
+					          .then(Mono.delay(Duration.ofMillis(200)).then());
+				})
+				.bindNow();
+
+		ConnectionProvider p = ConnectionProvider.create("testIssue4188", 1);
+
+		try {
+			Flux.range(0, requestCount)
+			    .concatMap(i ->
+			        createClient(p, disposableServer.port())
+			            .get()
+			            .uri("/")
+			            .responseSingle((r, bytes) -> {
+			                assertThat(r.status().code()).isEqualTo(200);
+			                return bytes.asString().defaultIfEmpty("");
+			            }))
+			    .blockLast(Duration.ofSeconds(20));
+		}
+		finally {
+			p.disposeLater().block(Duration.ofSeconds(5));
+		}
+
+		assertThat(latch.await(20, TimeUnit.SECONDS)).as("all requests processed").isTrue();
+		assertThat(parentConnections).hasSize(requestCount);
+
+		// All ops must share the same parent connection
+		Connection firstParent = parentConnections.get(0);
+		for (int i = 1; i < parentConnections.size(); i++) {
+			assertThat(parentConnections.get(i))
+					.as("ops[%d] parent connection should be the same stable initial connection", i)
+					.isSameAs(firstParent);
+		}
+
+		// The parent must NOT be a ChannelOperations (which can be terminated/disposed)
+		assertThat(firstParent)
+				.as("parent connection should not be a terminable ChannelOperations")
+				.isNotInstanceOf(ChannelOperations.class);
+	}
+
 }
