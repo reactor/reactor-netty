@@ -522,13 +522,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	}
 
 	@Override
-	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		if (evt == HttpServerOperationsTerminatedEvent.INSTANCE) {
 			if (persistentConnection && ctx.channel().isActive()) {
 				resumeRead();
 			}
 		}
-		super.userEventTriggered(ctx, evt);
+		ctx.fireUserEventTriggered(evt);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
