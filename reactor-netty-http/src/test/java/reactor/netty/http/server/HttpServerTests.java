@@ -113,7 +113,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -3714,7 +3713,6 @@ class HttpServerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
-	@Disabled
 	@SuppressWarnings("deprecation")
 	void testIssue2760_H2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
@@ -3728,7 +3726,6 @@ class HttpServerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
-	@Disabled
 	void testIssue2760_H2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		testIssue2760(server -> server.protocol(serverProtocols), client -> client.protocol(clientProtocols));
 	}
@@ -3747,14 +3744,27 @@ class HttpServerTests extends BaseHttpTest {
 					clientCustomizer.apply(createClient(provider, () -> disposableServer.address()).runOn(loopClient)));
 		}
 		finally {
-			provider.disposeLater().block(Duration.ofSeconds(5));
-			if (loopServer != null) {
-				loopServer.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
-				          .block(Duration.ofSeconds(5));
+			try {
+				// Dispose the server before disposing the server's event loop, otherwise
+				// the listen channel's close task would be submitted to an already
+				// terminated event loop and the closeFuture would never complete,
+				// leading to a "Socket couldn't be stopped within 3000ms" failure in
+				// BaseHttpTest#disposeServer / tearDown.
+				if (disposableServer != null) {
+					disposableServer.disposeNow();
+					disposableServer = null;
+				}
 			}
-			if (loopClient != null) {
-				loopClient.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
-				          .block(Duration.ofSeconds(5));
+			finally {
+				provider.disposeLater().block(Duration.ofSeconds(5));
+				if (loopServer != null) {
+					loopServer.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
+					          .block(Duration.ofSeconds(5));
+				}
+				if (loopClient != null) {
+					loopClient.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
+					          .block(Duration.ofSeconds(5));
+				}
 			}
 		}
 	}
