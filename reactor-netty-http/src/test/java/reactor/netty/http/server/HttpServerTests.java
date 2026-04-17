@@ -3740,14 +3740,27 @@ class HttpServerTests extends BaseHttpTest {
 					clientCustomizer.apply(createClient(provider, () -> disposableServer.address()).runOn(loopClient)));
 		}
 		finally {
-			provider.disposeLater().block(Duration.ofSeconds(5));
-			if (loopServer != null) {
-				loopServer.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
-				          .block(Duration.ofSeconds(5));
+			try {
+				// Dispose the server before disposing the server's event loop, otherwise
+				// the listen channel's close task would be submitted to an already
+				// terminated event loop and the closeFuture would never complete,
+				// leading to a "Socket couldn't be stopped within 3000ms" failure in
+				// BaseHttpTest#disposeServer / tearDown.
+				if (disposableServer != null) {
+					disposableServer.disposeNow();
+					disposableServer = null;
+				}
 			}
-			if (loopClient != null) {
-				loopClient.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
-				          .block(Duration.ofSeconds(5));
+			finally {
+				provider.disposeLater().block(Duration.ofSeconds(5));
+				if (loopServer != null) {
+					loopServer.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
+					          .block(Duration.ofSeconds(5));
+				}
+				if (loopClient != null) {
+					loopClient.disposeLater(Duration.ofSeconds(0), Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT))
+					          .block(Duration.ofSeconds(5));
+				}
 			}
 		}
 	}
