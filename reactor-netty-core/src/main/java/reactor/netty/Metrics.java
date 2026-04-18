@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,14 @@ public class Metrics {
 	 * registered in Micrometer's global registry.
 	 */
 	public static final String HTTP_CLIENT_PREFIX = "reactor.netty.http.client";
+
+	/**
+	 * Name prefix that will be used for the WebSocket client's metrics
+	 * registered in Micrometer's global registry.
+	 *
+	 * @since 1.3.5
+	 */
+	public static final String WEBSOCKET_CLIENT_PREFIX = "reactor.netty.websocket.client";
 
 	/**
 	 * Name prefix that will be used for the TCP server's metrics
@@ -144,6 +152,20 @@ public class Metrics {
 	 * Total time for the request/response.
 	 */
 	public static final String RESPONSE_TIME = ".response.time";
+
+	/**
+	 * Time spent for WebSocket handshake.
+	 *
+	 * @since 1.3.5
+	 */
+	public static final String HANDSHAKE_TIME = ".handshake.time";
+
+	/**
+	 * Duration of the WebSocket connection.
+	 *
+	 * @since 1.3.5
+	 */
+	public static final String CONNECTION_DURATION = ".connection.duration";
 
 	/**
 	 * The number of all connections, whether they are active or idle.
