@@ -8,9 +8,23 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.client.AbstractWebSocketClientMetricsHandler"
+		},
+		"name": "reactor.netty.http.client.AbstractWebSocketClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.client.ContextAwareHttpClientMetricsHandler"
 		},
 		"name": "reactor.netty.http.client.ContextAwareHttpClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.ContextAwareWebSocketClientMetricsHandler"
+		},
+		"name": "reactor.netty.http.client.ContextAwareWebSocketClientMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
@@ -130,6 +144,20 @@
 			"typeReachable": "reactor.netty.http.client.MicrometerHttpClientMetricsHandler"
 		},
 		"name": "reactor.netty.http.client.MicrometerHttpClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.MicrometerWebSocketClientMetricsHandler"
+		},
+		"name": "reactor.netty.http.client.MicrometerWebSocketClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.WebSocketClientMetricsHandler"
+		},
+		"name": "reactor.netty.http.client.WebSocketClientMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
