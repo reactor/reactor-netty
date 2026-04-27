@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,11 @@ import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
  * A {@link ChannelMetricsRecorder} implementation for integration with Micrometer.
+ * <p>Meters use a {@link reactor.netty.Metrics#REMOTE_ADDRESS remote.address} tag whose value is derived
+ * from each peer address. Applications should apply a {@link io.micrometer.core.instrument.config.MeterFilter}
+ * such as {@link io.micrometer.core.instrument.config.MeterFilter#maximumAllowableTags maximumAllowableTags}
+ * on the registry, scoped to the
+ * transport's metric name prefix and the {@code remote.address} tag key, to cap cardinality.
  *
  * @author Violeta Georgieva
  * @since 0.9

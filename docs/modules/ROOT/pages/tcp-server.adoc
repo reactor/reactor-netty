@@ -227,6 +227,9 @@ See xref:observability.adoc#observability-metrics-errors-count[Errors Count]
 See xref:observability.adoc#observability-metrics-tls-handshake-time[Tls Handshake Time]
 |=======
 
+:channel-metrics-prefix: reactor.netty.tcp.server
+include::partial$tcp-udp-metrics-remote-address-filter.adoc[]
+
 These additional metrics are also available:
 
 include::partial$alloc-metrics.adoc[]

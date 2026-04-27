@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,6 +131,22 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 		return super.host(host);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 * <p>When metrics are enabled with the default Micrometer {@link ChannelMetricsRecorder}, several meters use a
+	 * {@link reactor.netty.Metrics#REMOTE_ADDRESS remote.address} tag with one value per distinct peer. That cardinality can grow
+	 * without bound, so it is best practice to configure
+	 * {@link io.micrometer.core.instrument.config.MeterFilter#maximumAllowableTags maximumAllowableTags} on the registry
+	 * for {@link reactor.netty.Metrics#UDP_CLIENT_PREFIX} and {@link reactor.netty.Metrics#REMOTE_ADDRESS}. For example:
+	 * <pre class="code">
+	 * import io.micrometer.core.instrument.MeterFilter;
+	 * import io.micrometer.core.instrument.Metrics;
+	 *
+	 * Metrics.globalRegistry
+	 *        .config()
+	 *        .meterFilter(MeterFilter.maximumAllowableTags(UDP_CLIENT_PREFIX, REMOTE_ADDRESS, 100, MeterFilter.deny()));
+	 * </pre>
+	 */
 	@Override
 	public final UdpClient metrics(boolean enable) {
 		return super.metrics(enable);
