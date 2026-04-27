@@ -2,7 +2,7 @@ NOTE: TCP and UDP channel metrics include a `remote.address` tag for the peer.
 Each distinct address adds time series, which can increase memory and CPU usage on the registry.
 As a best practice, configure an upper bound for that tag with https://micrometer.io/docs/concepts#_denyaccept_meters[`MeterFilter.maximumAllowableTags`], using this transport's metric name prefix and `reactor.netty.Metrics.REMOTE_ADDRESS` as the tag key.
 
-[source,java,subs=verbatim+attributes]
+[source,java,subs=attributes+]
 ----
 import io.micrometer.core.instrument.MeterFilter;
 import io.micrometer.core.instrument.Metrics;
