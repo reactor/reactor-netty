@@ -1727,8 +1727,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				Http2Headers headers = ((Http2HeadersFrame) msg).headers();
 				CharSequence value = headers.get(Http2Headers.PseudoHeaderName.PROTOCOL.value());
 				if (value != null) {
-					headers.set("x-http2-protocol", value);
-					headers.set("x-http2-path", headers.path());
+					Channel ch = ctx.channel();
+					ch.attr(HttpServerOperations.EXTENDED_CONNECT_PROTOCOL).set(value.toString());
+					CharSequence path = headers.path();
+					if (path != null) {
+						ch.attr(HttpServerOperations.EXTENDED_CONNECT_PATH).set(path.toString());
+					}
 				}
 				ctx.pipeline().remove(this);
 			}

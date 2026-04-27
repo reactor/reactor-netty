@@ -79,6 +79,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
@@ -131,6 +132,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
+	final String http2ExtendedConnectProtocol;
 	final boolean is100ContinueExpected;
 	final boolean isHttp2;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
@@ -166,6 +168,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieHolder = replaced.cookieHolder;
 		this.currentContext = replaced.currentContext;
 		this.formDecoderProvider = replaced.formDecoderProvider;
+		this.http2ExtendedConnectProtocol = replaced.http2ExtendedConnectProtocol;
 		this.is100ContinueExpected = replaced.is100ContinueExpected;
 		this.isHttp2 = replaced.isHttp2;
 		this.isWebsocket = replaced.isWebsocket;
@@ -217,11 +220,21 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
 		if (isHttp2) {
-			String uri = this.nettyRequest.headers().get("x-http2-path");
-			if (uri != null) {
-				this.nettyRequest.headers().remove("x-http2-path");
-				this.nettyRequest.setUri(uri);
+			Channel ch = channel();
+			String protocol = ch.attr(EXTENDED_CONNECT_PROTOCOL).getAndSet(null);
+			if (protocol != null) {
+				String path = ch.attr(EXTENDED_CONNECT_PATH).getAndSet(null);
+				if (path != null) {
+					this.nettyRequest.setUri(path);
+				}
+				this.http2ExtendedConnectProtocol = protocol;
 			}
+			else {
+				this.http2ExtendedConnectProtocol = null;
+			}
+		}
+		else {
+			this.http2ExtendedConnectProtocol = null;
 		}
 		this.resolvedHeadersFactory = validateHeaders ? headersFactory() : DEFAULT_HEADERS_NO_VALIDATION;
 		this.resolvedTrailersFactory = validateHeaders ? trailersFactory() : DEFAULT_TRAILERS_NO_VALIDATION;
@@ -1368,6 +1381,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static final DefaultHttpHeadersFactory DEFAULT_HEADERS_NO_VALIDATION = headersFactory().withValidation(false);
 
 	static final DefaultHttpHeadersFactory DEFAULT_TRAILERS_NO_VALIDATION = trailersFactory().withValidation(false);
+
+	static final AttributeKey<String> EXTENDED_CONNECT_PATH =
+			AttributeKey.valueOf(HttpServerOperations.class.getName() + ".EXTENDED_CONNECT_PATH");
+	static final AttributeKey<String> EXTENDED_CONNECT_PROTOCOL =
+			AttributeKey.valueOf(HttpServerOperations.class.getName() + ".EXTENDED_CONNECT_PROTOCOL");
 
 	static final class FailedHttpServerRequest extends HttpServerOperations {
 
