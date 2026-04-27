@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -348,7 +348,7 @@ public interface HttpServerRoutes extends
 			HttpHeaders requestHeaders = req.requestHeaders();
 			HttpServerOperations ops = (HttpServerOperations) req;
 			if (requestHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) ||
-					(ops.isHttp2 && requestHeaders.containsValue("x-http2-protocol", HttpHeaderValues.WEBSOCKET, true))) {
+					HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(ops.http2ExtendedConnectProtocol)) {
 				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();
