@@ -32,7 +32,6 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -69,8 +68,6 @@ import static reactor.netty.ReactorNetty.format;
  * handler management.
  */
 final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable {
-
-	static final String MULTIPART_PREFIX = "multipart";
 
 	static final HttpVersion H2 = HttpVersion.valueOf("HTTP/2.0");
 
@@ -711,8 +708,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	 * @return true if the response has a self defined message length.
 	 */
 	static boolean isSelfDefinedMessageLength(HttpResponse response) {
-		return isContentLengthSet(response) || isTransferEncodingChunked(response) || isMultipart(
-				response) || isInformational(response) || isNotModified(response) || isNoContent(response);
+		return isContentLengthSet(response) || isTransferEncodingChunked(response) || isInformational(response)
+				|| isNotModified(response) || isNoContent(response);
 	}
 
 	static boolean isInformational(HttpResponse response) {
@@ -726,16 +723,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	static boolean isNotModified(HttpResponse response) {
 		return HttpResponseStatus.NOT_MODIFIED.code() == response.status().code();
-	}
-
-	static boolean isMultipart(HttpResponse response) {
-		String contentType = response.headers()
-		                             .get(HttpHeaderNames.CONTENT_TYPE);
-		return contentType != null && contentType.regionMatches(true,
-				0,
-				MULTIPART_PREFIX,
-				0,
-				MULTIPART_PREFIX.length());
 	}
 
 	static final class HttpRequestHolder {
