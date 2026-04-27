@@ -178,6 +178,9 @@ See xref:observability.adoc#observability-metrics-data-sent[Data Sent]
 See xref:observability.adoc#observability-metrics-errors-count[Errors Count]
 |=======
 
+:channel-metrics-prefix: reactor.netty.udp.server
+include::partial$tcp-udp-metrics-remote-address-filter.adoc[]
+
 These additional metrics are also available:
 
 include::partial$alloc-metrics.adoc[]

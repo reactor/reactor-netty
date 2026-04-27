@@ -188,6 +188,9 @@ See xref:observability.adoc#observability-metrics-connect-time[Connect Time]
 See xref:observability.adoc#observability-metrics-hostname-resolution-time[Hostname Resolution Time]
 |=======
 
+:channel-metrics-prefix: reactor.netty.udp.client
+include::partial$tcp-udp-metrics-remote-address-filter.adoc[]
+
 These additional metrics are also available:
 
 include::partial$alloc-metrics.adoc[]

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,12 +123,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}.
 	 * Applications can separately register their own
 	 * {@link io.micrometer.core.instrument.config.MeterFilter filters}.
-	 * For example, to put an upper bound on the number of tags produced:
-	 * <pre class="code">
-	 * MeterFilter filter = ... ;
-	 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(prefix, 100, filter));
-	 * </pre>
-	 * <p>By default this is not enabled.
+	 * <p>By default, this is not enabled.
 	 *
 	 * @param enable true enables metrics collection; false disables it
 	 * @return a new {@link Transport} reference
