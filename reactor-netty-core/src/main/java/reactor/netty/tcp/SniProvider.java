@@ -126,6 +126,10 @@ final class SniProvider {
 			}
 
 			SslProvider sslProvider = future.getNow();
+			if (sslProvider == null) {
+				throw new DecoderException("failed to get the SslContext for " + hostname
+						+ ": the SNI mapping returned null");
+			}
 			SslHandler sslHandler = null;
 			try {
 				sslHandler = sslProvider.getSslContext().newHandler(ctx.alloc());
