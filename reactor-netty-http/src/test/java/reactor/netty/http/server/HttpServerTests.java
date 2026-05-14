@@ -67,6 +67,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -2433,6 +2434,58 @@ class HttpServerTests extends BaseHttpTest {
 
 		assertThat(hostname.get()).isNotNull();
 		assertThat(hostname.get()).isEqualTo("test.com");
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void testSniSupportAsyncMappingsReturningNull() throws Exception {
+		Http11SslContextSpec defaultSslContextBuilder =
+				Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+
+		Http11SslContextSpec clientSslContextBuilder =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		Sinks.One<Throwable> error = Sinks.one();
+		AtomicReference<String> mappedHostname = new AtomicReference<>();
+		disposableServer =
+				createServer()
+				        .secure(spec -> spec.sslContext(defaultSslContextBuilder)
+				                            .setSniAsyncMappings((input, promise) -> {
+				                                mappedHostname.set(input);
+				                                return promise.setSuccess(null);
+				                            }))
+				        .doOnChannelInit((obs, ch, addr) ->
+				                ch.pipeline().addBefore(NettyPipeline.ReactiveBridge, "testSniSupportAsyncMappingsReturningNull",
+				                        new ChannelInboundHandlerAdapter() {
+
+				                            @Override
+				                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+				                                error.tryEmitValue(cause);
+				                                ctx.fireExceptionCaught(cause);
+				                            }
+				                        }))
+				        .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
+				        .bindNow();
+
+		createClient(disposableServer::address)
+		        .secure(spec -> spec.sslContext(clientSslContextBuilder)
+		                            .serverNames(new SNIHostName("test.com")))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .as(StepVerifier::create)
+		        .expectError()
+		        .verify(Duration.ofSeconds(10));
+
+		StepVerifier.create(error.asMono())
+		            .expectNextMatches(t -> t instanceof DecoderException
+		                    && t.getMessage() != null
+		                    && t.getMessage().contains(String.valueOf(mappedHostname.get()))
+		                    && t.getMessage().contains("the SNI mapping returned null"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(10));
 	}
 
 	@Test
