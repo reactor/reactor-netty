@@ -120,11 +120,18 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					}
 
 					handshakerHttp2.finishHandshake(channel(), response);
+					if (micrometerWsHandler != null) {
+						micrometerWsHandler.recordHandshakeComplete(channel(),
+								String.valueOf(response.status().code()));
+					}
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {
+					if (micrometerWsHandler != null) {
+						micrometerWsHandler.recordHandshakeFailure(channel());
+					}
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.close();
@@ -156,7 +163,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					"Websocket version [" + websocketClientSpec.version().toHttpHeaderValue() + "] is not supported.");
 		}
 
-		removeHandler(NettyPipeline.HttpMetricsHandler);
+		swapMetricsHandler();
 
 		if (websocketClientSpec.compress()) {
 			requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
@@ -187,6 +194,11 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 		                   markPersistent(false);
 		                   channel.read();
 		               });
+	}
+
+	@Override
+	String wsHttpMethod() {
+		return "CONNECT";
 	}
 
 	@Override

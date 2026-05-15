@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -49,6 +50,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
+import reactor.util.context.ContextView;
 
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
@@ -60,6 +62,7 @@ import static reactor.netty.ReactorNetty.format;
  * @author Stephane Maldini
  * @author Simon Baslé
  * @author raccoonback
+ * @author LivingLikeKrillin
  */
 class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
@@ -67,6 +70,8 @@ class WebsocketClientOperations extends HttpClientOperations
 	WebSocketClientHandshaker handshakerHttp11;
 	final Sinks.One<WebSocketCloseStatus> onCloseState;
 	final boolean proxyPing;
+
+	@Nullable AbstractWebSocketClientMetricsHandler micrometerWsHandler;
 
 	volatile int closeSent;
 
@@ -85,7 +90,7 @@ class WebsocketClientOperations extends HttpClientOperations
 		// Returned value is deliberately ignored
 		addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-		removeHandler(NettyPipeline.HttpMetricsHandler);
+		swapMetricsHandler();
 
 		if (websocketClientSpec.compress()) {
 			requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
@@ -148,11 +153,18 @@ class WebsocketClientOperations extends HttpClientOperations
 			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
 					handshakerHttp11.finishHandshake(channel(), response);
+					if (micrometerWsHandler != null) {
+						micrometerWsHandler.recordHandshakeComplete(channel(),
+								String.valueOf(response.status().code()));
+					}
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {
+					if (micrometerWsHandler != null) {
+						micrometerWsHandler.recordHandshakeFailure(channel());
+					}
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.close();
@@ -222,6 +234,75 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	boolean isHandshakeComplete() {
 		return handshakerHttp11.isHandshakeComplete();
+	}
+
+	void swapMetricsHandler() {
+		Channel channel = channel();
+		ChannelHandler existingHandler = channel.pipeline().get(NettyPipeline.HttpMetricsHandler);
+		if (existingHandler instanceof AbstractHttpClientMetricsHandler) {
+			AbstractHttpClientMetricsHandler httpHandler = (AbstractHttpClientMetricsHandler) existingHandler;
+			channel.pipeline().remove(NettyPipeline.HttpMetricsHandler);
+
+			String rawPath = resolvePath(this);
+			String resolvedPath = httpHandler.uriTagValue != null ? httpHandler.uriTagValue.apply(rawPath) : rawPath;
+			ContextView ctxView = currentContext();
+			String httpMethod = wsHttpMethod();
+
+			AbstractWebSocketClientMetricsHandler wsHandler;
+			if (httpHandler instanceof MicrometerHttpClientMetricsHandler) {
+				wsHandler = new MicrometerWebSocketClientMetricsHandler(
+						MicrometerWebSocketClientMetricsRecorder.INSTANCE,
+						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
+			}
+			else if (httpHandler instanceof ContextAwareHttpClientMetricsHandler) {
+				ContextAwareHttpClientMetricsHandler ctxHandler = (ContextAwareHttpClientMetricsHandler) httpHandler;
+				ContextAwareWebSocketClientMetricsRecorder wsRecorder;
+				if (ctxHandler.recorder instanceof ContextAwareWebSocketClientMetricsRecorder) {
+					wsRecorder = (ContextAwareWebSocketClientMetricsRecorder) ctxHandler.recorder;
+				}
+				else {
+					wsRecorder = new DefaultContextAwareWebSocketClientMetricsRecorder(ctxHandler.recorder);
+				}
+				wsHandler = new ContextAwareWebSocketClientMetricsHandler(
+						wsRecorder,
+						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
+			}
+			else if (httpHandler instanceof HttpClientMetricsHandler) {
+				HttpClientMetricsHandler plainHandler = (HttpClientMetricsHandler) httpHandler;
+				WebSocketClientMetricsRecorder wsRecorder;
+				if (plainHandler.recorder instanceof WebSocketClientMetricsRecorder) {
+					wsRecorder = (WebSocketClientMetricsRecorder) plainHandler.recorder;
+				}
+				else {
+					wsRecorder = new DefaultWebSocketClientMetricsRecorder(plainHandler.recorder);
+				}
+				wsHandler = new WebSocketClientMetricsHandler(
+						wsRecorder,
+						httpHandler.remoteAddress, httpHandler.proxyAddress, resolvedPath, ctxView, httpMethod);
+			}
+			else {
+				return;
+			}
+			wsHandler.startHandshake(channel);
+			this.micrometerWsHandler = wsHandler;
+			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.WsMetricsHandler, wsHandler);
+		}
+		else {
+			removeHandler(NettyPipeline.HttpMetricsHandler);
+		}
+	}
+
+	String wsHttpMethod() {
+		return "GET";
+	}
+
+	static String resolvePath(HttpClientOperations ops) {
+		try {
+			return ops.fullPath();
+		}
+		catch (Exception e) {
+			return "/bad-request";
+		}
 	}
 
 	@Override
