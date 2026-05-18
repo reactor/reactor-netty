@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,11 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +78,43 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 
 	@Test
 	void test() throws Exception {
+		PooledByteBufAllocator alloc = new PooledByteBufAllocator(true);
+		doRequest(alloc);
+
+		String id = alloc.metric().hashCode() + "";
+		String[] tags = new String[]{ID, id, TYPE, "pooled"};
+		checkExpectations(BYTE_BUF_ALLOCATOR_PREFIX, tags);
+
+		verifyMemoryMetrics(alloc, ACTIVE_HEAP_MEMORY, ACTIVE_DIRECT_MEMORY, tags);
+	}
+
+	@Test
+	void testUnpooled() throws Exception {
+		UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+		doRequest(alloc);
+
+		String id = alloc.metric().hashCode() + "";
+		String[] tags = new String[]{ID, id, TYPE, "unpooled"};
+		assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + USED_HEAP_MEMORY, tags).isNotNull();
+		assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + USED_DIRECT_MEMORY, tags).isNotNull();
+
+		verifyMemoryMetrics(alloc, USED_HEAP_MEMORY, USED_DIRECT_MEMORY, tags);
+	}
+
+	@Test
+	void testAdaptive() throws Exception {
+		AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true);
+		doRequest(alloc);
+
+		String id = alloc.metric().hashCode() + "";
+		String[] tags = new String[]{ID, id, TYPE, "adaptive"};
+		assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + USED_HEAP_MEMORY, tags).isNotNull();
+		assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + USED_DIRECT_MEMORY, tags).isNotNull();
+
+		verifyMemoryMetrics(alloc, USED_HEAP_MEMORY, USED_DIRECT_MEMORY, tags);
+	}
+
+	private void doRequest(ByteBufAllocator alloc) throws InterruptedException {
 		disposableServer =
 				createServer()
 				          .handle((req, res) -> res.header("Connection", "close")
@@ -83,7 +123,6 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 
 		CountDownLatch latch = new CountDownLatch(1);
 
-		PooledByteBufAllocator alloc = new PooledByteBufAllocator(true);
 		createClient(disposableServer.port())
 		          .option(ChannelOption.ALLOCATOR, alloc)
 		          .doOnResponse((res, conn) -> conn.channel()
@@ -98,32 +137,29 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 		          .block(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+	}
 
-		String id = alloc.metric().hashCode() + "";
-		String[] tags = new String[]{ID, id, TYPE, "pooled"};
-		checkExpectations(BYTE_BUF_ALLOCATOR_PREFIX, tags);
-
-		// Verify ACTIVE_HEAP_MEMORY and ACTIVE_DIRECT_MEMORY meters
+	private void verifyMemoryMetrics(ByteBufAllocator alloc, String heapMetric, String directMetric, String[] tags) {
 		List<ByteBuf> buffers = new ArrayList<>();
 		boolean releaseBufList = true;
 
 		try {
-			double currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
-			double currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
+			double currentHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + heapMetric, tags);
+			double currentDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + directMetric, tags);
 
 			IntStream.range(0, 10).mapToObj(i -> alloc.heapBuffer(102400)).forEach(buffers::add);
 			IntStream.range(0, 10).mapToObj(i -> alloc.directBuffer(102400)).forEach(buffers::add);
-			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags).hasValueGreaterThan(currentActiveHeap);
-			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags).hasValueGreaterThan(currentActiveDirect);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + heapMetric, tags).hasValueGreaterThan(currentHeap);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + directMetric, tags).hasValueGreaterThan(currentDirect);
 
-			currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
-			currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
+			currentHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + heapMetric, tags);
+			currentDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + directMetric, tags);
 
 			buffers.forEach(ByteBuf::release);
 			releaseBufList = false;
 
-			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags).hasValueLessThan(currentActiveHeap);
-			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags).hasValueLessThan(currentActiveDirect);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + heapMetric, tags).hasValueLessThan(currentHeap);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + directMetric, tags).hasValueLessThan(currentDirect);
 		}
 		finally {
 			if (releaseBufList) {

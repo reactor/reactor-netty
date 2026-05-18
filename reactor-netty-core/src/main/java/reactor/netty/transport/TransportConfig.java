@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -399,6 +400,9 @@ public abstract class TransportConfig {
 						}
 						else if (alloc instanceof UnpooledByteBufAllocator) {
 							ByteBufAllocatorMetrics.INSTANCE.registerMetrics("unpooled", ((UnpooledByteBufAllocator) alloc).metric(), alloc);
+						}
+						else if (alloc instanceof AdaptiveByteBufAllocator) {
+							ByteBufAllocatorMetrics.INSTANCE.registerMetrics("adaptive", ((AdaptiveByteBufAllocator) alloc).metric(), alloc);
 						}
 
 						MicrometerEventLoopMeterRegistrar.INSTANCE.registerMetrics(channel.eventLoop());
