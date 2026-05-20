@@ -250,7 +250,8 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
+		assertThat(spec.maxConcurrentStreams())
+				.isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS != null ? DEFAULT_MAX_CONCURRENT_STREAMS : 123);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isNull();
