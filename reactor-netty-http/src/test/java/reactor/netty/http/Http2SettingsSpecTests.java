@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty.http;
 
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Settings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class Http2SettingsSpecTests {
+
+	private static final Long DEFAULT_MAX_CONCURRENT_STREAMS = Http2Settings.defaultSettings().maxConcurrentStreams();
 
 	private Http2SettingsSpec.Builder builder;
 
@@ -40,7 +43,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isTrue();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isNull();
@@ -60,7 +63,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isEqualTo(123);
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isNull();
@@ -87,7 +90,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isEqualTo(123);
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isNull();
@@ -141,7 +144,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isEqualTo(100);
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isEqualTo(10);
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isNull();
@@ -169,7 +172,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isEqualTo(100);
@@ -197,7 +200,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxFrameSize()).isEqualTo(16384);
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
@@ -220,7 +223,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isNull();
@@ -247,14 +250,14 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxDecodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxDecodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesPerWindow()).isNull();
 		assertThat(spec.maxEncodedRstFramesSecondsPerWindow()).isNull();
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
-		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
+		assertThat(spec.maxStreams()).isEqualTo(123);
 		assertThat(spec.pingAckDropThreshold()).isEqualTo(1);
 		assertThat(spec.pingAckTimeout()).isNull();
 		assertThat(spec.pushEnabled()).isNull();
@@ -314,7 +317,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
@@ -337,7 +340,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.connectProtocolEnabled()).isNull();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.maxStreams()).isNull();
@@ -359,7 +362,7 @@ class Http2SettingsSpecTests {
 		Http2SettingsSpec spec = builder.build();
 		assertThat(spec.headerTableSize()).isNull();
 		assertThat(spec.initialWindowSize()).isNull();
-		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(DEFAULT_MAX_CONCURRENT_STREAMS);
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.pushEnabled()).isTrue();
