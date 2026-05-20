@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.function.Supplier;
  */
 public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements Supplier<T> {
 
+	// tag::snippet-code[]
 	public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH             = 4096;
 	public static final int DEFAULT_MAX_HEADER_SIZE                     = 8192;
 	/**
@@ -38,6 +39,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	public static final int DEFAULT_INITIAL_BUFFER_SIZE                 = 128;
 	public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
 	public static final boolean DEFAULT_ALLOW_PARTIAL_CHUNKS            = true;
+	// end::snippet-code[]
 
 	protected int maxInitialLineLength             = DEFAULT_MAX_INITIAL_LINE_LENGTH;
 	protected int maxHeaderSize                    = DEFAULT_MAX_HEADER_SIZE;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,14 @@ final class TcpClientConnect extends TcpClient {
 
 	final TcpClientConfig config;
 
+	// tag::snippet-code[]
 	TcpClientConnect(ConnectionProvider provider) {
 		this.config = new TcpClientConfig(
 				provider,
 				Collections.singletonMap(ChannelOption.AUTO_READ, false),
 				() -> AddressUtils.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
 	}
+	// end::snippet-code[]
 
 	TcpClientConnect(TcpClientConfig config) {
 		this.config = config;

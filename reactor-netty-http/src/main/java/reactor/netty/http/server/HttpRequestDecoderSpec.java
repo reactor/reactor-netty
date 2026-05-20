@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,12 +39,14 @@ import reactor.netty.http.HttpDecoderSpec;
  */
 public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDecoderSpec> {
 
+	// tag::snippet-code[]
 	/**
 	 * The maximum length of the content of the HTTP/2.0 clear-text upgrade request.
 	 * By default, the server will reject an upgrade request with non-empty content,
 	 * because the upgrade request is most likely a GET request.
 	 */
 	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 0;
+	// end::snippet-code[]
 
 	HttpRequestDecoderSpec() {
 		this.h2cMaxContentLength = DEFAULT_H2C_MAX_CONTENT_LENGTH;

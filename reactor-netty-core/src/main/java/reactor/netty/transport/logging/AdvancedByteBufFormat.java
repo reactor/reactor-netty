@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import io.netty.handler.logging.LoggingHandler;
  * @since 1.0.0
  */
 public enum AdvancedByteBufFormat {
+	// tag::snippet-code-1[]
 	/**
 	 * When wire logging is enabled with this format, only the events will be logged.
 	 * <p>Examples:</p>
@@ -43,7 +44,9 @@ public enum AdvancedByteBufFormat {
 	 * }
 	 * </pre>
 	 */
+	// end::snippet-code-1[]
 	SIMPLE,
+	// tag::snippet-code-2[]
 	/**
 	 * When wire logging is enabled with this format, both events and content will be logged.
 	 * The content will be in hex format.
@@ -73,7 +76,9 @@ public enum AdvancedByteBufFormat {
 	 * }
 	 * </pre>
 	 */
+	// end::snippet-code-2[]
 	HEX_DUMP,
+	// tag::snippet-code-3[]
 	/**
 	 * When wire logging is enabled with this format, both events and content will be logged.
 	 * The content will be in plain text format.
@@ -91,6 +96,7 @@ public enum AdvancedByteBufFormat {
 	 * }
 	 * </pre>
 	 */
+	// end::snippet-code-3[]
 	TEXTUAL;
 
 	/**

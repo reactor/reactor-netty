@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.http.server.accessLog;
 
+// tag::snippet-application[]
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.logging.AccessLog;
@@ -33,3 +34,4 @@ public class CustomFormatAndFilterAccessLogApplication {
 		      .block();
 	}
 }
+// end::snippet-application[]

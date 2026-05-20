@@ -22,7 +22,7 @@ The following example shows how to create a `TcpClient`:
 {examples-link}/create/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/create/Application.java[lines=18..31]
+include::{examples-dir}/create/Application.java[tags=snippet-application]
 ----
 <1> Creates a {javadoc}/reactor/netty/tcp/TcpClient.html[`TcpClient`]
 instance that is ready for configuring.
@@ -41,7 +41,7 @@ The following example shows how to do so:
 {examples-link}/address/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/Application.java[lines=18..33]
+include::{examples-dir}/address/Application.java[tags=snippet-application]
 ----
 <1> Configures the `TCP` host
 <2> Configures the `TCP` port
@@ -64,7 +64,7 @@ When you need to preload these resources, you can configure the `TcpClient` as f
 {examples-link}/warmup/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/warmup/Application.java[lines=18..39]
+include::{examples-dir}/warmup/Application.java[tags=snippet-application]
 ----
 <1> Initialize and load the event loop group, the host name resolver, the native transport libraries and
 the native libraries for the security
@@ -80,7 +80,7 @@ to be able to write data.
 {examples-link}/send/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/Application.java[lines=18..35]
+include::{examples-dir}/send/Application.java[tags=snippet-application]
 ----
 <1> Sends `hello` string to the endpoint.
 
@@ -93,7 +93,7 @@ when using {javadoc}/reactor/netty/Connection.html#outbound()[`Connection#outbou
 {examples-link}/send/connection/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/connection/Application.java[lines=18..44]
+include::{examples-dir}/send/connection/Application.java[tags=snippet-application]
 ----
 <1> Sends `hello 1` string to the endpoint.
 <2> Sends `hello 2` string to the endpoint.
@@ -109,7 +109,7 @@ to be able to read data. The following example shows how to do so:
 {examples-link}/read/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/Application.java[lines=18..34]
+include::{examples-dir}/read/Application.java[tags=snippet-application]
 ----
 <1> Receives data from a given endpoint
 
@@ -122,7 +122,7 @@ when using {javadoc}/reactor/netty/Connection.html#inbound()[`Connection#inbound
 {examples-link}/read/connection/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/connection/Application.java[lines=18..38]
+include::{examples-dir}/read/connection/Application.java[tags=snippet-application]
 ----
 <1> Receives data from a given endpoint.
 
@@ -148,7 +148,7 @@ The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 {examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/lifecycle/Application.java[lines=18..41]
+include::{examples-dir}/lifecycle/Application.java[tags=snippet-application]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when the channel has been connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
@@ -169,7 +169,7 @@ By default, the `TCP` client is configured with the following options:
 
 {core-source-link}/reactor/netty/tcp/TcpClientConnect.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=35..40]
+include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[tags=snippet-code]
 ----
 
 If additional options are necessary or changes to the current options are needed, you can apply the following configuration:
@@ -177,7 +177,7 @@ If additional options are necessary or changes to the current options are needed
 {examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..35]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 
 You can find more about `Netty` channel options at the following links:
@@ -212,7 +212,7 @@ The following example uses `SslContextBuilder`:
 {examples-link}/security/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/security/Application.java[lines=18..37]
+include::{examples-dir}/security/Application.java[tags=snippet-application]
 ----
 
 [[server-name-indication]]
@@ -223,7 +223,7 @@ When you need to change this default setting, you can configure the `TCP` client
 {examples-link}/sni/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/sni/Application.java[lines=18..41]
+include::{examples-dir}/sni/Application.java[tags=snippet-application]
 ----
 
 include::partial$tcp-client-proxy.adoc[]
@@ -264,7 +264,7 @@ The following example enables that integration:
 {examples-link}/metrics/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/Application.java[lines=18..34]
+include::{examples-dir}/metrics/Application.java[tags=snippet-application]
 ----
 <1> Enables the built-in integration with Micrometer
 
@@ -274,7 +274,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 {examples-link}/metrics/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/custom/Application.java[lines=18..37]
+include::{examples-dir}/metrics/custom/Application.java[tags=snippet-application]
 ----
 <1> Enables TCP client metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 
@@ -301,7 +301,7 @@ See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_set
 {examples-link}/tracing/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/tracing/Application.java[lines=18..81]
+include::{examples-dir}/tracing/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Enables the built-in integration with Micrometer.
@@ -320,7 +320,7 @@ The following example shows how to use this library in a custom `ChannelHandler`
 {examples-link}/tracing/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/tracing/custom/Application.java[lines=18..80]
+include::{examples-dir}/tracing/custom/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Enables the built-in integration with Micrometer.
@@ -344,7 +344,7 @@ The following example shows how to use UDS support:
 {examples-link}/uds/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/uds/Application.java[lines=18..38]
+include::{examples-dir}/uds/Application.java[tags=snippet-application]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
 
@@ -358,7 +358,7 @@ When you need to change the default settings, you can configure the `TcpClient` 
 {examples-link}/resolver/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/resolver/Application.java[lines=18..36]
+include::{examples-dir}/resolver/Application.java[tags=snippet-application]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
 
@@ -421,6 +421,6 @@ Sometimes, you may want to switch to the JVM built-in resolver. To do so, you ca
 {examples-link}/resolver/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/resolver/custom/Application.java[lines=18..37]
+include::{examples-dir}/resolver/custom/Application.java[tags=snippet-application]
 ----
 <1> Sets the JVM built-in resolver.

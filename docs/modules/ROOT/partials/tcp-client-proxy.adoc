@@ -23,6 +23,6 @@ The following example uses `ProxyProvider`:
 {examples-link}/proxy/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/proxy/Application.java[lines=18..42]
+include::{examples-dir}/proxy/Application.java[tags=snippet-application]
 ----
 <1> Configures the connection establishment timeout to 20 seconds.
