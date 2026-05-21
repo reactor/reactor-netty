@@ -271,7 +271,7 @@ public final class Http2SettingsSpec {
 	 * Returns the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value or
 	 * the default {@link Http2CodecUtil#SMALLEST_MAX_CONCURRENT_STREAMS}.
 	 *
-	 * @return the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value
+	 * @return the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value or
 	 * the default {@link Http2CodecUtil#SMALLEST_MAX_CONCURRENT_STREAMS}
 	 */
 	public Long maxConcurrentStreams() {
