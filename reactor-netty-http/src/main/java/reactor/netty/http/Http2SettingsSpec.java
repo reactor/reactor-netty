@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,7 @@ public final class Http2SettingsSpec {
 
 		/**
 		 * Sets the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value.
+		 * The default {@code maxConcurrentStreams} is {@link Http2CodecUtil#SMALLEST_MAX_CONCURRENT_STREAMS}.
 		 *
 		 * @param maxConcurrentStreams the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value
 		 * @return {@code this}
@@ -270,11 +271,12 @@ public final class Http2SettingsSpec {
 	}
 
 	/**
-	 * Returns the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value or null.
+	 * Returns the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value or
+	 * the default {@link Http2CodecUtil#SMALLEST_MAX_CONCURRENT_STREAMS}.
 	 *
-	 * @return the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value or null
+	 * @return the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value or
+	 * the default {@link Http2CodecUtil#SMALLEST_MAX_CONCURRENT_STREAMS}
 	 */
-	@Nullable
 	public Long maxConcurrentStreams() {
 		return maxConcurrentStreams;
 	}
@@ -398,7 +400,7 @@ public final class Http2SettingsSpec {
 		return Objects.equals(connectProtocolEnabled, that.connectProtocolEnabled) &&
 				Objects.equals(headerTableSize, that.headerTableSize) &&
 				Objects.equals(initialWindowSize, that.initialWindowSize) &&
-				Objects.equals(maxConcurrentStreams, that.maxConcurrentStreams) &&
+				maxConcurrentStreams.equals(that.maxConcurrentStreams) &&
 				Objects.equals(maxDecodedRstFramesPerWindow, that.maxDecodedRstFramesPerWindow) &&
 				Objects.equals(maxDecodedRstFramesSecondsPerWindow, that.maxDecodedRstFramesSecondsPerWindow) &&
 				Objects.equals(maxEncodedRstFramesPerWindow, that.maxEncodedRstFramesPerWindow) &&
@@ -417,13 +419,13 @@ public final class Http2SettingsSpec {
 		result = 31 * result + (connectProtocolEnabled == null ? 0 : Boolean.hashCode(connectProtocolEnabled));
 		result = 31 * result + (headerTableSize == null ? 0 : Long.hashCode(headerTableSize));
 		result = 31 * result + (initialWindowSize == null ? 0 : initialWindowSize);
-		result = 31 * result + (maxConcurrentStreams == null ? 0 : Long.hashCode(maxConcurrentStreams));
+		result = 31 * result + Long.hashCode(maxConcurrentStreams);
 		result = 31 * result + (maxDecodedRstFramesPerWindow == null ? 0 : maxDecodedRstFramesPerWindow);
 		result = 31 * result + (maxDecodedRstFramesSecondsPerWindow == null ? 0 : maxDecodedRstFramesSecondsPerWindow);
 		result = 31 * result + (maxEncodedRstFramesPerWindow == null ? 0 : maxEncodedRstFramesPerWindow);
 		result = 31 * result + (maxEncodedRstFramesSecondsPerWindow == null ? 0 : maxEncodedRstFramesSecondsPerWindow);
 		result = 31 * result + (maxFrameSize == null ? 0 : maxFrameSize);
-		result = 31 * result + (maxHeaderListSize == null ? 0 : Long.hashCode(maxHeaderListSize));
+		result = 31 * result + Long.hashCode(maxHeaderListSize);
 		result = 31 * result + (maxStreams == null ? 0 : Long.hashCode(maxStreams));
 		result = 31 * result + pingAckDropThreshold;
 		result = 31 * result + (pingAckTimeout == null ? 0 : Objects.hashCode(pingAckTimeout));
