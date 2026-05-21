@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -300,7 +300,7 @@ class ClientTransportTest {
 				NameResolverProvider nameResolverProvider = NameResolverProvider.builder()
 						.hostsFileEntriesResolver((inetHost, resolvedAddressTypes) ->
 							// Returns only the first entry from the hosts file
-							addresses != null && !addresses.isEmpty() ? addresses.get(0) : null)
+							!addresses.isEmpty() ? addresses.get(0) : null)
 						.build();
 				config.defaultResolver.set(nameResolverProvider.newNameResolverGroup(config.loopResources, true));
 			}
