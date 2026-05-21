@@ -37,6 +37,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -282,7 +283,17 @@ class ClientTransportTest {
 		TestClientTransportConfig config =
 				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
 		HostsFileEntriesProvider hostsFileEntriesProvider = HostsFileEntriesProvider.parser().parseSilently();
-		List<InetAddress> addresses = hostsFileEntriesProvider.ipv4Entries().get("localhost");
+		List<InetAddress> addresses = new ArrayList<>();
+
+		List<InetAddress> ipv4Addresses = hostsFileEntriesProvider.ipv4Entries().get("localhost");
+		if (ipv4Addresses != null) {
+			addresses.addAll(ipv4Addresses);
+		}
+
+		List<InetAddress> ipv6Addresses = hostsFileEntriesProvider.ipv6Entries().get("localhost");
+		if (ipv6Addresses != null) {
+			addresses.addAll(ipv6Addresses);
+		}
 		try {
 			config.loopResources = loop1;
 			if (customResolver) {
