@@ -23,7 +23,7 @@ The following example shows how to create and start a `QUIC` server:
 {examples-link}/create/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/create/Application.java[lines=18..33]
+include::{examples-dir}/create/Application.java[tags=snippet-application]
 ----
 <1> Creates a {javadoc}/reactor/netty/quic/QuicServer.html[`QuicServer`]
 instance that is ready for configuring.
@@ -41,7 +41,7 @@ To bind to a specific `host` and `port`, you can apply the following configurati
 {examples-link}/address/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/Application.java[lines=18..33]
+include::{examples-dir}/address/Application.java[tags=snippet-application]
 ----
 <1> Configures the `host` to which this server should bind
 <2> Configures the `port` to which this server should bind
@@ -54,7 +54,7 @@ To configure the `QUIC` server with SSL, you must apply the following configurat
 {examples-link}/security/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/security/Application.java[lines=18..46]
+include::{examples-dir}/security/Application.java[tags=snippet-application]
 ----
 <1> Configures the SSL context to use for the secure connection
 
@@ -66,7 +66,7 @@ include::{examples-dir}/security/Application.java[lines=18..46]
 {examples-link}/settings/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/settings/Application.java[lines=18..38]
+include::{examples-dir}/settings/Application.java[tags=snippet-application]
 ----
 <1> Configures the initial settings for the QUIC connection
 <2> Sets the maximum amount of data that can be sent on the connection
@@ -84,7 +84,7 @@ To handle incoming streams, you can use the following approach:
 {examples-link}/stream/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/stream/Application.java[lines=18..56]
+include::{examples-dir}/stream/Application.java[tags=snippet-application]
 ----
 <1> Invoked when a new `QUIC` stream is opened
 <2> Sets up a handler for incoming streams
@@ -109,7 +109,7 @@ The following example uses the `doOnBound` and `doOnConnection` callbacks:
 {examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/lifecycle/Application.java[lines=18..33]
+include::{examples-dir}/lifecycle/Application.java[tags=snippet-application]
 ----
 <1> Invoked when the server has been bound
 <2> Invoked when a new `QUIC` connection has been established
@@ -131,7 +131,7 @@ If you need additional options or need to change the current options, you can ap
 {examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..37]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 <1> Configures the backlog size
 <2> Enables `QLOG` for the `QUIC` connection
@@ -156,6 +156,6 @@ you can provide your own metrics recorder, as follows:
 {examples-link}/metrics/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/Application.java[lines=18..36]
+include::{examples-dir}/metrics/Application.java[tags=snippet-application]
 ----
 <1> Enables `QUIC` server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.

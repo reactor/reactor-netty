@@ -23,7 +23,7 @@ configure a `TcpServer` instance:
 {examples-link}/create/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/create/Application.java[lines=18..31]
+include::{examples-dir}/create/Application.java[tags=snippet-application]
 ----
 <1> Creates a {javadoc}/reactor/netty/tcp/TcpServer.html[`TcpServer`]
 instance that is ready for configuring.
@@ -41,7 +41,7 @@ To serve on a specific `host` and `port`, you can apply the following configurat
 {examples-link}/address/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/Application.java[lines=18..33]
+include::{examples-dir}/address/Application.java[tags=snippet-application]
 ----
 <1> Configures the `TCP` server host
 <2> Configures the `TCP` server port
@@ -52,7 +52,7 @@ All created servers will share resources such as `LoopResources` because they us
 {examples-link}/address/MultiAddressApplication.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/MultiAddressApplication.java[lines=18..41]
+include::{examples-dir}/address/MultiAddressApplication.java[tags=snippet-application]
 ----
 <1> Configures the first `TCP` server host
 <2> Configures the first `TCP` server port
@@ -74,7 +74,7 @@ When you need to preload these resources, you can configure the `TcpServer` as f
 {examples-link}/warmup/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/warmup/Application.java[lines=18..36]
+include::{examples-dir}/warmup/Application.java[tags=snippet-application]
 ----
 <1> Initialize and load the event loop groups, the native transport libraries and the native libraries for the security
 
@@ -88,7 +88,7 @@ to be able to write data. The following example shows how to attach an I/O handl
 {examples-link}/send/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/Application.java[lines=18..33]
+include::{examples-dir}/send/Application.java[tags=snippet-application]
 ----
 <1> Sends `hello` string to the connected clients
 
@@ -102,7 +102,7 @@ to be able to read data. The following example shows how to use it:
 {examples-link}/read/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/Application.java[lines=18..32]
+include::{examples-dir}/read/Application.java[tags=snippet-application]
 ----
 <1> Receives data from the connected clients
 
@@ -126,7 +126,7 @@ The following example uses the `doOnConnection` and `doOnChannelInit` callbacks:
 {examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/lifecycle/Application.java[lines=18..39]
+include::{examples-dir}/lifecycle/Application.java[tags=snippet-application]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
@@ -148,7 +148,7 @@ By default, the `TCP` server is configured with the following options:
 {core-source-link}/reactor/netty/tcp/TcpServerBind.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=38..46]
+include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[tags=snippet-code]
 ----
 
 If additional options are necessary or changes to the current options are needed, you can apply the following configuration:
@@ -156,7 +156,7 @@ If additional options are necessary or changes to the current options are needed
 {examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..33]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 
 You can find more about `Netty` channel options at the following links:
@@ -189,7 +189,7 @@ The following example uses `SslContextBuilder`:
 {examples-link}/security/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/security/Application.java[lines=18..40]
+include::{examples-dir}/security/Application.java[tags=snippet-application]
 ----
 
 [[server-name-indication]]
@@ -202,7 +202,7 @@ The following example uses a domain name containing a wildcard:
 {examples-link}/sni/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/sni/Application.java[lines=18..47]
+include::{examples-dir}/sni/Application.java[tags=snippet-application]
 ----
 
 [[metrics]]
@@ -240,7 +240,7 @@ The following example enables that integration:
 {examples-link}/metrics/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/Application.java[lines=18..32]
+include::{examples-dir}/metrics/Application.java[tags=snippet-application]
 ----
 <1> Enables the built-in integration with Micrometer
 
@@ -250,7 +250,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 {examples-link}/metrics/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/custom/Application.java[lines=18..35]
+include::{examples-dir}/metrics/custom/Application.java[tags=snippet-application]
 ----
 <1> Enables TCP server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 
@@ -273,7 +273,7 @@ See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_set
 {examples-link}/tracing/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/tracing/Application.java[lines=18..81]
+include::{examples-dir}/tracing/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Enables the built-in integration with Micrometer.
@@ -292,7 +292,7 @@ The following example shows how to use this library in a custom `ChannelHandler`
 {examples-link}/tracing/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/tracing/custom/Application.java[lines=18..86]
+include::{examples-dir}/tracing/custom/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Enables the built-in integration with Micrometer.
@@ -316,6 +316,6 @@ The following example shows how to use UDS support:
 {examples-link}/uds/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/uds/Application.java[lines=18..38]
+include::{examples-dir}/uds/Application.java[tags=snippet-application]
 ----
 <1> Specifies `DomainSocketAddress` that will be used

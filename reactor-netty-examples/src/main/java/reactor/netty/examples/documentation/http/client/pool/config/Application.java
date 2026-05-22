@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.http.client.pool.config;
 
+// tag::snippet-application[]
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 
@@ -49,3 +50,4 @@ public class Application {
 		        .block();
 	}
 }
+// end::snippet-application[]

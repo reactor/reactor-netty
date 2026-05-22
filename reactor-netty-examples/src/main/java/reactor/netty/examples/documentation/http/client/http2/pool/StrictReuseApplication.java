@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.http.client.http2.pool;
 
+// tag::snippet-application[]
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.Http2AllocationStrategy;
 import reactor.netty.http.client.HttpClient;
@@ -51,3 +52,4 @@ public class StrictReuseApplication {
 		        .block();
 	}
 }
+// end::snippet-application[]

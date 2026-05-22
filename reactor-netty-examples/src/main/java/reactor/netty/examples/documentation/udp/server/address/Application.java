@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.udp.server.address;
 
+// tag::snippet-application[]
 import reactor.netty.Connection;
 import reactor.netty.udp.UdpServer;
 import java.time.Duration;
@@ -32,3 +33,4 @@ public class Application {
 		      .block();
 	}
 }
+// end::snippet-application[]

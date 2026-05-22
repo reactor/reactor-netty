@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.tcp.server.tracing.custom;
 
+// tag::snippet-application[]
 import brave.Tracing;
 import brave.propagation.StrictCurrentTraceContext;
 import brave.sampler.Sampler;
@@ -83,6 +84,7 @@ public class Application {
 			return true;
 		}
 	}
+	// end::snippet-application[]
 
 	/**
 	 * This setup is based on

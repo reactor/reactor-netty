@@ -22,7 +22,7 @@ The following example shows how to create and connect a UDP client:
 {examples-link}/create/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/create/Application.java[lines=18..32]
+include::{examples-dir}/create/Application.java[tags=snippet-application]
 ----
 <1> Creates a {javadoc}/reactor/netty/udp/UdpClient.html[`UdpClient`]
 instance that is ready for configuring.
@@ -40,7 +40,7 @@ To connect to a specific `host` and `port`, you can apply the following configur
 {examples-link}/address/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/Application.java[lines=18..34]
+include::{examples-dir}/address/Application.java[tags=snippet-application]
 ----
 <1> Configures the `host` to which this client should connect
 <2> Configures the `port` to which this client should connect
@@ -62,7 +62,7 @@ When you need to preload these resources, you can configure the `UdpClient` as f
 {examples-link}/warmup/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/warmup/Application.java[lines=18..40]
+include::{examples-dir}/warmup/Application.java[tags=snippet-application]
 ----
 <1> Initialize and load the event loop group, the host name resolver, and the native transport libraries
 <2> Host name resolution happens when connecting to the remote peer
@@ -79,7 +79,7 @@ The following example shows how to send `hello`:
 {examples-link}/send/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/Application.java[lines=18..37]
+include::{examples-dir}/send/Application.java[tags=snippet-application]
 ----
 <1> Sends `hello` string to the remote peer.
 
@@ -94,7 +94,7 @@ The following example shows how to consume data:
 {examples-link}/read/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/Application.java[lines=18..35]
+include::{examples-dir}/read/Application.java[tags=snippet-application]
 ----
 <1> Receives data from a given peer
 
@@ -120,7 +120,7 @@ The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 {examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/lifecycle/Application.java[lines=18..40]
+include::{examples-dir}/lifecycle/Application.java[tags=snippet-application]
 ----
 <1> `Netty` pipeline is extended with `LineBasedFrameDecoder` when the channel has been connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
@@ -142,7 +142,7 @@ By default, the `UDP` client is configured with the following options:
 {core-source-link}/reactor/netty/udp/UdpClientConnect.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/udp/UdpClientConnect.java[lines=37..42]
+include::{sourcedir}/reactor/netty/udp/UdpClientConnect.java[tags=snippet-code]
 ----
 
 If you need additional options or need to change the current options, you can apply the following configuration:
@@ -150,7 +150,7 @@ If you need additional options or need to change the current options, you can ap
 {examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..36]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 
 You can find more about Netty channel options at the following links:
@@ -201,7 +201,7 @@ The following example enables that integration:
 {examples-link}/metrics/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/Application.java[lines=18..36]
+include::{examples-dir}/metrics/Application.java[tags=snippet-application]
 ----
 <1> Enables the built-in integration with Micrometer
 
@@ -211,7 +211,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 {examples-link}/metrics/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/custom/Application.java[lines=18..37]
+include::{examples-dir}/metrics/custom/Application.java[tags=snippet-application]
 ----
 <1> Enables UDP client metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 
@@ -224,6 +224,6 @@ The following example shows how to use UDS support:
 {examples-link}/uds/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/uds/Application.java[lines=18..42]
+include::{examples-dir}/uds/Application.java[tags=snippet-application]
 ----
 <1> Specifies `DomainSocketAddress` that will be used

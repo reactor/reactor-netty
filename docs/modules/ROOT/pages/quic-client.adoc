@@ -22,7 +22,7 @@ The following example shows how to create and connect a `QUIC` client:
 {examples-link}/create/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/create/Application.java[lines=18..33]
+include::{examples-dir}/create/Application.java[tags=snippet-application]
 ----
 <1> Creates a {javadoc}/reactor/netty/quic/QuicClient.html[`QuicClient`]
 instance that is ready for configuring.
@@ -40,7 +40,7 @@ To connect to a specific `host` and `port`, you can apply the following configur
 {examples-link}/address/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/Application.java[lines=18..34]
+include::{examples-dir}/address/Application.java[tags=snippet-application]
 ----
 <1> Configures the `host` and `port` to which this client should connect
 
@@ -54,7 +54,7 @@ To configure the `QUIC` client with SSL, you must apply the following configurat
 {examples-link}/security/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/security/Application.java[lines=18..39]
+include::{examples-dir}/security/Application.java[tags=snippet-application]
 ----
 <1> Configures the SSL context to use for the secure connection
 
@@ -66,7 +66,7 @@ include::{examples-dir}/security/Application.java[lines=18..39]
 {examples-link}/settings/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/settings/Application.java[lines=18..38]
+include::{examples-dir}/settings/Application.java[tags=snippet-application]
 ----
 <1> Configures the initial settings for the `QUIC` connection
 <2> Sets the maximum amount of data that can be sent on the connection
@@ -84,7 +84,7 @@ To open a stream to the remote peer, you can use the following approach:
 {examples-link}/stream/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/stream/Application.java[lines=18..64]
+include::{examples-dir}/stream/Application.java[tags=snippet-application]
 ----
 <1> Creates a new bidirectional stream
 <2> Sends data to the remote peer
@@ -112,7 +112,7 @@ The following example uses the `doOnConnected` callback:
 {examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/lifecycle/Application.java[lines=18..32]
+include::{examples-dir}/lifecycle/Application.java[tags=snippet-application]
 ----
 <1> Invoked after the client has been connected
 
@@ -133,7 +133,7 @@ If you need additional options or need to change the current options, you can ap
 {examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..37]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 <1> Configures the connect timeout
 <2> Enables `QLOG` for the `QUIC` connection
@@ -158,6 +158,6 @@ you can provide your own metrics recorder, as follows:
 {examples-link}/metrics/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/Application.java[lines=18..36]
+include::{examples-dir}/metrics/Application.java[tags=snippet-application]
 ----
 <1> Enables `QUIC` client metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.

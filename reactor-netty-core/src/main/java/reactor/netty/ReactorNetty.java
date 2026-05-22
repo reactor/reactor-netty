@@ -87,6 +87,7 @@ public final class ReactorNetty {
 	static final boolean LOG_CHANNEL_INFO =
 			Boolean.parseBoolean(System.getProperty("reactor.netty.logChannelInfo", "true"));
 
+	// tag::snippet-code-1[]
 	/**
 	 * Default worker thread count, fallback to available processor
 	 * (but with a minimum value of 4).
@@ -125,8 +126,11 @@ public final class ReactorNetty {
 	 * has to be added.
 	 */
 	public static final String NATIVE = "reactor.netty.native";
+	// end::snippet-code-1[]
 
 
+	// tag::snippet-code-2[]
+	// tag::snippet-code-3[]
 	/**
 	 * Default max connections. Fallback to
 	 * 2 * available number of processors (but with a minimum value of 16)
@@ -138,6 +142,7 @@ public final class ReactorNetty {
 	 * connection in an unbounded fashion. Fallback 45 seconds
 	 */
 	public static final String POOL_ACQUIRE_TIMEOUT = "reactor.netty.pool.acquireTimeout";
+	// end::snippet-code-2[]
 	/**
 	 * Default max idle time, fallback - max idle time is not specified.
 	 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
@@ -176,6 +181,7 @@ public final class ReactorNetty {
 	 * Fallback - sampling is not enabled.
 	 */
 	public static final String POOL_RETURN_PERMITS_SAMPLING_RATE = "reactor.netty.pool.returnPermitsSamplingRate";
+	// end::snippet-code-3[]
 
 
 	/**

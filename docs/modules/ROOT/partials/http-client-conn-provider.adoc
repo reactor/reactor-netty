@@ -16,7 +16,7 @@ and further attempts are declined with an error.
 {reactor-netty-github-repo}/reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
 [%unbreakable]
 ----
-include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=130..178]
+include::{core}/src/main/java/reactor/netty/ReactorNetty.java[tags=snippet-code-3]
 ----
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
@@ -24,7 +24,7 @@ When you need to change the default settings, you can configure the `ConnectionP
 {examples-link}/pool/config/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/pool/config/Application.java[lines=18..51]
+include::{examples-dir}/pool/config/Application.java[tags=snippet-application]
 ----
 <1> Configures the maximum time for a connection to stay idle to 20 seconds.
 <2> Configures the maximum time for a connection to stay alive to 60 seconds.
@@ -85,7 +85,7 @@ If you need to disable the connection pool, you can apply the following configur
 {examples-link}/pool/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/pool/Application.java[lines=18..49]
+include::{examples-dir}/pool/Application.java[tags=snippet-application]
 ----
 
 [[http2-connection-pool]]
@@ -126,7 +126,7 @@ The following example shows how to configure the `HTTP/2` connection pool:
 {examples-link}/http2/pool/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/http2/pool/Application.java[lines=18..55]
+include::{examples-dir}/http2/pool/Application.java[tags=snippet-application]
 ----
 <1> Configures the maximum number of live connections to `20`.
 <2> Configures the minimum number of live connections to `5`. This also enables strict connection reuse.
@@ -153,7 +153,7 @@ Strict connection reuse can be enabled in two ways:
 {examples-link}/http2/pool/StrictReuseApplication.java
 [%unbreakable]
 ----
-include::{examples-dir}/http2/pool/StrictReuseApplication.java[lines=18..54]
+include::{examples-dir}/http2/pool/StrictReuseApplication.java[tags=snippet-application]
 ----
 <1> Enables strict connection reuse. The pool will avoid opening additional connections as long as
 existing connections have not reached their max concurrent streams limit.
@@ -193,7 +193,7 @@ The following example enables that integration:
 {examples-link}/pool/metrics/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/pool/metrics/Application.java[lines=18..45]
+include::{examples-dir}/pool/metrics/Application.java[tags=snippet-application]
 ----
 <1> Enables the built-in integration with Micrometer
 
@@ -205,7 +205,7 @@ The following `HTTP` example enables that integration:
 {examples-link}/pool/metrics/http/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/pool/metrics/http/Application.java[lines=25..72]
+include::{examples-dir}/pool/metrics/http/Application.java[tags=snippet-application]
 ----
 <1> Enables `HTTP` Connection Pool metrics and provides `ConnectionProvider.MeterRegistrar` implementation.
 <2> It is called when registering metrics for the `HTTP` connection pool.
@@ -216,7 +216,7 @@ The following `HTTP2`, `H2C`, `HTTP3` example enables that integration:
 {examples-link}/pool/metrics/http2/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/pool/metrics/http2/Application.java[lines=27..73]
+include::{examples-dir}/pool/metrics/http2/Application.java[tags=snippet-application]
 ----
 <1> Enables `HTTP2`, `H2C`, `HTTP3` Connection Pool metrics and provides `HttpMeterRegistrarAdapter` implementation.
 <2> It is called when registering metrics for the  `HTTP2`, `H2C`, `HTTP3` connection pool.

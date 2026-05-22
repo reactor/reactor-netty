@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import reactor.netty.http.HttpDecoderSpec;
  */
 public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseDecoderSpec> {
 
+	// tag::snippet-code[]
 	public static final boolean DEFAULT_FAIL_ON_MISSING_RESPONSE         = false;
 	public static final boolean DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST = false;
 
@@ -48,6 +49,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	 * the maximum length of the aggregated content.
 	 */
 	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 65536;
+	// end::snippet-code[]
 
 	boolean failOnMissingResponse        = DEFAULT_FAIL_ON_MISSING_RESPONSE;
 	boolean parseHttpAfterConnectRequest = DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST;

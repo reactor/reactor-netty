@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.http.server.uds;
 
+// tag::snippet-application[]
 import io.netty.channel.unix.DomainSocketAddress;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
@@ -36,3 +37,4 @@ public class Application {
 		      .block();
 	}
 }
+// end::snippet-application[]

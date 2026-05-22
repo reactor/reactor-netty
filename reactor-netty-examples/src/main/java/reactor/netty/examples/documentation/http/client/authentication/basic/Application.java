@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.http.client.authentication.basic;
 
+// tag::snippet-application[]
 import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.netty.http.client.HttpClient;
 
@@ -44,3 +45,4 @@ public class Application {
 		      .block();
 	}
 }
+// end::snippet-application[]

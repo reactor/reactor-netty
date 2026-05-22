@@ -22,7 +22,7 @@ The following example shows how to do so:
 {examples-link}/connect/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/connect/Application.java[lines=18..30]
+include::{examples-dir}/connect/Application.java[tags=snippet-application]
 ----
 <1> Creates a {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient]
 instance ready for configuring.
@@ -36,7 +36,7 @@ The following example uses `WebSocket`:
 {examples-link}/websocket/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/websocket/Application.java[lines=18..42]
+include::{examples-dir}/websocket/Application.java[tags=snippet-application]
 ----
 
 [[host-and-port]]
@@ -47,7 +47,7 @@ In order to connect to a specific host and port, you can apply the following con
 {examples-link}/address/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/Application.java[lines=18..33]
+include::{examples-dir}/address/Application.java[tags=snippet-application]
 ----
 <1> Configures the `HTTP` host
 <2> Configures the `HTTP` port
@@ -70,7 +70,7 @@ When you need to preload these resources, you can configure the `HttpClient` as 
 {examples-link}/warmup/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/warmup/Application.java[lines=18..36]
+include::{examples-dir}/warmup/Application.java[tags=snippet-application]
 ----
 <1> Initialize and load the event loop group, the host name resolver, the native transport libraries and
 the native libraries for the security
@@ -90,7 +90,7 @@ if necessary. The following example sends `hello`:
 {examples-link}/send/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/Application.java[lines=18..33]
+include::{examples-dir}/send/Application.java[tags=snippet-application]
 ----
 <1> Sends a `hello` string to the given `HTTP` endpoint
 
@@ -103,7 +103,7 @@ You can use the following configuration to do so:
 {examples-link}/send/headers/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/headers/Application.java[lines=18..36]
+include::{examples-dir}/send/headers/Application.java[tags=snippet-application]
 ----
 <1> Disables `Transfer-Encoding: chunked` and provides `Content-Length` header.
 
@@ -116,7 +116,7 @@ You can enable compression on the `HTTP` client, which means the request header
 {examples-link}/compression/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/compression/Application.java[lines=18..32]
+include::{examples-dir}/compression/Application.java[tags=snippet-application]
 ----
 
 [[auto-redirect-support]]
@@ -139,7 +139,7 @@ The following example uses `followRedirect(true)` to automatically follow standa
 {examples-link}/redirect/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/redirect/Application.java[lines=18..32]
+include::{examples-dir}/redirect/Application.java[tags=snippet-application]
 ----
 
 [[consuming-data]]
@@ -152,7 +152,7 @@ The following example uses the `responseContent` method:
 {examples-link}/read/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/Application.java[lines=18..33]
+include::{examples-dir}/read/Application.java[tags=snippet-application]
 ----
 <1> Receives data from a given `HTTP` endpoint
 <2> Aggregates the data
@@ -169,7 +169,7 @@ The following example shows how to do so.
 {examples-link}/read/status/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/status/Application.java[lines=18..34]
+include::{examples-dir}/read/status/Application.java[tags=snippet-application]
 ----
 <1> Obtains the status code.
 
@@ -189,13 +189,13 @@ By default, the `HTTP` client is configured with the following settings:
 {http-source-link}/reactor/netty/http/HttpDecoderSpec.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..40]
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[tags=snippet-code]
 ----
 
 {http-source-link}/reactor/netty/http/client/HttpResponseDecoderSpec.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=42..50]
+include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[tags=snippet-code]
 ----
 
 When you need to change these default settings, you can configure the `HTTP` client as follows:
@@ -203,7 +203,7 @@ When you need to change these default settings, you can configure the `HTTP` cli
 {examples-link}/responsedecoder/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/responsedecoder/Application.java[lines=18..35]
+include::{examples-dir}/responsedecoder/Application.java[tags=snippet-application]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
@@ -240,7 +240,7 @@ The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 {examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/lifecycle/Application.java[lines=18..39]
+include::{examples-dir}/lifecycle/Application.java[tags=snippet-application]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when the channel has been connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
@@ -254,7 +254,7 @@ to extend the default `TCP` client configuration (add an option, bind address et
 {examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..54]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
@@ -285,7 +285,7 @@ The following example uses `SslContextBuilder`:
 {examples-link}/security/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/security/Application.java[lines=18..35]
+include::{examples-dir}/security/Application.java[tags=snippet-application]
 ----
 
 [[server-name-indication]]
@@ -296,7 +296,7 @@ When you need to change this default setting, you can configure the `HTTP` clien
 {examples-link}/sni/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/sni/Application.java[lines=18..39]
+include::{examples-dir}/sni/Application.java[tags=snippet-application]
 ----
 
 [[retry-strategies]]
@@ -317,7 +317,7 @@ The following listing presents a simple `H2` example:
 {examples-link}/http2/H2Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/http2/H2Application.java[lines=18..42]
+include::{examples-dir}/http2/H2Application.java[tags=snippet-application]
 ----
 <1> Configures the client to support only `HTTP/2`
 <2> Configures `SSL`
@@ -327,7 +327,7 @@ The following listing presents a simple `H2C` example:
 {examples-link}/http2/H2CApplication.java
 [%unbreakable]
 ----
-include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
+include::{examples-dir}/http2/H2CApplication.java[tags=snippet-application]
 ----
 
 [[protocol-selection]]
@@ -336,7 +336,7 @@ include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 {http-source-link}/reactor/netty/http/HttpProtocol.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..58]
+include::{sourcedir}/reactor/netty/http/HttpProtocol.java[tags=snippet-code]
 ----
 
 [[HTTP3]]
@@ -348,7 +348,7 @@ The following listing presents a simple `HTTP3` example:
 
 {examples-link}/http3/Application.java
 ----
-include::{examples-dir}/http3/Application.java[lines=18..46]
+include::{examples-dir}/http3/Application.java[tags=snippet-application]
 ----
 <1> Configures the client to support only `HTTP/3`
 <2> Configures `HTTP/3` settings
@@ -409,7 +409,7 @@ The following example enables that integration:
 {examples-link}/metrics/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/Application.java[lines=18..51]
+include::{examples-dir}/metrics/Application.java[tags=snippet-application]
 ----
 <1> Applies upper limit for the meters with `URI` tag
 <2> Templated URIs will be used as a URI tag value when possible
@@ -427,7 +427,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 {examples-link}/metrics/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/metrics/custom/Application.java[lines=18..35]
+include::{examples-dir}/metrics/custom/Application.java[tags=snippet-application]
 ----
 <1> Enables HTTP client metrics and provides {javadoc}/reactor/netty/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
 
@@ -455,7 +455,7 @@ See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_set
 
 {examples-link}/tracing/Application.java
 ----
-include::{examples-dir}/tracing/Application.java[lines=18..90]
+include::{examples-dir}/tracing/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Templated URIs are used as an URI tag value when possible.
@@ -474,7 +474,7 @@ The following example shows how to use this library in a custom `ChannelHandler`
 
 {examples-link}/tracing/custom/Application.java
 ----
-include::{examples-dir}/tracing/custom/Application.java[lines=18..85]
+include::{examples-dir}/tracing/custom/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Templated URIs are used as an URI tag value when possible.
@@ -498,7 +498,7 @@ The following example shows how to use UDS support:
 
 {examples-link}/uds/Application.java
 ----
-include::{examples-dir}/uds/Application.java[lines=18..38]
+include::{examples-dir}/uds/Application.java[tags=snippet-application]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
 
@@ -511,7 +511,7 @@ When you need to change the default settings, you can configure the `HttpClient`
 
 {examples-link}/resolver/Application.java
 ----
-include::{examples-dir}/resolver/Application.java[lines=18..39]
+include::{examples-dir}/resolver/Application.java[tags=snippet-application]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
 
@@ -574,7 +574,7 @@ Sometimes, you may want to switch to the JVM built-in resolver. To do so, you ca
 
 {examples-link}/resolver/custom/Application.java
 ----
-include::{examples-dir}/resolver/custom/Application.java[lines=18..38]
+include::{examples-dir}/resolver/custom/Application.java[tags=snippet-application]
 ----
 <1> Sets the JVM built-in resolver.
 
@@ -619,7 +619,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 
 {examples-link}/pool/Application.java
 ----
-include::{examples-dir}/pool/config/Application.java[lines=18..50]
+include::{examples-dir}/pool/config/Application.java[tags=snippet-application]
 ----
 <1> Configures the maximum time for a connection to stay idle to 20 seconds.
 <2> Configures the maximum time for a connection to stay alive to 60 seconds.
@@ -646,7 +646,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 
 {examples-link}/read/timeout/Application.java
 ----
-include::{examples-dir}/read/timeout/Application.java[lines=18..55]
+include::{examples-dir}/read/timeout/Application.java[tags=snippet-application]
 ----
 <1> Configures the default response timeout to 1 second.
 <2> Configures a response timeout for a specific request to 2 seconds.
@@ -675,7 +675,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 
 {examples-link}/channeloptions/Application.java
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..54]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
@@ -712,7 +712,7 @@ To enable `PING` frames for `HTTP/2` connections, configure the `HttpClient` as 
 
 {examples-link}/liveness/Application.java
 ----
-include::{examples-dir}/liveness/Application.java[lines=27..52]
+include::{examples-dir}/liveness/Application.java[tags=snippet-application]
 ----
 <1> Configure `maxIdleTime` to enable PING-based health checks. When a connection is idle for this duration, a PING frame will be sent.
 <2> Configure `pingAckTimeout` - the maximum time to wait for each PING ACK response. If no ACK is received within this timeout, another PING is sent (up to the threshold).
@@ -735,7 +735,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 
 {examples-link}/security/custom/Application.java
 ----
-include::{examples-dir}/security/custom/Application.java[lines=18..45]
+include::{examples-dir}/security/custom/Application.java[tags=snippet-application]
 ----
 <1> Configures the SSL handshake timeout to 30 seconds.
 <2> Configures the SSL `close_notify` flush timeout to 10 seconds.
@@ -752,7 +752,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 
 {examples-link}/proxy/Application.java
 ----
-include::{examples-dir}/proxy/Application.java[lines=18..42]
+include::{examples-dir}/proxy/Application.java[tags=snippet-application]
 ----
 <1> Configures the connection establishment timeout to 20 seconds.
 
@@ -777,7 +777,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 
 {examples-link}/resolver/Application.java
 ----
-include::{examples-dir}/resolver/Application.java[lines=18..39]
+include::{examples-dir}/resolver/Application.java[tags=snippet-application]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
 
@@ -822,7 +822,7 @@ The following example demonstrates how to implement Bearer token authentication 
 {examples-link}/authentication/token/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/token/Application.java[lines=18..52]
+include::{examples-dir}/authentication/token/Application.java[tags=snippet-application]
 ----
 <1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds the `Authorization` header with a Bearer token.
@@ -833,7 +833,7 @@ include::{examples-dir}/authentication/token/Application.java[lines=18..52]
 {examples-link}/authentication/basic/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/basic/Application.java[lines=18..46]
+include::{examples-dir}/authentication/basic/Application.java[tags=snippet-application]
 ----
 <1> The predicate checks for `401 Unauthorized` responses to trigger authentication retry.
 <2> The authenticator adds Basic authentication credentials to the `Authorization` header.
@@ -853,7 +853,7 @@ NOTE: This is a simplified example to showcase the API.
 {examples-link}/authentication/spnego/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/authentication/spnego/Application.java[lines=18..72]
+include::{examples-dir}/authentication/spnego/Application.java[tags=snippet-application]
 ----
 <1> Custom predicate checks for `401 Unauthorized` with `WWW-Authenticate: Negotiate` header.
 <2> The authenticator generates a SPNEGO token using GSS-API and adds it to the `Authorization` header.
