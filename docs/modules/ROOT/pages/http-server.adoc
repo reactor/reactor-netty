@@ -23,7 +23,7 @@ The following example shows how to create an `HttpServer` instance:
 {examples-link}/create/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/create/Application.java[lines=18..31]
+include::{examples-dir}/create/Application.java[tags=snippet-application]
 ----
 <1> Creates an {javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer]
 instance ready for configuring.
@@ -41,7 +41,7 @@ To serve on a specific `host` and `port`, you can apply the following configurat
 {examples-link}/address/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/Application.java[lines=18..33]
+include::{examples-dir}/address/Application.java[tags=snippet-application]
 ----
 <1> Configures the `HTTP` server host
 <2> Configures the `HTTP` server port
@@ -52,7 +52,7 @@ All created servers will share resources such as `LoopResources` because they us
 {examples-link}/address/MultiAddressApplication.java
 [%unbreakable]
 ----
-include::{examples-dir}/address/MultiAddressApplication.java[lines=18..41]
+include::{examples-dir}/address/MultiAddressApplication.java[tags=snippet-application]
 ----
 <1> Configures the first `HTTP` server host
 <2> Configures the first `HTTP` server port
@@ -74,7 +74,7 @@ When you need to preload these resources, you can configure the `HttpServer` as 
 {examples-link}/warmup/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/warmup/Application.java[lines=18..36]
+include::{examples-dir}/warmup/Application.java[tags=snippet-application]
 ----
 <1> Initialize and load the event loop groups, the native transport libraries and the native libraries for the security
 
@@ -88,7 +88,7 @@ The following example shows how to do so:
 {examples-link}/routing/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/routing/Application.java[lines=18..41]
+include::{examples-dir}/routing/Application.java[tags=snippet-application]
 ----
 <1> Serves a `GET` request to `/hello` and returns `Hello World!`
 <2> Serves a `POST` request to `/echo` and returns the received request body as a response.
@@ -108,7 +108,7 @@ The following code shows how you can configure the `HTTP` server to serve `Serve
 {examples-link}/sse/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/sse/Application.java[lines=18..76]
+include::{examples-dir}/sse/Application.java[tags=snippet-application]
 ----
 
 [[static-resources]]
@@ -119,7 +119,7 @@ The following code shows how you can configure the `HTTP` server to serve static
 {examples-link}/staticresources/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/staticresources/Application.java[lines=18..37]
+include::{examples-dir}/staticresources/Application.java[tags=snippet-application]
 ----
 
 [[writing-data]]
@@ -134,7 +134,7 @@ to be able to write data. The following example uses the `handle(...)` method:
 {examples-link}/send/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/Application.java[lines=18..33]
+include::{examples-dir}/send/Application.java[tags=snippet-application]
 ----
 <1> Sends `hello` string to the connected clients
 
@@ -150,7 +150,7 @@ The following example shows how to do so:
 {examples-link}/send/headers/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/send/headers/Application.java[lines=18..40]
+include::{examples-dir}/send/headers/Application.java[tags=snippet-application]
 ----
 
 [[compression]]
@@ -193,7 +193,7 @@ The following example uses the `compress` method (set to `true`) to enable compr
 {examples-link}/compression/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/compression/Application.java[lines=18..38]
+include::{examples-dir}/compression/Application.java[tags=snippet-application]
 ----
 
 [[consuming-data]]
@@ -210,7 +210,7 @@ The following example uses the `handle(...)` method:
 {examples-link}/read/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/Application.java[lines=18..32]
+include::{examples-dir}/read/Application.java[tags=snippet-application]
 ----
 <1> Receives data from the connected clients
 
@@ -225,7 +225,7 @@ The following example shows how to do so:
 {examples-link}/read/headers/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/read/headers/Application.java[lines=18..40]
+include::{examples-dir}/read/headers/Application.java[tags=snippet-application]
 ----
 
 [[reading-post-form-or-multipart-data]]
@@ -238,7 +238,7 @@ When you receive data from the connected clients, you might want to access `POST
 {examples-link}/multipart/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/multipart/Application.java[lines=18..36]
+include::{examples-dir}/multipart/Application.java[tags=snippet-application]
 ----
 <1> Receives `POST` form/multipart data.
 
@@ -247,7 +247,7 @@ When you need to change the default settings, you can configure the `HttpServer`
 {examples-link}/multipart/custom/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/multipart/custom/Application.java[lines=18..37]
+include::{examples-dir}/multipart/custom/Application.java[tags=snippet-application]
 ----
 <1> Configuration on the `HttpServer` that specifies that the data is stored on disk only.
 <2> Configuration per request that specifies that if the data size exceed the specified size, the data is stored on the disk.
@@ -286,7 +286,7 @@ The following example shows how to do so:
 {examples-link}/clientaddress/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/clientaddress/Application.java[lines=18..38]
+include::{examples-dir}/clientaddress/Application.java[tags=snippet-application]
 ----
 <1> Specifies that the information about the connection is to be obtained from the `Forwarded` and `X-Forwarded-*`
 `HTTP` request headers, if possible.
@@ -298,7 +298,7 @@ The following example shows how to do so:
 {examples-link}/clientaddress/CustomForwardedHeaderHandlerApplication.java
 [%unbreakable]
 ----
-include::{examples-dir}/clientaddress/CustomForwardedHeaderHandlerApplication.java[lines=18..52]
+include::{examples-dir}/clientaddress/CustomForwardedHeaderHandlerApplication.java[tags=snippet-application]
 ----
 <1> Add a custom header handler.
 <2> Returns the address of the remote (client) peer.
@@ -320,13 +320,13 @@ By default, the `HTTP` server is configured with the following settings:
 {http-source-link}/reactor/netty/http/HttpDecoderSpec.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..40]
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[tags=snippet-code]
 ----
 
 {http-source-link}/reactor/netty/http/server/HttpRequestDecoderSpec.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=42..47]
+include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[tags=snippet-code]
 ----
 
 When you need to change these default settings, you can configure the `HTTP` server as follows:
@@ -334,7 +334,7 @@ When you need to change these default settings, you can configure the `HTTP` ser
 {examples-link}/requestdecoder/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/requestdecoder/Application.java[lines=18..34]
+include::{examples-dir}/requestdecoder/Application.java[tags=snippet-application]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
@@ -361,7 +361,7 @@ The following example uses the `doOnConnection` and `doOnChannelInit` callbacks:
 {examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/lifecycle/Application.java[lines=18..39]
+include::{examples-dir}/lifecycle/Application.java[tags=snippet-application]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
@@ -375,7 +375,7 @@ to extend the default `TCP` server configuration:
 {examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/channeloptions/Application.java[lines=18..33]
+include::{examples-dir}/channeloptions/Application.java[tags=snippet-application]
 ----
 
 See xref:tcp-server.adoc[TCP Server] for more detail about TCP-level configuration.
@@ -400,7 +400,7 @@ The following example uses `SslContextBuilder`:
 
 {examples-link}/security/Application.java
 ----
-include::{examples-dir}/security/Application.java[lines=18..39]
+include::{examples-dir}/security/Application.java[tags=snippet-application]
 ----
 
 [[server-name-indication]]
@@ -412,7 +412,7 @@ The following example uses a domain name containing a wildcard:
 
 {examples-link}/sni/Application.java
 ----
-include::{examples-dir}/sni/Application.java[lines=18..47]
+include::{examples-dir}/sni/Application.java[tags=snippet-application]
 ----
 
 [[http-log]]
@@ -449,7 +449,7 @@ The following example enables it programmatically:
 
 {examples-link}/accessLog/Application.java
 ----
-include::{examples-dir}/accessLog/Application.java[lines=18..32]
+include::{examples-dir}/accessLog/Application.java[tags=snippet-application]
 ----
 
 Calling this method takes precedence over the system property configuration.
@@ -459,21 +459,21 @@ specify a custom one as a parameter, as in the following example:
 
 {examples-link}/accessLog/CustomLogAccessFormatApplication.java
 ----
-include::{examples-dir}/accessLog/CustomLogAccessFormatApplication.java[lines=18..33]
+include::{examples-dir}/accessLog/CustomLogAccessFormatApplication.java[tags=snippet-application]
 ----
 
 You can also filter `HTTP` access logs by using the `AccessLogFactory#createFilter` method, as in the following example:
 
 {examples-link}/accessLog/FilterLogAccessApplication.java
 ----
-include::{examples-dir}/accessLog/FilterLogAccessApplication.java[lines=18..34]
+include::{examples-dir}/accessLog/FilterLogAccessApplication.java[tags=snippet-application]
 ----
 
 Note that this method can take a custom format parameter too, as in this example:
 
 {examples-link}/accessLog/CustomFormatAndFilterAccessLogApplication.java.java
 ----
-include::{examples-dir}/accessLog/CustomFormatAndFilterAccessLogApplication.java[lines=18..35]
+include::{examples-dir}/accessLog/CustomFormatAndFilterAccessLogApplication.java[tags=snippet-application]
 ----
 <1> Specifies the filter predicate to use
 <2> Specifies the custom format to apply
@@ -507,7 +507,7 @@ The following example enables it programmatically:
 
 {examples-link}/errorLog/Application.java
 ----
-include::{examples-dir}/errorLog/Application.java[lines=18..32]
+include::{examples-dir}/errorLog/Application.java[tags=snippet-application]
 ----
 
 Calling this method takes precedence over the system property configuration.
@@ -517,21 +517,21 @@ specify a custom one as a parameter, as in the following example:
 
 {examples-link}/errorLog/CustomLogErrorFormatApplication.java
 ----
-include::{examples-dir}/errorLog/CustomLogErrorFormatApplication.java[lines=18..33]
+include::{examples-dir}/errorLog/CustomLogErrorFormatApplication.java[tags=snippet-application]
 ----
 
 You can also filter `HTTP` error logs by using the `ErrorLogFactory#createFilter` method, as in the following example:
 
 {examples-link}/errorLog/FilterLogErrorApplication.java
 ----
-include::{examples-dir}/errorLog/FilterLogErrorApplication.java[lines=18..33]
+include::{examples-dir}/errorLog/FilterLogErrorApplication.java[tags=snippet-application]
 ----
 
 Note that this method can take a custom format parameter too, as in this example:
 
 {examples-link}/errorLog/CustomFormatAndFilterErrorLogApplication.java.java
 ----
-include::{examples-dir}/errorLog/CustomFormatAndFilterErrorLogApplication.java[lines=18..35]
+include::{examples-dir}/errorLog/CustomFormatAndFilterErrorLogApplication.java[tags=snippet-application]
 ----
 <1> Specifies the filter predicate to use
 <2> Specifies the custom format to apply
@@ -549,7 +549,7 @@ The following listing presents a simple `H2` example:
 
 {examples-link}/http2/H2Application.java
 ----
-include::{examples-dir}/http2/H2Application.java[lines=18..44]
+include::{examples-dir}/http2/H2Application.java[tags=snippet-application]
 ----
 <1> Configures the server to support only `HTTP/2`
 <2> Configures `SSL`
@@ -568,7 +568,7 @@ The following listing presents a simple `H2C` example:
 
 {examples-link}/http2/H2CApplication.java
 ----
-include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
+include::{examples-dir}/http2/H2CApplication.java[tags=snippet-application]
 ----
 
 The application should now behave as follows:
@@ -586,7 +586,7 @@ hello
 
 {http-source-link}/reactor/netty/http/HttpProtocol.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=26..61]
+include::{sourcedir}/reactor/netty/http/HttpProtocol.java[tags=snippet-code]
 ----
 
 [[HTTP3]]
@@ -599,7 +599,7 @@ The following listing presents a simple `HTTP3` example:
 
 {examples-link}/http3/Application.java
 ----
-include::{examples-dir}/http3/Application.java[lines=18..52]
+include::{examples-dir}/http3/Application.java[tags=snippet-application]
 ----
 <1> Configures the server to support only `HTTP/3`
 <2> Configures `SSL`
@@ -656,7 +656,7 @@ The following example enables that integration:
 
 {examples-link}/metrics/Application.java
 ----
-include::{examples-dir}/metrics/Application.java[lines=18..52]
+include::{examples-dir}/metrics/Application.java[tags=snippet-application]
 ----
 <1> Applies upper limit for the meters with `URI` tag
 <2> Templated URIs will be used as an URI tag value when possible
@@ -673,7 +673,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 
 {examples-link}/metrics/custom/Application.java
 ----
-include::{examples-dir}/metrics/custom/Application.java[lines=18..41]
+include::{examples-dir}/metrics/custom/Application.java[tags=snippet-application]
 ----
 <1> Enables HTTP server metrics and provides {javadoc}/reactor/netty/http/server/HttpServerMetricsRecorder.html[`HttpServerMetricsRecorder`] implementation.
 
@@ -695,7 +695,7 @@ See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_set
 
 {examples-link}/tracing/Application.java
 ----
-include::{examples-dir}/tracing/Application.java[lines=18..91]
+include::{examples-dir}/tracing/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Templated URIs are used as an URI tag value when possible.
@@ -714,7 +714,7 @@ The following example shows how to use this library in a custom `ChannelHandler`
 
 {examples-link}/tracing/custom/Application.java
 ----
-include::{examples-dir}/tracing/custom/Application.java[lines=18..85]
+include::{examples-dir}/tracing/custom/Application.java[tags=snippet-application]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Templated URIs are used as an URI tag value when possible.
@@ -738,7 +738,7 @@ The following example shows how to use UDS support:
 
 {examples-link}/uds/Application.java
 ----
-include::{examples-dir}/uds/Application.java[lines=18..38]
+include::{examples-dir}/uds/Application.java[tags=snippet-application]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
 
@@ -765,7 +765,7 @@ To customize the default settings, you can configure `HttpServer` as follows:
 
 {examples-link}/read/timeout/Application.java
 ----
-include::{examples-dir}/read/timeout/Application.java[lines=18..36]
+include::{examples-dir}/read/timeout/Application.java[tags=snippet-application]
 ----
 <1> Configures the read timeout to 5 second.
 <2> Configures the request timeout to 30 second.
@@ -785,7 +785,7 @@ To customize the default settings, you can configure `HttpServer` as follows:
 
 {examples-link}/idle/timeout/Application.java
 ----
-include::{examples-dir}/idle/timeout/Application.java[lines=18..35]
+include::{examples-dir}/idle/timeout/Application.java[tags=snippet-application]
 ----
 <1> Configures the default idle timeout to 1 second.
 
@@ -818,7 +818,7 @@ To enable `PING` frames for `HTTP/2` connections, configure the `HttpServer` as 
 
 {examples-link}/liveness/Application.java
 ----
-include::{examples-dir}/liveness/Application.java[lines=26..50]
+include::{examples-dir}/liveness/Application.java[tags=snippet-application]
 ----
 <1> Configure `idleTimeout` to enable PING-based health checks. When a connection is idle for this duration, a PING frame will be sent.
 <2> Configure `pingAckTimeout` - the maximum time to wait for each PING ACK response. If no ACK is received within this timeout, another PING is sent (up to the threshold).
@@ -841,7 +841,7 @@ To customize the default settings, you can configure `HttpServer` as follows:
 
 {examples-link}/security/custom/Application.java
 ----
-include::{examples-dir}/security/custom/Application.java[lines=18..44]
+include::{examples-dir}/security/custom/Application.java[tags=snippet-application]
 ----
 <1> Configures the SSL handshake timeout to 30 seconds.
 <2> Configures the SSL `close_notify` flush timeout to 10 seconds.

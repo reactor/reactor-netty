@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import reactor.netty.resources.ConnectionProvider;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 
+// tag::snippet-application[]
 public class Application {
 
 	public static void main(String[] args) {
@@ -70,3 +71,4 @@ public class Application {
 		}
 	}
 }
+// end::snippet-application[]

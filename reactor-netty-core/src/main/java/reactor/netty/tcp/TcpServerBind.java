@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ final class TcpServerBind extends TcpServer {
 
 	final TcpServerConfig config;
 
+	// tag::snippet-code[]
 	TcpServerBind() {
 		Map<ChannelOption<?>, Boolean> childOptions = new HashMap<>(MapUtils.calculateInitialCapacity(2));
 		childOptions.put(ChannelOption.AUTO_READ, false);
@@ -44,6 +45,7 @@ final class TcpServerBind extends TcpServer {
 				childOptions,
 				() -> new InetSocketAddress(DEFAULT_PORT));
 	}
+	// end::snippet-code[]
 
 	TcpServerBind(TcpServerConfig config) {
 		this.config = config;

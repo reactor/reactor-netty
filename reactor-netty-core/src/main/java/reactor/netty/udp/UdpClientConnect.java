@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,12 +34,14 @@ final class UdpClientConnect extends UdpClient {
 
 	final UdpClientConfig config;
 
+	// tag::snippet-code[]
 	UdpClientConnect() {
 		this.config = new UdpClientConfig(
 				ConnectionProvider.newConnection(),
 				Collections.singletonMap(ChannelOption.AUTO_READ, false),
 				() -> new InetSocketAddress(NetUtil.LOCALHOST, DEFAULT_PORT));
 	}
+	// end::snippet-code[]
 
 	UdpClientConnect(UdpClientConfig config) {
 		this.config = config;
