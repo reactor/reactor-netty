@@ -34,7 +34,7 @@ public class Application {
 		server.onDispose()
 		      .block();
 	}
-	// tag::snippet-application[]
+	// end::snippet-application[]
 
 	private static class CustomChannelMetricsRecorder implements ChannelMetricsRecorder {
 		@Override
