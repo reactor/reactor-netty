@@ -26,6 +26,7 @@ import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import reactor.netty.NettyPipeline;
@@ -112,7 +113,22 @@ final class SniProvider {
 
 		@Override
 		protected Future<SslProvider> lookup(ChannelHandlerContext ctx, String hostname) {
-			return mappings.map(hostname, ctx.executor().newPromise());
+			Promise<SslProvider> promise = ctx.executor().newPromise();
+			mappings.map(hostname, ctx.executor().newPromise())
+			        .addListener((FutureListener<SslProvider>) future -> {
+			            Throwable cause = future.cause();
+			            if (cause != null) {
+			                promise.setFailure(cause);
+			            }
+			            else if (future.getNow() == null) {
+			                promise.setFailure(new DecoderException("failed to get the SslContext for " + hostname
+			                        + ": the SNI mapping returned null"));
+			            }
+			            else {
+			                promise.setSuccess(future.getNow());
+			            }
+			        });
+			return promise;
 		}
 
 		@Override
@@ -122,14 +138,15 @@ final class SniProvider {
 				if (cause instanceof Error) {
 					throw (Error) cause;
 				}
+				// The lookup already builds a descriptive DecoderException (e.g. the SNI mapping
+				// returned null), so propagate it as-is instead of wrapping it once more.
+				if (cause instanceof DecoderException) {
+					throw (DecoderException) cause;
+				}
 				throw new DecoderException("failed to get the SslContext for " + hostname, cause);
 			}
 
 			SslProvider sslProvider = future.getNow();
-			if (sslProvider == null) {
-				throw new DecoderException("failed to get the SslContext for " + hostname
-						+ ": the SNI mapping returned null");
-			}
 			SslHandler sslHandler = null;
 			try {
 				sslHandler = sslProvider.getSslContext().newHandler(ctx.alloc());

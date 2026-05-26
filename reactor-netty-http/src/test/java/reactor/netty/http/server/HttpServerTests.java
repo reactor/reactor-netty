@@ -2447,6 +2447,7 @@ class HttpServerTests extends BaseHttpTest {
 				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		Sinks.One<Throwable> error = Sinks.one();
+		Sinks.One<SniCompletionEvent> sniCompletionEvent = Sinks.one();
 		AtomicReference<String> mappedHostname = new AtomicReference<>();
 		disposableServer =
 				createServer()
@@ -2458,6 +2459,14 @@ class HttpServerTests extends BaseHttpTest {
 				        .doOnChannelInit((obs, ch, addr) ->
 				                ch.pipeline().addBefore(NettyPipeline.ReactiveBridge, "testSniSupportAsyncMappingsReturningNull",
 				                        new ChannelInboundHandlerAdapter() {
+
+				                            @Override
+				                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                                if (evt instanceof SniCompletionEvent) {
+				                                    sniCompletionEvent.tryEmitValue((SniCompletionEvent) evt);
+				                                }
+				                                ctx.fireUserEventTriggered(evt);
+				                            }
 
 				                            @Override
 				                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -2484,6 +2493,14 @@ class HttpServerTests extends BaseHttpTest {
 		                    && t.getMessage() != null
 		                    && t.getMessage().contains(String.valueOf(mappedHostname.get()))
 		                    && t.getMessage().contains("the SNI mapping returned null"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(10));
+
+		StepVerifier.create(sniCompletionEvent.asMono())
+		            .expectNextMatches(evt -> !evt.isSuccess()
+		                    && evt.cause() instanceof DecoderException
+		                    && evt.cause().getMessage() != null
+		                    && evt.cause().getMessage().contains("the SNI mapping returned null"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(10));
 	}
