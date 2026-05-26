@@ -77,7 +77,7 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
-	void test() throws Exception {
+	void testPooled() throws Exception {
 		PooledByteBufAllocator alloc = new PooledByteBufAllocator(true);
 		doRequest(alloc);
 
