@@ -79,6 +79,11 @@ class JarFileShadingTest extends AbstractJarFileTest {
 		String osgiVersion = version.replace('-', '.')
 				.replace(".SNAPSHOT", ".BUILD-");
 
+		if (version.split("\\.").length == 4) {
+			osgiVersion = osgiVersion.replace(".BUILD-", "-BUILD-");
+		}
+
+
 		try (InputStream inputStream = jar.getInputStream(manifest);
 		     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))) {
 			String lines = reader.lines()
