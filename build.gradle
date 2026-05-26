@@ -19,7 +19,7 @@ import org.gradle.api.attributes.java.TargetJvmVersion
 plugins {
 	id "com.diffplug.spotless" version "8.5.1"
 	id 'com.google.osdetector' version '1.7.3'
-	id 'org.gradle.test-retry' version '1.6.4'
+	id 'org.gradle.test-retry' version '1.6.5'
 	id 'io.spring.nohttp' version '0.0.11'
 	id 'com.gradleup.shadow' version '9.4.1' apply false
 	id 'com.jfrog.artifactory' version '6.0.4' apply false
