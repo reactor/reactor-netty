@@ -39,9 +39,10 @@ task javadocJar(type: Jar) {
 }
 
 static def qualifyVersion(String v) {
-	def m = v =~ /^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:[.\-](.+))?$/
+	// Using non-capturing groups (?:) for numeric components since we only need to capture the qualifier
+	def m = v =~ /^(?:\d+)\.(?:\d+)\.(?:\d+)(?:\.(?:\d+))?(?:[.\-](.+))?$/
 	if (!m.matches()) return "BAD"
-	def qualifier = m[0][5] ?: ""
+	def qualifier = m[0][1] ?: ""
 
 	if (qualifier.size() == 0) return "RELEASE" //new scheme
 	if (qualifier.matches("(?:M|RC)\\d+")) return "MILESTONE"
