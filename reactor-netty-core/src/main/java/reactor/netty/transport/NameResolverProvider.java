@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ public final class NameResolverProvider {
 		/**
 		 * Sets the strategy that is used to determine how a {@link DatagramChannel} is used by the resolver for sending
 		 * queries over UDP protocol.
-		 * Default to {@link DnsNameResolverChannelStrategy#ChannelPerResolver}
+		 * Default to {@link DnsNameResolverChannelStrategy#ChannelPerResolution}
 		 *
 		 * @param datagramChannelStrategy the {@link DnsNameResolverChannelStrategy} to use when doing queries over UDP protocol
 		 * @return {@code this}
@@ -673,7 +673,7 @@ public final class NameResolverProvider {
 		static final Duration DEFAULT_CACHE_MIN_TIME_TO_LIVE = Duration.ofSeconds(0);
 		static final Duration DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE = Duration.ofSeconds(0);
 		static final boolean DEFAULT_COMPLETE_ONCE_PREFERRED_RESOLVED = true;
-		static final DnsNameResolverChannelStrategy DEFAULT_DATAGRAM_CHANNEL_STRATEGY = DnsNameResolverChannelStrategy.ChannelPerResolver;
+		static final DnsNameResolverChannelStrategy DEFAULT_DATAGRAM_CHANNEL_STRATEGY = DnsNameResolverChannelStrategy.ChannelPerResolution;
 		static final int DEFAULT_MAX_PAYLOAD_SIZE = 4096;
 		static final int DEFAULT_MAX_QUERIES_PER_RESOLVE = 16;
 		static final int DEFAULT_NDOTS = -1;
