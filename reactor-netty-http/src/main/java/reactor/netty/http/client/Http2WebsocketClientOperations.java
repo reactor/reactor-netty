@@ -100,6 +100,9 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			String errorMsg = !HttpResponseStatus.OK.equals(status) ?
 					"Invalid websocket handshake response status [" + status + "]." :
 					"Failed to upgrade to websocket. End of stream is received.";
+			if (micrometerWsHandler != null) {
+				micrometerWsHandler.recordHandshakeFailure(channel());
+			}
 			onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.close();
@@ -120,13 +123,13 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					}
 
 					handshakerHttp2.finishHandshake(channel(), response);
+					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+					ctx.read();
+					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 					if (micrometerWsHandler != null) {
 						micrometerWsHandler.recordHandshakeComplete(channel(),
 								String.valueOf(response.status().code()));
 					}
-					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-					ctx.read();
-					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {
 					if (micrometerWsHandler != null) {
@@ -192,6 +195,9 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 		handshakerHttp2.handshake(channel)
 		               .addListener(f -> {
 		                   markPersistent(false);
+		                   if (!f.isSuccess() && micrometerWsHandler != null) {
+		                       micrometerWsHandler.recordHandshakeFailure(channel);
+		                   }
 		                   channel.read();
 		               });
 	}

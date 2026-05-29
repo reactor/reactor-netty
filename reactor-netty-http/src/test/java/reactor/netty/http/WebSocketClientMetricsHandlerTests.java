@@ -19,6 +19,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -334,6 +335,40 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 				REMOTE_ADDRESS, serverAddress,
 				PROXY_ADDRESS, NA,
 				URI, "/not-ws")
+				.hasCountEqualTo(1)
+				.hasTotalTimeGreaterThan(0);
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void testWebSocketHandshakeFailureOnHttp2NonOK() {
+		disposableServer = createServer()
+				.host("127.0.0.1")
+				.secure(spec -> spec.sslContext(serverCtx2))
+				.protocol(HttpProtocol.H2)
+				.http2Settings(spec -> spec.connectProtocolEnabled(true))
+				.handle((req, res) -> res.status(HttpResponseStatus.NOT_FOUND).send())
+				.bindNow();
+		String serverAddress = formatSocketAddress(disposableServer.address());
+
+		HttpClient client = httpClient
+				.secure(spec -> spec.sslContext(clientCtx2))
+				.protocol(HttpProtocol.H2);
+
+		client.websocket()
+		      .uri("/ws")
+		      .handle((in, out) -> in.receive().aggregate().asString())
+		      .as(StepVerifier::create)
+		      .expectError()
+		      .verify(Duration.ofSeconds(30));
+
+		// The FullHttpResponse-non-OK branch in Http2WebsocketClientOperations
+		// records handshake failure with status=ERROR.
+		assertTimer(registry, WS_HANDSHAKE_TIME,
+				REMOTE_ADDRESS, serverAddress,
+				PROXY_ADDRESS, NA,
+				URI, "/ws",
+				STATUS, "ERROR")
 				.hasCountEqualTo(1)
 				.hasTotalTimeGreaterThan(0);
 	}

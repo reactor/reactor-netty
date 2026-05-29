@@ -93,6 +93,10 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 
 	@Override
 	void recordHandshakeComplete(Channel channel, String status) {
+		if (handshakeFinalized) {
+			return;
+		}
+		handshakeFinalized = true;
 		if (handshakeTimeHandlerContext != null) {
 			handshakeTimeHandlerContext.status = status;
 		}
@@ -109,6 +113,10 @@ final class MicrometerWebSocketClientMetricsHandler extends AbstractWebSocketCli
 
 	@Override
 	void recordHandshakeFailure(Channel channel) {
+		if (handshakeFinalized) {
+			return;
+		}
+		handshakeFinalized = true;
 		if (handshakeTimeHandlerContext != null) {
 			handshakeTimeHandlerContext.status = "ERROR";
 		}

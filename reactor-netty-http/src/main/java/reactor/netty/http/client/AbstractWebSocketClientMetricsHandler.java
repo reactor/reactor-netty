@@ -63,6 +63,8 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 	long handshakeStartTime;
 
+	boolean handshakeFinalized;
+
 	protected AbstractWebSocketClientMetricsHandler(SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress,
 			String path, ContextView contextView, String method) {
 		this.method = method;
@@ -103,6 +105,10 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	}
 
 	void recordHandshakeComplete(Channel channel, String status) {
+		if (handshakeFinalized) {
+			return;
+		}
+		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		if (proxyAddress == null) {
 			recorder().recordWebSocketHandshakeTime(remoteAddress, path, status, time);
@@ -113,6 +119,10 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	}
 
 	void recordHandshakeFailure(Channel channel) {
+		if (handshakeFinalized) {
+			return;
+		}
+		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		if (proxyAddress == null) {
 			recorder().recordWebSocketHandshakeTime(remoteAddress, path, "ERROR", time);

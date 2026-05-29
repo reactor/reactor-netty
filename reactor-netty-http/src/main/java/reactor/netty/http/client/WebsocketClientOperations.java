@@ -120,6 +120,9 @@ class WebsocketClientOperations extends HttpClientOperations
 		handshakerHttp11.handshake(channel)
 		                .addListener(f -> {
 		                    markPersistent(false);
+		                    if (!f.isSuccess() && micrometerWsHandler != null) {
+		                        micrometerWsHandler.recordHandshakeFailure(channel);
+		                    }
 		                    channel.read();
 		                });
 	}
@@ -153,13 +156,13 @@ class WebsocketClientOperations extends HttpClientOperations
 			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
 					handshakerHttp11.finishHandshake(channel(), response);
+					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+					ctx.read();
+					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 					if (micrometerWsHandler != null) {
 						micrometerWsHandler.recordHandshakeComplete(channel(),
 								String.valueOf(response.status().code()));
 					}
-					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-					ctx.read();
-					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {
 					if (micrometerWsHandler != null) {
@@ -227,6 +230,9 @@ class WebsocketClientOperations extends HttpClientOperations
 			terminate();
 		}
 		else {
+			if (micrometerWsHandler != null) {
+				micrometerWsHandler.recordHandshakeFailure(channel());
+			}
 			onInboundError(new WebSocketClientHandshakeException("Connection prematurely closed BEFORE " +
 					"opening handshake is complete."));
 		}
