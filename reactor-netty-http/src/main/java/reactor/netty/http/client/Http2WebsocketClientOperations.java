@@ -100,9 +100,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			String errorMsg = !HttpResponseStatus.OK.equals(status) ?
 					"Invalid websocket handshake response status [" + status + "]." :
 					"Failed to upgrade to websocket. End of stream is received.";
-			if (micrometerWsHandler != null) {
-				micrometerWsHandler.recordHandshakeFailure(channel());
-			}
+			recordHandshakeFailure(channel());
 			onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.close();
@@ -132,9 +130,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					}
 				}
 				catch (Exception e) {
-					if (micrometerWsHandler != null) {
-						micrometerWsHandler.recordHandshakeFailure(channel());
-					}
+					recordHandshakeFailure(channel());
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.close();
@@ -195,8 +191,8 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 		handshakerHttp2.handshake(channel)
 		               .addListener(f -> {
 		                   markPersistent(false);
-		                   if (!f.isSuccess() && micrometerWsHandler != null) {
-		                       micrometerWsHandler.recordHandshakeFailure(channel);
+		                   if (!f.isSuccess()) {
+		                       recordHandshakeFailure(channel);
 		                   }
 		                   channel.read();
 		               });

@@ -30,6 +30,7 @@ import reactor.util.Loggers;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -63,7 +64,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 	long handshakeStartTime;
 
-	boolean handshakeFinalized;
+	volatile int handshakeFinalized;
 
 	protected AbstractWebSocketClientMetricsHandler(SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress,
 			String path, ContextView contextView, String method) {
@@ -105,10 +106,9 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	}
 
 	void recordHandshakeComplete(Channel channel, String status) {
-		if (handshakeFinalized) {
+		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
 			return;
 		}
-		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		if (proxyAddress == null) {
 			recorder().recordWebSocketHandshakeTime(remoteAddress, path, status, time);
@@ -119,10 +119,9 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	}
 
 	void recordHandshakeFailure(Channel channel) {
-		if (handshakeFinalized) {
+		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
 			return;
 		}
-		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		if (proxyAddress == null) {
 			recorder().recordWebSocketHandshakeTime(remoteAddress, path, "ERROR", time);
@@ -275,5 +274,8 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		}
 		dataSent = 0;
 	}
+
+	static final AtomicIntegerFieldUpdater<AbstractWebSocketClientMetricsHandler> HANDSHAKE_FINALIZED =
+			AtomicIntegerFieldUpdater.newUpdater(AbstractWebSocketClientMetricsHandler.class, "handshakeFinalized");
 
 }

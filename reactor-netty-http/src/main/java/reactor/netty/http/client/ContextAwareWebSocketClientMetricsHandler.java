@@ -50,10 +50,9 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 
 	@Override
 	void recordHandshakeComplete(Channel channel, String status) {
-		if (handshakeFinalized) {
+		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
 			return;
 		}
-		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		if (proxyAddress == null) {
 			recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, path, status, time);
@@ -65,10 +64,9 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 
 	@Override
 	void recordHandshakeFailure(Channel channel) {
-		if (handshakeFinalized) {
+		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
 			return;
 		}
-		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		if (proxyAddress == null) {
 			recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, path, "ERROR", time);

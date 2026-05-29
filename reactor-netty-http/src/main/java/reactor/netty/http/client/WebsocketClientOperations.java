@@ -120,8 +120,8 @@ class WebsocketClientOperations extends HttpClientOperations
 		handshakerHttp11.handshake(channel)
 		                .addListener(f -> {
 		                    markPersistent(false);
-		                    if (!f.isSuccess() && micrometerWsHandler != null) {
-		                        micrometerWsHandler.recordHandshakeFailure(channel);
+		                    if (!f.isSuccess()) {
+		                        recordHandshakeFailure(channel);
 		                    }
 		                    channel.read();
 		                });
@@ -165,9 +165,7 @@ class WebsocketClientOperations extends HttpClientOperations
 					}
 				}
 				catch (Exception e) {
-					if (micrometerWsHandler != null) {
-						micrometerWsHandler.recordHandshakeFailure(channel());
-					}
+					recordHandshakeFailure(channel());
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.close();
@@ -230,9 +228,7 @@ class WebsocketClientOperations extends HttpClientOperations
 			terminate();
 		}
 		else {
-			if (micrometerWsHandler != null) {
-				micrometerWsHandler.recordHandshakeFailure(channel());
-			}
+			recordHandshakeFailure(channel());
 			onInboundError(new WebSocketClientHandshakeException("Connection prematurely closed BEFORE " +
 					"opening handshake is complete."));
 		}
@@ -300,6 +296,20 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	String wsHttpMethod() {
 		return "GET";
+	}
+
+	void recordHandshakeFailure(Channel channel) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordHandshakeFailure(channel);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
 	}
 
 	static String resolvePath(HttpClientOperations ops) {
