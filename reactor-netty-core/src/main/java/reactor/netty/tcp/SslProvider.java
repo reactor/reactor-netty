@@ -199,6 +199,10 @@ public final class SslProvider {
 		 * <p><strong>Note:</strong> This method is an alternative of {@link #addSniMapping(String, Consumer)},
 		 * {@link #addSniMappings(Map)} and {@link #setSniMappings(Map)}.
 		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
+		 * <p><strong>Note:</strong> The supplied {@link AsyncMapping} must resolve to a non-null
+		 * {@link SslProvider} when it completes successfully. Completing the lookup successfully
+		 * with a {@code null} value causes the SNI handshake to fail with an
+		 * {@link io.netty.handler.codec.DecoderException}.
 		 *
 		 * @param mappings mappings of domain names to {@link SslProvider}
 		 * @return {@literal this}
