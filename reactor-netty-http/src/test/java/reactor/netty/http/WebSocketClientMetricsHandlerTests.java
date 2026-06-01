@@ -15,8 +15,10 @@
  */
 package reactor.netty.http;
 
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -53,6 +55,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import static reactor.netty.Metrics.CONNECTION_DURATION;
@@ -412,6 +415,62 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 						       .hasCountEqualTo(1)
 						       .hasTotalTimeGreaterThan(0);
 		       });
+	}
+
+	@Test
+	void testWebSocketMultipleMessagesSentMetrics() {
+		disposableServer = httpServer.bindNow();
+		String serverAddress = formatSocketAddress(disposableServer.address());
+
+		int messageCount = 16;
+		String message = "abcde";
+		int messageSize = message.getBytes(CharsetUtil.UTF_8).length;
+
+		// Send several distinct, equally-sized messages in a single burst on one connection.
+		httpClient.websocket()
+		          .uri("/ws-echo")
+		          .handle((in, out) -> out.sendObject(
+				          Flux.range(0, messageCount).map(i -> new TextWebSocketFrame(message)))
+		                                  .then())
+		          .as(StepVerifier::create)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// Each message must be recorded as its own data.sent record. A per-message
+		// accumulator that bleeds across messages would collapse the burst into a single
+		// record (and a garbage data.sent.time).
+		await().atMost(5, TimeUnit.SECONDS)
+		       .pollInterval(50, TimeUnit.MILLISECONDS)
+		       .untilAsserted(() -> {
+			       assertDistributionSummary(registry, WS_DATA_SENT,
+					       REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "/ws-echo")
+					       .hasCountEqualTo(messageCount)
+					       .hasTotalAmountGreaterThanOrEqualTo((double) messageSize * messageCount);
+
+			       assertTimer(registry, WS_DATA_SENT_TIME,
+					       REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "/ws-echo")
+					       .hasCountEqualTo(messageCount)
+					       .hasTotalTimeGreaterThan(0);
+		       });
+
+		// Per-message attribution must be exact: no single record may carry more than one
+		// message worth of bytes.
+		DistributionSummary dataSent = registry.find(WS_DATA_SENT)
+				.tag(REMOTE_ADDRESS, serverAddress)
+				.tag(PROXY_ADDRESS, NA)
+				.tag(URI, "/ws-echo")
+				.summary();
+		assertThat(dataSent).isNotNull();
+		assertThat(dataSent.max()).isLessThanOrEqualTo(messageSize);
+
+		// And no send-time may be a garbage 'now - 0' duration.
+		Timer dataSentTime = registry.find(WS_DATA_SENT_TIME)
+				.tag(REMOTE_ADDRESS, serverAddress)
+				.tag(PROXY_ADDRESS, NA)
+				.tag(URI, "/ws-echo")
+				.timer();
+		assertThat(dataSentTime).isNotNull();
+		assertThat(dataSentTime.max(TimeUnit.SECONDS)).isLessThan(10d);
 	}
 
 	@Test

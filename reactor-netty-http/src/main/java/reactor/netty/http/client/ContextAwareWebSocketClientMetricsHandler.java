@@ -98,20 +98,19 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 	}
 
 	@Override
-	protected void recordWrite(SocketAddress address) {
+	protected void recordWrite(SocketAddress address, long sentBytes, long sentTimeNanos) {
 		if (proxyAddress == null) {
 			recorder.recordDataSentTime(contextView, address, path, method,
-					Duration.ofNanos(System.nanoTime() - dataSentTime));
+					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
 
-			recorder.recordDataSent(contextView, address, path, dataSent);
+			recorder.recordDataSent(contextView, address, path, sentBytes);
 		}
 		else {
 			recorder.recordDataSentTime(contextView, address, proxyAddress, path, method,
-					Duration.ofNanos(System.nanoTime() - dataSentTime));
+					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
 
-			recorder.recordDataSent(contextView, address, proxyAddress, path, dataSent);
+			recorder.recordDataSent(contextView, address, proxyAddress, path, sentBytes);
 		}
-		dataSent = 0;
 	}
 
 	@Override

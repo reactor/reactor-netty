@@ -144,12 +144,19 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 					dataSent += extractProcessedDataFromBuffer(frame);
 
 					if (frame.isFinalFragment()) {
+						// Snapshot and reset the shared accumulators BEFORE registering the
+						// asynchronous write-completion listener. Otherwise a subsequent message
+						// written before this listener fires mutates dataSent/dataSentTime and
+						// corrupts this message's byte/time attribution.
+						long sentBytes = dataSent;
+						long sentTimeNanos = dataSentTime;
+						dataSent = 0;
+						dataSentTime = 0;
 						// VoidChannelPromise does not support addListener, unvoid to ensure the listener fires
 						promise = promise.unvoid();
 						promise.addListener(f -> {
 							try {
-								recordWrite(remoteAddress);
-								dataSentTime = 0;
+								recordWrite(remoteAddress, sentBytes, sentTimeNanos);
 							}
 							catch (RuntimeException e) {
 								if (log.isWarnEnabled()) {
@@ -259,20 +266,19 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		dataReceived = 0;
 	}
 
-	protected void recordWrite(SocketAddress address) {
+	protected void recordWrite(SocketAddress address, long sentBytes, long sentTimeNanos) {
 		if (proxyAddress == null) {
 			recorder().recordDataSentTime(address, path, method,
-					Duration.ofNanos(System.nanoTime() - dataSentTime));
+					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
 
-			recorder().recordDataSent(address, path, dataSent);
+			recorder().recordDataSent(address, path, sentBytes);
 		}
 		else {
 			recorder().recordDataSentTime(address, proxyAddress, path, method,
-					Duration.ofNanos(System.nanoTime() - dataSentTime));
+					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
 
-			recorder().recordDataSent(address, proxyAddress, path, dataSent);
+			recorder().recordDataSent(address, proxyAddress, path, sentBytes);
 		}
-		dataSent = 0;
 	}
 
 	static final AtomicIntegerFieldUpdater<AbstractWebSocketClientMetricsHandler> HANDSHAKE_FINALIZED =
