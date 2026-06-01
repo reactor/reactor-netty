@@ -431,6 +431,29 @@ include::{examples-dir}/metrics/custom/Application.java[lines=18..35]
 ----
 <1> Enables HTTP client metrics and provides {javadoc}/reactor/netty/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
 
+[[websocket-metrics]]
+=== WebSocket Metrics
+When the connection is upgraded to a `WebSocket`, the HTTP client metrics handler is replaced by a dedicated
+`WebSocket` client metrics handler. From that point on, the metrics are exposed with a prefix of
+`reactor.netty.websocket.client`.
+
+The following table provides information for the `WebSocket` client metrics:
+
+[width="100%",options="header"]
+|=======
+| metric name | type | description
+| reactor.netty.websocket.client.handshake.time | Timer | Time spent for the `WebSocket` opening handshake.
+| reactor.netty.websocket.client.connection.duration | Timer | Time spent for the lifetime of the `WebSocket` connection.
+| reactor.netty.websocket.client.data.received | DistributionSummary | Amount of the data received, in bytes. Control frames (Close, Ping, Pong) are excluded.
+| reactor.netty.websocket.client.data.sent | DistributionSummary | Amount of the data sent, in bytes. Control frames (Close, Ping, Pong) are excluded.
+| reactor.netty.websocket.client.data.received.time | Timer | Time spent in consuming incoming data.
+| reactor.netty.websocket.client.data.sent.time | Timer | Time spent in sending outgoing data.
+| reactor.netty.websocket.client.errors | Counter | Number of errors that occurred.
+|=======
+
+The same recorder customization applies: when an integration with a system other than `Micrometer` is needed,
+provide your own {javadoc}/reactor/netty/http/client/WebSocketClientMetricsRecorder.html[`WebSocketClientMetricsRecorder`] implementation.
+
 [[tracing]]
 == Tracing
 The HTTP client supports built-in integration with https://micrometer.io/docs/tracing[`Micrometer Tracing`].
