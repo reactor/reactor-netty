@@ -24,5 +24,13 @@ public class CustomBlockHoundIntegration implements BlockHoundIntegration {
 	public void applyTo(BlockHound.Builder builder) {
 		// Calls blocking SecureRandom.next
 		builder.allowBlockingCallsInside("java.nio.file.TempFileHelper", "createTempFile");
+
+		builder.allowBlockingCallsInside(
+				"io.netty.resolver.dns.DnsQueryIdSpace",
+				"nextId");
+
+		builder.allowBlockingCallsInside(
+				"io.netty.resolver.dns.DnsQueryIdSpace$DnsQueryIdRange",
+				"pushId");
 	}
 }
