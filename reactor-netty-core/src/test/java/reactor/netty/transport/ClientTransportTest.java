@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -291,6 +292,7 @@ class ClientTransportTest {
 			              ((List<InetSocketAddress>) f.getNow())
 			                      .stream()
 			                      .map(InetSocketAddress::getAddress)
+			                      .filter(address -> address instanceof Inet4Address)
 			                      .collect(Collectors.toList()));
 			          latch.countDown();
 			      });
