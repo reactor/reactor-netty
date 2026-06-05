@@ -1043,7 +1043,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			this.creationTimestamp = pool.clock.millis();
 			this.pool = pool;
 			this.maxLifeTimeMs = maxLifeTimeMs;
-			SslHandler handler = connection.channel().pipeline().get(SslHandler.class);
+			SslHandler handler = (SslHandler) connection.channel().pipeline().get(NettyPipeline.SslHandler);
 			if (handler != null) {
 				this.applicationProtocol = handler.applicationProtocol() != null ?
 						handler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;

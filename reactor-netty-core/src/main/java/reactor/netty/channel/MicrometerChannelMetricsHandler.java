@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandler;
 import org.jspecify.annotations.Nullable;
+import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.context.ContextView;
@@ -352,7 +353,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		private void addListener(ChannelHandlerContext ctx) {
 			if (!listenerAdded) {
-				SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+				SslHandler sslHandler = (SslHandler) ctx.pipeline().get(NettyPipeline.SslHandler);
 				if (sslHandler != null) {
 					listenerAdded = true;
 					SocketAddress rAddr = remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress();
