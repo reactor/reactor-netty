@@ -472,6 +472,41 @@ public final class SslProvider {
 		addSslReadHandler(pipeline, sslDebug);
 	}
 
+	public void addProxySslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
+		Objects.requireNonNull(channel, "channel");
+
+		SslHandler sslHandler;
+
+		if (remoteAddress instanceof InetSocketAddress) {
+			InetSocketAddress sniInfo = (InetSocketAddress) remoteAddress;
+			sslHandler = getSslContext()
+					.newHandler(channel.alloc(), sniInfo.getHostString(), sniInfo.getPort());
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Proxy SSL enabled using engine {} and SNI {}"), sslHandler.engine(), sniInfo);
+			}
+		}
+		else {
+			sslHandler = getSslContext().newHandler(channel.alloc());
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Proxy SSL enabled using engine {}"), sslHandler.engine());
+			}
+		}
+
+		configure(sslHandler);
+
+		ChannelPipeline pipeline = channel.pipeline();
+		if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
+			pipeline.addBefore(NettyPipeline.ProxyHandler, NettyPipeline.ProxySslHandler, sslHandler);
+		}
+		else {
+			pipeline.addFirst(NettyPipeline.ProxySslHandler, sslHandler);
+		}
+
+		addProxySslReadHandler(pipeline, sslDebug);
+	}
+
 	@Override
 	public String toString() {
 		return "SslProvider {" +
@@ -507,6 +542,13 @@ public final class SslProvider {
 		}
 		else {
 			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslReadHandler());
+		}
+	}
+
+	static void addProxySslReadHandler(ChannelPipeline pipeline, boolean sslDebug) {
+		pipeline.addAfter(NettyPipeline.ProxySslHandler, NettyPipeline.ProxySslReader, new SslReadHandler());
+		if (sslDebug) {
+			pipeline.addBefore(NettyPipeline.ProxySslHandler, NettyPipeline.ProxySslLoggingHandler, LOGGING_HANDLER);
 		}
 	}
 
