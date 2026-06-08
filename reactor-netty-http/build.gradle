@@ -211,6 +211,7 @@ jar {
 
 japicmp {
 	methodExcludes = [
+			'reactor.netty.http.Http3SettingsSpec$Builder#maxFieldSectionSize(long)'
 	]
 }
 

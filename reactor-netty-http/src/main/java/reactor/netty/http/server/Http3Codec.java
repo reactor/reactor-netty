@@ -21,6 +21,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http3.DefaultHttp3SettingsFrame;
 import io.netty.handler.codec.http3.Http3FrameToHttpObjectCodec;
 import io.netty.handler.codec.http3.Http3ServerConnectionHandler;
 import io.netty.handler.codec.quic.QuicStreamChannel;
@@ -188,6 +189,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			long maxFieldSectionSize,
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
@@ -196,9 +198,11 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Duration requestTimeout,
 			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
+		DefaultHttp3SettingsFrame localSettings = new DefaultHttp3SettingsFrame();
+		localSettings.settings().maxFieldSectionSize(maxFieldSectionSize);
 		return new Http3ServerConnectionHandler(
 				new Http3Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate, decoder, encoder, errorLogEnabled, errorLog,
 						formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder,
-						minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
+						minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue, validate), null, null, localSettings, true);
 	}
 }

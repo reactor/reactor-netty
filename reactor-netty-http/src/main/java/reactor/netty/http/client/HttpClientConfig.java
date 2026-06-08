@@ -714,10 +714,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 	}
 
-	static void configureHttp3Pipeline(ChannelPipeline p, boolean removeMetricsRecorder, boolean removeProxyProvider) {
+	static void configureHttp3Pipeline(ChannelPipeline p, long maxFieldSectionSize, boolean removeMetricsRecorder, boolean removeProxyProvider) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
-		p.addLast(NettyPipeline.HttpCodec, newHttp3ClientConnectionHandler());
+		p.addLast(NettyPipeline.HttpCodec, newHttp3ClientConnectionHandler(maxFieldSectionSize));
 
 		if (removeMetricsRecorder) {
 			// Connection metrics are not applicable
@@ -1158,6 +1158,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final HttpResponseDecoderSpec                    decoder;
 		final Http2Settings                              http2Settings;
 		final @Nullable Http2SettingsSpec                http2SettingsSpec;
+		final long                                       maxFieldSectionSize;
 		final @Nullable ChannelMetricsRecorder           metricsRecorder;
 		final ChannelOperations.OnSetup                  opsFactory;
 		final int                                        protocols;
@@ -1170,6 +1171,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.decoder = config.decoder;
 			this.http2Settings = config.http2Settings();
 			this.http2SettingsSpec = config.http2SettingsSpec();
+			this.maxFieldSectionSize = config.http3SettingsSpec() != null ? config.http3SettingsSpec().maxFieldSectionSize() : 8192;
 			this.metricsRecorder = config.metricsRecorderInternal();
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;
@@ -1197,7 +1199,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, http2SettingsSpec, observer);
 				}
 				else if ((protocols & h3) == h3) {
-					configureHttp3Pipeline(channel.pipeline(), metricsRecorder != null, proxyAddress != null);
+					configureHttp3Pipeline(channel.pipeline(), maxFieldSectionSize, metricsRecorder != null, proxyAddress != null);
 				}
 			}
 			else {

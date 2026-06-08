@@ -627,6 +627,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			long maxFieldSectionSize,
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
@@ -639,7 +640,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog, compressionOptions,
 				compressPredicate, cookieDecoder, cookieEncoder, errorLogEnabled, errorLog, formDecoderProvider,
-				forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
+				forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, maxFieldSectionSize, methodTagValue, metricsRecorder, minCompressionSize,
 				opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 
 		if (metricsRecorder != null) {
@@ -1449,6 +1450,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final @Nullable Duration                                                idleTimeout;
 		final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 		                                                                        mapHandle;
+		final long                                                              maxFieldSectionSize;
 		final int                                                               maxKeepAliveRequests;
 		final @Nullable Function<String, String>                                methodTagValue;
 		final @Nullable ChannelMetricsRecorder                                  metricsRecorder;
@@ -1479,6 +1481,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.httpMessageLogFactory = config.httpMessageLogFactory;
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
+			this.maxFieldSectionSize = config.http3SettingsSpec() != null ? config.http3SettingsSpec().maxFieldSectionSize() : 8192;
 			this.maxKeepAliveRequests = config.maxKeepAliveRequests;
 			this.methodTagValue = config.methodTagValue;
 			this.metricsRecorder = config.metricsRecorderInternal();
@@ -1597,6 +1600,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							httpMessageLogFactory,
 							observer,
 							mapHandle,
+							maxFieldSectionSize,
 							methodTagValue,
 							metricsRecorder,
 							minCompressionSize,

@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http3.DefaultHttp3SettingsFrame;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.codec.http3.Http3ClientConnectionHandler;
 import io.netty.handler.codec.http3.Http3FrameToHttpObjectCodec;
@@ -125,8 +126,10 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		}
 	}
 
-	static ChannelHandler newHttp3ClientConnectionHandler() {
-		return new Http3ClientConnectionHandler();
+	static ChannelHandler newHttp3ClientConnectionHandler(long maxFieldSectionSize) {
+		DefaultHttp3SettingsFrame localSettings = new DefaultHttp3SettingsFrame();
+		localSettings.settings().maxFieldSectionSize(maxFieldSectionSize);
+		return new Http3ClientConnectionHandler(null, null, null, localSettings, true);
 	}
 
 	static final Http3StreamBridgeClientHandler HTTP_3_STREAM_BRIDGE_CLIENT_HANDLER =

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,15 @@ public final class Http3SettingsSpec {
 		 * @return {@code this}
 		 */
 		Builder maxData(long maxData);
+
+		/**
+		 * Sets the {@code SETTINGS_MAX_FIELD_SECTION_SIZE} value.
+		 *
+		 * @param maxFieldSectionSize the {@code SETTINGS_MAX_FIELD_SECTION_SIZE} value
+		 * @return {@code this}
+		 * @since 1.3.6
+		 */
+		Builder maxFieldSectionSize(long maxFieldSectionSize);
 
 		/**
 		 * Set the initial maximum data limit for local bidirectional streams.
@@ -135,6 +144,16 @@ public final class Http3SettingsSpec {
 	}
 
 	/**
+	 * Return the configured {@code SETTINGS_MAX_FIELD_SECTION_SIZE} value.
+	 *
+	 * @return the configured {@code SETTINGS_MAX_FIELD_SECTION_SIZE} value
+	 * @since 1.3.6
+	 */
+	public long maxFieldSectionSize() {
+		return maxFieldSectionSize;
+	}
+
+	/**
 	 * Return the configured initial maximum data limit for local bidirectional streams.
 	 *
 	 * @return the configured initial maximum data limit for local bidirectional streams
@@ -181,6 +200,7 @@ public final class Http3SettingsSpec {
 		Http3SettingsSpec that = (Http3SettingsSpec) o;
 		return Objects.equals(idleTimeout, that.idleTimeout) &&
 				maxData == that.maxData &&
+				maxFieldSectionSize == that.maxFieldSectionSize &&
 				maxStreamDataBidirectionalLocal == that.maxStreamDataBidirectionalLocal &&
 				maxStreamDataBidirectionalRemote == that.maxStreamDataBidirectionalRemote &&
 				maxStreamsBidirectional == that.maxStreamsBidirectional &&
@@ -192,6 +212,7 @@ public final class Http3SettingsSpec {
 		int result = 1;
 		result = 31 * result + Objects.hashCode(idleTimeout);
 		result = 31 * result + Long.hashCode(maxData);
+		result = 31 * result + Long.hashCode(maxFieldSectionSize);
 		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalLocal);
 		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalRemote);
 		result = 31 * result + Long.hashCode(maxStreamsBidirectional);
@@ -201,6 +222,7 @@ public final class Http3SettingsSpec {
 
 	final @Nullable Duration idleTimeout;
 	final long maxData;
+	final long maxFieldSectionSize;
 	final long maxStreamDataBidirectionalLocal;
 	final long maxStreamDataBidirectionalRemote;
 	final long maxStreamsBidirectional;
@@ -209,6 +231,7 @@ public final class Http3SettingsSpec {
 	Http3SettingsSpec(Build build) {
 		this.idleTimeout = build.idleTimeout;
 		this.maxData = build.maxData;
+		this.maxFieldSectionSize = build.maxFieldSectionSize;
 		this.maxStreamDataBidirectionalLocal = build.maxStreamDataBidirectionalLocal;
 		this.maxStreamDataBidirectionalRemote = build.maxStreamDataBidirectionalRemote;
 		this.maxStreamsBidirectional = build.maxStreamsBidirectional;
@@ -217,12 +240,14 @@ public final class Http3SettingsSpec {
 
 	static final class Build implements Builder {
 		static final long DEFAULT_MAX_DATA = 0L;
+		static final long DEFAULT_MAX_FIELD_SECTION_SIZE = 8192;
 		static final long DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_LOCAL = 0L;
 		static final long DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_REMOTE = 0L;
 		static final long DEFAULT_MAX_STREAMS_BIDIRECTIONAL = 0L;
 
 		@Nullable Duration idleTimeout;
 		long maxData = DEFAULT_MAX_DATA;
+		long maxFieldSectionSize = DEFAULT_MAX_FIELD_SECTION_SIZE;
 		long maxStreamDataBidirectionalLocal = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_LOCAL;
 		long maxStreamDataBidirectionalRemote = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_REMOTE;
 		long maxStreamsBidirectional = DEFAULT_MAX_STREAMS_BIDIRECTIONAL;
@@ -245,6 +270,15 @@ public final class Http3SettingsSpec {
 				throw new IllegalArgumentException("maxData must be positive or zero");
 			}
 			this.maxData = maxData;
+			return this;
+		}
+
+		@Override
+		public Builder maxFieldSectionSize(long maxFieldSectionSize) {
+			if (maxFieldSectionSize <= 0) {
+				throw new IllegalArgumentException("maxFieldSectionSize must be positive");
+			}
+			this.maxFieldSectionSize = maxFieldSectionSize;
 			return this;
 		}
 
