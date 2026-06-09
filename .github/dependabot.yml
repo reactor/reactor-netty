@@ -7,28 +7,28 @@ updates:
   open-pull-requests-limit: 10
   assignees:
   - violetagg
-  target-branch: "1.2.x"
+  target-branch: "main"
   labels:
   - type/dependency-upgrade
   ignore:
   # Don't update Micrometer
   - dependency-name: io.micrometer:micrometer-core
     versions:
-    - "> 1.14.0"
+    - "> 1.16.0"
   # Don't update Micrometer Tracing
   - dependency-name: io.micrometer:micrometer-tracing
     versions:
-    - "> 1.4.0"
+    - "> 1.6.0"
   - dependency-name: io.micrometer:micrometer-tracing-integration-test
     versions:
-    - "> 1.4.0"
+    - "> 1.6.0"
   - dependency-name: io.micrometer:micrometer-tracing-bridge-brave
     versions:
-    - "> 1.4.0"
+    - "> 1.6.0"
   # Don't update Context Propagation
   - dependency-name: io.micrometer:context-propagation
     versions:
-    - "> 1.1.0"
+    - "> 1.2.0"
   # Versions > 9 require JDK11+
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
     versions:
@@ -68,58 +68,6 @@ updates:
     versions:
     - "[1.a, 2]"
   rebase-strategy: disabled
-- package-ecosystem: gradle
-  directory: "/"
-  schedule:
-    interval: daily
-  open-pull-requests-limit: 10
-  assignees:
-  - violetagg
-  target-branch: "main"
-  labels:
-  - type/dependency-upgrade
-  ignore:
-  # Don't update Micrometer
-  - dependency-name: io.micrometer:micrometer-core
-    versions:
-    - "> 1.15.0"
-  # Don't update Micrometer Tracing
-  - dependency-name: io.micrometer:micrometer-tracing
-    versions:
-    - "> 1.5.0"
-  - dependency-name: io.micrometer:micrometer-tracing-integration-test
-    versions:
-    - "> 1.5.0"
-  - dependency-name: io.micrometer:micrometer-tracing-bridge-brave
-    versions:
-    - "> 1.5.0"
-  # Dependencies updated by forward merging 1.2.x branch
-  - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
-  - dependency-name: org.assertj:assertj-core
-  - dependency-name: com.fasterxml.jackson.core:jackson-databind
-  - dependency-name: io.specto:hoverfly-java-junit5
-  - dependency-name: org.gradle.test-retry
-  - dependency-name: io.projectreactor.tools:blockhound-junit-platform
-  - dependency-name: net.ltgt.errorprone
-  - dependency-name: me.champeau.gradle.japicmp
-  - dependency-name: org.junit.platform:junit-platform-launcher
-  - dependency-name: org.junit.jupiter:*
-  - dependency-name: org.awaitility:awaitility
-  - dependency-name: com.aayushatharva.brotli4j:brotli4j
-  - dependency-name: io.netty.incubator:netty-incubator-transport-native-io_uring
-  - dependency-name: io.netty.incubator:netty-incubator-codec-http3
-  - dependency-name: com.diffplug.spotless
-  - dependency-name: com.github.luben:zstd-jni
-  - dependency-name: io.micrometer:context-propagation
-  - dependency-name: biz.aQute.bnd.builder
-  - dependency-name: org.mockito:mockito-core
-  - dependency-name: ch.qos.logback:logback-classic
-  - dependency-name: org.slf4j:*
-  - dependency-name: org.graalvm.buildtools.native
-  - dependency-name: com.gradleup.shadow
-  - dependency-name: gradle-wrapper
-  - dependency-name: de.undercouch.download
-  rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
@@ -127,7 +75,7 @@ updates:
   open-pull-requests-limit: 10
   assignees:
       - violetagg
-  target-branch: "1.2.x"
+  target-branch: "main"
   labels:
       - type/dependency-upgrade
   rebase-strategy: disabled
@@ -138,7 +86,7 @@ updates:
   open-pull-requests-limit: 10
   assignees:
     - violetagg
-  target-branch: "1.2.x"
+  target-branch: "main"
   labels:
     - type/dependency-upgrade
   rebase-strategy: disabled
