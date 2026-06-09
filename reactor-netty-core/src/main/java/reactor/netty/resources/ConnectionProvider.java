@@ -914,5 +914,31 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		default void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 		}
+
+		/**
+		 * Invoked when a pending acquisition succeeds, i.e. when a connection/stream becomes available after the
+		 * acquisition had to wait. Default implementation is a no-op for backwards compatibility.
+		 *
+		 * @param poolName the pool name
+		 * @param id the pool id
+		 * @param remoteAddress the remote address
+		 * @param pendingAcquireTimeMillis the time, in milliseconds, the acquisition spent pending before succeeding
+		 * @since 1.3.7
+		 */
+		default void recordPendingAcquireSuccess(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
+		}
+
+		/**
+		 * Invoked when a pending acquisition fails, e.g. on timeout or when the pending acquire queue is full, after
+		 * the acquisition had to wait. Default implementation is a no-op for backwards compatibility.
+		 *
+		 * @param poolName the pool name
+		 * @param id the pool id
+		 * @param remoteAddress the remote address
+		 * @param pendingAcquireTimeMillis the time, in milliseconds, the acquisition spent pending before failing
+		 * @since 1.3.7
+		 */
+		default void recordPendingAcquireFailure(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
+		}
 	}
 }
