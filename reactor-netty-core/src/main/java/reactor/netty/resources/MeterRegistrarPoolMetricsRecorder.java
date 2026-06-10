@@ -25,7 +25,7 @@ import java.net.SocketAddress;
  * {@link MeterRegistrar}. This allows custom registrars to receive the {@code pending.connections.time}
  * data that is otherwise only available to the built-in Micrometer integration.
  *
- * @author Violeta Georgieva
+ * @author ejhnsn
  * @since 1.3.7
  */
 final class MeterRegistrarPoolMetricsRecorder implements PoolMetricsRecorder {
