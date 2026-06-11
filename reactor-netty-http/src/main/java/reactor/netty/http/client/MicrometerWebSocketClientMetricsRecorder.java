@@ -45,7 +45,7 @@ import static reactor.netty.Metrics.formatSocketAddress;
  * {@link WebSocketClientMetricsRecorder} for Reactor Netty built-in integration with Micrometer.
  *
  * @author LivingLikeKrillin
- * @since 1.3.5
+ * @since 1.3.7
  */
 final class MicrometerWebSocketClientMetricsRecorder extends MicrometerHttpMetricsRecorder implements WebSocketClientMetricsRecorder {
 

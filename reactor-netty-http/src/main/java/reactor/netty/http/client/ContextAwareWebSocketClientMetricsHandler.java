@@ -27,7 +27,7 @@ import java.time.Duration;
  * {@link reactor.util.context.ContextView}.
  *
  * @author LivingLikeKrillin
- * @since 1.3.5
+ * @since 1.3.7
  */
 final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketClientMetricsHandler {
 
@@ -99,15 +99,14 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 
 	@Override
 	protected void recordWrite(SocketAddress address, long sentBytes, long sentTimeNanos) {
+		Duration duration = Duration.ofNanos(System.nanoTime() - sentTimeNanos);
 		if (proxyAddress == null) {
-			recorder.recordDataSentTime(contextView, address, path, method,
-					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
+			recorder.recordDataSentTime(contextView, address, path, method, duration);
 
 			recorder.recordDataSent(contextView, address, path, sentBytes);
 		}
 		else {
-			recorder.recordDataSentTime(contextView, address, proxyAddress, path, method,
-					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
+			recorder.recordDataSentTime(contextView, address, proxyAddress, path, method, duration);
 
 			recorder.recordDataSent(contextView, address, proxyAddress, path, sentBytes);
 		}
@@ -115,15 +114,14 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 
 	@Override
 	protected void recordRead(SocketAddress address) {
+		Duration duration = Duration.ofNanos(System.nanoTime() - dataReceivedTime);
 		if (proxyAddress == null) {
-			recorder.recordDataReceivedTime(contextView, address, path, method, "n/a",
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+			recorder.recordDataReceivedTime(contextView, address, path, method, "n/a", duration);
 
 			recorder.recordDataReceived(contextView, address, path, dataReceived);
 		}
 		else {
-			recorder.recordDataReceivedTime(contextView, address, proxyAddress, path, method, "n/a",
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+			recorder.recordDataReceivedTime(contextView, address, proxyAddress, path, method, "n/a", duration);
 
 			recorder.recordDataReceived(contextView, address, proxyAddress, path, dataReceived);
 		}

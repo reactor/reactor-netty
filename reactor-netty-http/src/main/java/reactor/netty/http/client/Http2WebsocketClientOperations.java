@@ -124,10 +124,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
-					if (micrometerWsHandler != null) {
-						micrometerWsHandler.recordHandshakeComplete(channel(),
-								String.valueOf(response.status().code()));
-					}
+					recordHandshakeComplete(channel(), String.valueOf(response.status().code()));
 				}
 				catch (Exception e) {
 					recordHandshakeFailure(channel());

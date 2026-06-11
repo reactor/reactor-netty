@@ -25,7 +25,7 @@ import java.time.Duration;
  * {@link ContextView} aware class for collecting metrics on WebSocket client level.
  *
  * @author LivingLikeKrillin
- * @since 1.3.5
+ * @since 1.3.7
  */
 public abstract class ContextAwareWebSocketClientMetricsRecorder extends ContextAwareHttpClientMetricsRecorder
 		implements WebSocketClientMetricsRecorder {

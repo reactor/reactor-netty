@@ -65,7 +65,7 @@ public class Metrics {
 	 * Name prefix that will be used for the WebSocket client's metrics
 	 * registered in Micrometer's global registry.
 	 *
-	 * @since 1.3.5
+	 * @since 1.3.7
 	 */
 	public static final String WEBSOCKET_CLIENT_PREFIX = "reactor.netty.websocket.client";
 
@@ -129,9 +129,16 @@ public class Metrics {
 	public static final String ERRORS = ".errors";
 
 	/**
+	 * Time spent for handshake.
+	 *
+	 * @since 1.3.7
+	 */
+	public static final String HANDSHAKE_TIME = ".handshake.time";
+
+	/**
 	 * Time spent for TLS handshake.
 	 */
-	public static final String TLS_HANDSHAKE_TIME = ".tls.handshake.time";
+	public static final String TLS_HANDSHAKE_TIME = ".tls" + HANDSHAKE_TIME;
 
 	/**
 	 * Time spent for connecting to the remote address.
@@ -154,16 +161,9 @@ public class Metrics {
 	public static final String RESPONSE_TIME = ".response.time";
 
 	/**
-	 * Time spent for WebSocket handshake.
-	 *
-	 * @since 1.3.5
-	 */
-	public static final String HANDSHAKE_TIME = ".handshake.time";
-
-	/**
 	 * Duration of the WebSocket connection.
 	 *
-	 * @since 1.3.5
+	 * @since 1.3.7
 	 */
 	public static final String CONNECTION_DURATION = ".connection.duration";
 

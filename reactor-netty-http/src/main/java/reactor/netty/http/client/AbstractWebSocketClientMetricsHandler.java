@@ -38,7 +38,7 @@ import static reactor.netty.ReactorNetty.format;
  * {@link ChannelDuplexHandler} for handling WebSocket {@link HttpClient} metrics.
  *
  * @author LivingLikeKrillin
- * @since 1.3.5
+ * @since 1.3.7
  */
 abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandler {
 
@@ -145,7 +145,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 					if (frame.isFinalFragment()) {
 						// Snapshot and reset the shared accumulators BEFORE registering the
-						// asynchronous write-completion listener. Otherwise a subsequent message
+						// asynchronous write-completion listener. Otherwise, a subsequent message
 						// written before this listener fires mutates dataSent/dataSentTime and
 						// corrupts this message's byte/time attribution.
 						long sentBytes = dataSent;
@@ -190,6 +190,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 					dataReceived += extractProcessedDataFromBuffer(frame);
 
 					if (frame.isFinalFragment()) {
+						// dataReceived is reset inside recordRead
 						recordRead(remoteAddress);
 						dataReceivedTime = 0;
 					}
@@ -251,15 +252,14 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	}
 
 	protected void recordRead(SocketAddress address) {
+		Duration duration = Duration.ofNanos(System.nanoTime() - dataReceivedTime);
 		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(address, path, method, "n/a",
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+			recorder().recordDataReceivedTime(address, path, method, "n/a", duration);
 
 			recorder().recordDataReceived(address, path, dataReceived);
 		}
 		else {
-			recorder().recordDataReceivedTime(address, proxyAddress, path, method, "n/a",
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+			recorder().recordDataReceivedTime(address, proxyAddress, path, method, "n/a", duration);
 
 			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
 		}
@@ -267,15 +267,14 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 	}
 
 	protected void recordWrite(SocketAddress address, long sentBytes, long sentTimeNanos) {
+		Duration duration = Duration.ofNanos(System.nanoTime() - sentTimeNanos);
 		if (proxyAddress == null) {
-			recorder().recordDataSentTime(address, path, method,
-					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
+			recorder().recordDataSentTime(address, path, method, duration);
 
 			recorder().recordDataSent(address, path, sentBytes);
 		}
 		else {
-			recorder().recordDataSentTime(address, proxyAddress, path, method,
-					Duration.ofNanos(System.nanoTime() - sentTimeNanos));
+			recorder().recordDataSentTime(address, proxyAddress, path, method, duration);
 
 			recorder().recordDataSent(address, proxyAddress, path, sentBytes);
 		}

@@ -159,10 +159,7 @@ class WebsocketClientOperations extends HttpClientOperations
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
-					if (micrometerWsHandler != null) {
-						micrometerWsHandler.recordHandshakeComplete(channel(),
-								String.valueOf(response.status().code()));
-					}
+					recordHandshakeComplete(channel(), String.valueOf(response.status().code()));
 				}
 				catch (Exception e) {
 					recordHandshakeFailure(channel());
@@ -296,6 +293,20 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	String wsHttpMethod() {
 		return "GET";
+	}
+
+	void recordHandshakeComplete(Channel channel, String status) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordHandshakeComplete(channel, status);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
 	}
 
 	void recordHandshakeFailure(Channel channel) {

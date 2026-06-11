@@ -24,7 +24,7 @@ import java.time.Duration;
  * {@link ContextAwareWebSocketClientMetricsRecorder} that delegates to a {@link ContextAwareHttpClientMetricsRecorder}.
  *
  * @author LivingLikeKrillin
- * @since 1.3.5
+ * @since 1.3.7
  */
 final class DefaultContextAwareWebSocketClientMetricsRecorder extends ContextAwareWebSocketClientMetricsRecorder {
 

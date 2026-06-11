@@ -49,9 +49,7 @@ import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -78,7 +76,7 @@ import static reactor.netty.micrometer.TimerAssert.assertTimer;
  * WebSocket client metrics tests.
  *
  * @author LivingLikeKrillin
- * @since 1.3.5
+ * @since 1.3.7
  */
 class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 
@@ -138,10 +136,10 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	@AfterEach
-	void tearDown() throws InterruptedException, ExecutionException, TimeoutException {
+	void tearDown() {
 		if (!provider.isDisposed()) {
 			provider.disposeLater()
-					.block(Duration.ofSeconds(30));
+			        .block(Duration.ofSeconds(30));
 		}
 
 		Metrics.removeRegistry(registry);
@@ -215,9 +213,9 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 		httpClient.websocket()
 		          .uri("/ws-echo")
 		          .handle((in, out) ->
-				          out.sendString(Mono.just("test message"))
-				             .then()
-				             .thenMany(in.receive().asString().take(1)))
+		                  out.sendString(Mono.just("test message"))
+		                     .then()
+		                     .thenMany(in.receive().asString().take(1)))
 		          .as(StepVerifier::create)
 		          .expectNext("test message")
 		          .expectComplete()
@@ -271,8 +269,7 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 		disposableServer = httpServer.bindNow();
 		String serverAddress = formatSocketAddress(disposableServer.address());
 
-		HttpClient client = createClient(provider, () -> disposableServer.address())
-				.metrics(true, s -> "/normalized");
+		HttpClient client = createClient(provider, () -> disposableServer.address()).metrics(true, s -> "/normalized");
 
 		client.websocket()
 		      .uri("/ws")
@@ -311,12 +308,12 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 		await().atMost(5, TimeUnit.SECONDS)
 		       .pollInterval(50, TimeUnit.MILLISECONDS)
 		       .untilAsserted(() ->
-				       assertTimer(registry, WS_CONNECTION_DURATION,
-						       REMOTE_ADDRESS, serverAddress,
-						       PROXY_ADDRESS, NA,
-						       URI, "/ws")
-						       .hasCountEqualTo(1)
-						       .hasTotalTimeGreaterThan(0));
+		               assertTimer(registry, WS_CONNECTION_DURATION,
+		                       REMOTE_ADDRESS, serverAddress,
+		                       PROXY_ADDRESS, NA,
+		                       URI, "/ws")
+		                       .hasCountEqualTo(1)
+		                       .hasTotalTimeGreaterThan(0));
 	}
 
 	@Test
@@ -389,10 +386,10 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 		httpClient.websocket()
 		          .uri("/ws-echo")
 		          .handle((in, out) ->
-				          out.sendObject(Flux.just(
-						          new TextWebSocketFrame(false, 0, Unpooled.wrappedBuffer(part1)),
-						          new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(part2)),
-						          new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(part3)))))
+		                  out.sendObject(Flux.just(
+		                          new TextWebSocketFrame(false, 0, Unpooled.wrappedBuffer(part1)),
+		                          new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(part2)),
+		                          new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(part3)))))
 		          .as(StepVerifier::create)
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
@@ -401,19 +398,19 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 		await().atMost(5, TimeUnit.SECONDS)
 		       .pollInterval(50, TimeUnit.MILLISECONDS)
 		       .untilAsserted(() -> {
-				       assertDistributionSummary(registry, WS_DATA_SENT,
-						       REMOTE_ADDRESS, serverAddress,
-						       PROXY_ADDRESS, NA,
-						       URI, "/ws-echo")
-						       .hasCountEqualTo(1)
-						       .hasTotalAmountGreaterThanOrEqualTo(expectedTotal);
+		               assertDistributionSummary(registry, WS_DATA_SENT,
+		                       REMOTE_ADDRESS, serverAddress,
+		                       PROXY_ADDRESS, NA,
+		                       URI, "/ws-echo")
+		                       .hasCountEqualTo(1)
+		                       .hasTotalAmountGreaterThanOrEqualTo(expectedTotal);
 
-				       assertTimer(registry, WS_DATA_SENT_TIME,
-						       REMOTE_ADDRESS, serverAddress,
-						       PROXY_ADDRESS, NA,
-						       URI, "/ws-echo")
-						       .hasCountEqualTo(1)
-						       .hasTotalTimeGreaterThan(0);
+		               assertTimer(registry, WS_DATA_SENT_TIME,
+		                       REMOTE_ADDRESS, serverAddress,
+		                       PROXY_ADDRESS, NA,
+		                       URI, "/ws-echo")
+		                       .hasCountEqualTo(1)
+		                       .hasTotalTimeGreaterThan(0);
 		       });
 	}
 
@@ -430,7 +427,7 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 		httpClient.websocket()
 		          .uri("/ws-echo")
 		          .handle((in, out) -> out.sendObject(
-				          Flux.range(0, messageCount).map(i -> new TextWebSocketFrame(message)))
+		                  Flux.range(0, messageCount).map(i -> new TextWebSocketFrame(message)))
 		                                  .then())
 		          .as(StepVerifier::create)
 		          .expectComplete()
@@ -442,15 +439,15 @@ class WebSocketClientMetricsHandlerTests extends BaseHttpTest {
 		await().atMost(5, TimeUnit.SECONDS)
 		       .pollInterval(50, TimeUnit.MILLISECONDS)
 		       .untilAsserted(() -> {
-			       assertDistributionSummary(registry, WS_DATA_SENT,
-					       REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "/ws-echo")
-					       .hasCountEqualTo(messageCount)
-					       .hasTotalAmountGreaterThanOrEqualTo((double) messageSize * messageCount);
+		           assertDistributionSummary(registry, WS_DATA_SENT,
+		                   REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "/ws-echo")
+		                   .hasCountEqualTo(messageCount)
+		                   .hasTotalAmountGreaterThanOrEqualTo((double) messageSize * messageCount);
 
-			       assertTimer(registry, WS_DATA_SENT_TIME,
-					       REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "/ws-echo")
-					       .hasCountEqualTo(messageCount)
-					       .hasTotalTimeGreaterThan(0);
+		           assertTimer(registry, WS_DATA_SENT_TIME,
+		                   REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "/ws-echo")
+		                   .hasCountEqualTo(messageCount)
+		                   .hasTotalTimeGreaterThan(0);
 		       });
 
 		// Per-message attribution must be exact: no single record may carry more than one

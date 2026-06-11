@@ -24,7 +24,7 @@ import java.net.SocketAddress;
  * {@link AbstractWebSocketClientMetricsHandler} for collecting metrics on WebSocket {@link HttpClient} level.
  *
  * @author LivingLikeKrillin
- * @since 1.3.5
+ * @since 1.3.7
  */
 final class WebSocketClientMetricsHandler extends AbstractWebSocketClientMetricsHandler {
 
