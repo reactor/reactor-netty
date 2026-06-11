@@ -100,6 +100,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			String errorMsg = !HttpResponseStatus.OK.equals(status) ?
 					"Invalid websocket handshake response status [" + status + "]." :
 					"Failed to upgrade to websocket. End of stream is received.";
+			recordHandshakeFailure(channel());
 			onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.close();
@@ -123,8 +124,13 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
+					if (micrometerWsHandler != null) {
+						micrometerWsHandler.recordHandshakeComplete(channel(),
+								String.valueOf(response.status().code()));
+					}
 				}
 				catch (Exception e) {
+					recordHandshakeFailure(channel());
 					onInboundError(e);
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.close();
@@ -156,7 +162,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 					"Websocket version [" + websocketClientSpec.version().toHttpHeaderValue() + "] is not supported.");
 		}
 
-		removeHandler(NettyPipeline.HttpMetricsHandler);
+		swapMetricsHandler();
 
 		if (websocketClientSpec.compress()) {
 			requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
@@ -185,8 +191,16 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 		handshakerHttp2.handshake(channel)
 		               .addListener(f -> {
 		                   markPersistent(false);
+		                   if (!f.isSuccess()) {
+		                       recordHandshakeFailure(channel);
+		                   }
 		                   channel.read();
 		               });
+	}
+
+	@Override
+	String wsHttpMethod() {
+		return "CONNECT";
 	}
 
 	@Override
