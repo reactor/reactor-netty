@@ -69,6 +69,7 @@ import static reactor.netty.ReactorNetty.format;
  * <ul>
  *     <li>The connection is closed.</li>
  *     <li>GO_AWAY is received and there are no active streams.</li>
+ *     <li>An IO error is observed on one of the streams and there are no active streams.</li>
  *     <li>The eviction predicate evaluates to true and there are no active streams.</li>
  *     <li>When the client is in one of the two modes: 1) H2 and HTTP/1.1 or 2) H2C and HTTP/1.1,
  *     and the negotiated protocol is HTTP/1.1.</li>
@@ -76,7 +77,8 @@ import static reactor.netty.ReactorNetty.format;
  * <p>
  * The connection is filtered out when:
  * <ul>
- *     <li>The connection's eviction predicate evaluates to true or GO_AWAY is received, and there are active streams. In this case, the
+ *     <li>The connection's eviction predicate evaluates to true, GO_AWAY is received or an IO error is observed
+ *     on one of the streams, and there are active streams. In this case, the
  *     connection stays in the pool, but it is not used. Once there are no active streams, the connection is removed
  *     from the pool.</li>
  *     <li>The connection has reached its max active streams configuration. In this case, the connection stays
@@ -343,8 +345,15 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
+			// an IO error was observed on one of the streams, checked before GO_AWAY
+			// because the (potentially broken) channel must also be closed
+			if (ref.slot.streamIoErrorObserved) {
+				closeChannel(ref.slot.connection.channel());
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
 			// received GO_AWAY
-			if (ref.slot.goAwayReceived()) {
+			else if (ref.slot.goAwayReceived()) {
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
@@ -533,6 +542,18 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 							continue;
 						}
 
+						if (slot.streamIoErrorObserved) {
+							if (log.isDebugEnabled()) {
+								log.debug(format(slot.connection.channel(), "Channel observed an IO error on a stream, remove from pool"));
+							}
+							closeChannel(slot.connection.channel());
+							recordInteractionTimestamp();
+							slots.remove();
+							IDLE_SIZE.decrementAndGet(this);
+							slot.invalidate();
+							continue;
+						}
+
 						if (slot.goAwayReceived()) {
 							if (log.isDebugEnabled()) {
 								log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
@@ -591,6 +612,26 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Channel is closed, remove from pool"));
 					}
+					slot.invalidate();
+				}
+				continue;
+			}
+
+			// check the connection observed an IO error on one of its streams,
+			// checked before GO_AWAY because the (potentially broken) channel must also be closed
+			if (slot.streamIoErrorObserved) {
+				if (slot.concurrency() > 0) {
+					if (log.isDebugEnabled()) {
+						log.debug(format(slot.connection.channel(), "Channel observed an IO error on a stream, {} active streams"),
+								slot.concurrency());
+					}
+					offerSlot(resources, slot);
+				}
+				else {
+					if (log.isDebugEnabled()) {
+						log.debug(format(slot.connection.channel(), "Channel observed an IO error on a stream, remove from pool"));
+					}
+					closeChannel(slot.connection.channel());
 					slot.invalidate();
 				}
 				continue;
@@ -1033,6 +1074,13 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		long idleTimestamp;
 		volatile int maxConcurrentStreams;
+
+		// An IO error (e.g. a response timeout before the response headers arrive) was observed
+		// on one of the streams of this connection. The connection may be broken (e.g. TCP half-open)
+		// while Channel#isActive() still returns true, so it must not be used for new streams
+		// and must be evicted from the pool.
+		// See https://github.com/reactor/reactor-netty/issues/4245
+		volatile boolean streamIoErrorObserved;
 
 		volatile @Nullable ChannelHandlerContext http2FrameCodecCtx;
 		volatile @Nullable ChannelHandlerContext http2MultiplexHandlerCtx;
