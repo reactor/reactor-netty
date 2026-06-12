@@ -30,6 +30,7 @@ import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.SslProvider;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -87,7 +88,7 @@ class Http2PoolIoErrorEvictionTest extends BaseHttpTest {
 		HttpServer server = createServer().protocol(protocols)
 		                                  .handle((req, res) -> res.sendString(Mono.just("OK")));
 		if (secure) {
-			server = server.secure(spec -> spec.sslContext(serverCtx));
+			server = server.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) serverCtx));
 		}
 		disposableServer = server.bindNow();
 		TcpProxy proxy = new TcpProxy("localhost", disposableServer.port());
@@ -95,7 +96,7 @@ class Http2PoolIoErrorEvictionTest extends BaseHttpTest {
 		try {
 			HttpClient client = createClient(provider, proxy.port()).protocol(protocols);
 			if (secure) {
-				client = client.secure(spec -> spec.sslContext(clientCtx));
+				client = client.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx));
 			}
 
 			// establish the pooled connection with a successful request
