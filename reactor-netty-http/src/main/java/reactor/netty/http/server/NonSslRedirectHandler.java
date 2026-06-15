@@ -29,11 +29,15 @@ import static io.netty.handler.codec.http.HttpHeaderNames.LOCATION;
 
 /**
  * The handler sends an HTTP response with a status code of 308 and a
- * location header consisting of the host header of the request and
+ * location header consisting of the {@code Host} header of the request and
  * HTTPS protocol to the incoming HTTP requests.
  * <p>
  * The handler is applicable only for HTTP/1.x and will not propagate
  * for incoming HTTP requests
+ * <p>
+ * <strong>Note:</strong> This feature uses the {@code Host} header
+ * to construct the redirect URL. The feature should only be enabled if the server is
+ * deployed behind a trusted proxy that validates and sanitises the {@code Host} header.
  *
  * @author James Chen
  * @since 1.0.5
