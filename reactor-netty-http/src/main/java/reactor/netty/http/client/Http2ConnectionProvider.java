@@ -16,7 +16,6 @@
 package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2StreamChannel;
@@ -393,13 +392,15 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 			Http2Pool http2Pool = http2Pool();
 			if (http2Pool.evictionPredicate != null) {
-				ChannelHandlerContext frameCodec = http2PooledRef(pooledRef).slot.http2FrameCodecCtx();
+				Http2Pool.Slot slot = http2PooledRef(pooledRef).slot;
+				ChannelHandlerContext frameCodec = slot.http2FrameCodecCtx();
 				if (frameCodec != null) {
 					IdleTimeoutHandler.addIdleTimeoutHandler(channel.pipeline(), Duration.ofMillis(http2Pool.maxIdleTime),
 							new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
 									// Deliberately suppress "NullAway"
 									// http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null in this case
-									http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+									http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos(),
+									inProgress -> slot.connectionLivenessCheckInProgress = inProgress));
 				}
 			}
 
@@ -418,13 +419,15 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			else if (newState == UPGRADE_SUCCESSFUL) {
 				Http2Pool http2Pool = http2Pool();
 				if (http2Pool.evictionPredicate != null) {
-					ChannelHandlerContext frameCodec = http2PooledRef(pooledRef).slot.http2FrameCodecCtx();
+					Http2Pool.Slot slot = http2PooledRef(pooledRef).slot;
+					ChannelHandlerContext frameCodec = slot.http2FrameCodecCtx();
 					if (frameCodec != null) {
 						IdleTimeoutHandler.addIdleTimeoutHandler(connection.channel().pipeline(), Duration.ofMillis(http2Pool.maxIdleTime),
 								new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
 										// Deliberately suppress "NullAway"
 										// http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null in this case
-										http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+										http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos(),
+										inProgress -> slot.connectionLivenessCheckInProgress = inProgress));
 					}
 				}
 			}
@@ -469,7 +472,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				Http2StreamChannel ch = future.getNow();
 
 				if (!channel.isActive() || frameCodec == null ||
-						http2PooledRef.slot.streamIoErrorObserved ||
 						((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived() ||
 						!((Http2FrameCodec) frameCodec.handler()).connection().local().canOpenStream()) {
 					invalidate(this);
@@ -493,12 +495,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					}
 					// Deliberately suppress "NullAway"
 					// remoteAddress null is handled in Http2ConnectionProvider.DisposableAcquire.onNext
-					// StreamIoErrorObserver is first in the chain so that the connection is marked
-					// before the error is propagated to the subscriber (which may immediately retry)
-					HttpClientConfig.addStreamHandlers(ch,
-							new StreamIoErrorObserver(http2PooledRef.slot)
-									.then(obs)
-									.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
+					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
 							opsFactory, acceptGzip, false, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 
 					if (log.isDebugEnabled()) {
@@ -714,41 +711,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				long effectiveMaxLifeTime = meta.maxLifeTimeMs() > 0 ? meta.maxLifeTimeMs() : maxLifeTime;
 				return effectiveMaxLifeTime > 0 && meta.lifeTime() >= effectiveMaxLifeTime;
 			}
-		}
-	}
-
-	/**
-	 * Marks the parent connection as broken when an IO error is observed on one of its streams.
-	 * A broken connection (e.g. TCP half-open) may still have a channel whose isActive()
-	 * returns true, so the connection must not be reused for new streams and must be evicted
-	 * from the pool.
-	 * <p>Note: the observer is invoked only when the error is not delivered to an active inbound
-	 * receiver, e.g. a response timeout before the response headers arrive. Errors surfacing
-	 * mid-response-body do not reach this observer.
-	 * See https://github.com/reactor/reactor-netty/issues/4245
-	 */
-	static final class StreamIoErrorObserver implements ConnectionObserver {
-
-		final Http2Pool.Slot slot;
-
-		StreamIoErrorObserver(Http2Pool.Slot slot) {
-			this.slot = slot;
-		}
-
-		@Override
-		public void onUncaughtException(Connection connection, Throwable error) {
-			if (error instanceof IOException || error instanceof ChannelException) {
-				if (log.isDebugEnabled()) {
-					log.debug(format(connection.channel(), "An IO error was observed on the stream, " +
-							"the parent connection will be evicted from the pool"), error);
-				}
-				slot.streamIoErrorObserved = true;
-			}
-		}
-
-		@Override
-		public void onStateChange(Connection connection, State newState) {
-			// noop
 		}
 	}
 }

@@ -1025,13 +1025,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				if (!owner.currentContext().isEmpty()) {
 					setChannelContext(ch, owner.currentContext());
 				}
-				// StreamIoErrorObserver is first in the chain so that the connection is marked
-				// before the error is propagated to the subscriber (which may immediately retry)
-				addStreamHandlers(ch,
-						new Http2ConnectionProvider.StreamIoErrorObserver(http2PooledRef(owner.pooledRef).slot)
-								.then(observer)
-								.then(new StreamConnectionObserver(owner.currentContext())),
-						opsFactory, acceptGzip, true, metricsRecorder, proxyAddress, remoteAddress, responseTimeoutMillis, uriTagValue);
+				addStreamHandlers(ch, observer.then(new StreamConnectionObserver(owner.currentContext())), opsFactory,
+						acceptGzip, true, metricsRecorder, proxyAddress, remoteAddress, responseTimeoutMillis, uriTagValue);
 				if (log.isDebugEnabled()) {
 					logStreamsState(ch, http2PooledRef(owner.pooledRef).slot, "Stream opened");
 				}

@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.channel.Channel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
@@ -40,26 +40,31 @@ import java.net.Socket;
 import java.time.Duration;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * This class tests https://github.com/reactor/reactor-netty/issues/4245.
  *
- * <p>A pooled HTTP/2 connection whose stream fails with an IO error (e.g. a response timeout
- * because the remote peer silently went away) must be evicted from the pool, matching the
- * HTTP/1.1 behavior.
+ * <p>When the HTTP/2 PING liveness check is enabled ({@code pingAckTimeout} + {@code maxIdleTime}),
+ * a pooled connection whose remote peer silently went away is detected by the idle PING probe:
+ * while the probe is in flight the connection is excluded from acquisition, and when no PING ACK
+ * arrives the connection is closed and removed from the pool. A subsequent request therefore
+ * recovers on a freshly established connection instead of being handed the broken one.
  *
  * <p>The remote-peer failure is simulated with a small TCP forwarder: severing its server-side
  * socket leaves the client-side TCP connection fully established, so the client channel keeps
- * reporting as active although nothing will ever be received on it again.
+ * reporting as active although nothing will ever be received on it again — and, being idle, it
+ * is the exact case the idle PING probe is meant to catch.
  *
  * @author Jooyoung Jung
  * @since 1.3.7
  */
-class Http2PoolIoErrorEvictionTest extends BaseHttpTest {
+class Http2PoolPingLivenessEvictionTest extends BaseHttpTest {
 
 	static X509Bundle ssc;
 	static Http2SslContextSpec serverCtx;
@@ -76,15 +81,15 @@ class Http2PoolIoErrorEvictionTest extends BaseHttpTest {
 	static Stream<Arguments> protocols() {
 		return Stream.of(
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, true),
+				// H2C with prior knowledge, liveness is wired on acquire
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, false),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, false),
-				// H2C via cleartext upgrade, the upgrade stream observers are attached via H2Codec
+				// H2C via cleartext upgrade, liveness is wired on UPGRADE_SUCCESSFUL
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11, HttpProtocol.H2C}, false));
 	}
 
 	@ParameterizedTest
 	@MethodSource("protocols")
-	void brokenConnectionIsEvictedAfterStreamIoError(HttpProtocol[] protocols, boolean secure) throws IOException {
+	void brokenConnectionIsEvictedByPingLivenessProbe(HttpProtocol[] protocols, boolean secure) throws Exception {
 		HttpServer server = createServer().protocol(protocols)
 		                                  .handle((req, res) -> res.sendString(Mono.just("OK")));
 		if (secure) {
@@ -92,27 +97,42 @@ class Http2PoolIoErrorEvictionTest extends BaseHttpTest {
 		}
 		disposableServer = server.bindNow();
 		TcpProxy proxy = new TcpProxy("localhost", disposableServer.port());
-		ConnectionProvider provider = ConnectionProvider.create("brokenConnectionIsEvicted", 1);
+		// maxIdleTime enables the idle PING probe (and the eviction predicate that wires the liveness handler)
+		ConnectionProvider provider = ConnectionProvider.builder("pingLivenessEviction")
+		                                                .maxConnections(1)
+		                                                .maxIdleTime(Duration.ofMillis(500))
+		                                                .build();
 		try {
-			HttpClient client = createClient(provider, proxy.port()).protocol(protocols);
+			HttpClient client = createClient(provider, proxy.port())
+					.protocol(protocols)
+					// pingAckTimeout turns the HTTP/2 PING liveness check on
+					.http2Settings(builder -> builder.pingAckTimeout(Duration.ofMillis(100)));
 			if (secure) {
 				client = client.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx));
 			}
 
-			// establish the pooled connection with a successful request
-			assertThat(status(client)).isEqualTo(200);
+			AtomicReference<Channel> brokenParent = new AtomicReference<>();
+			CountDownLatch brokenConnectionClosed = new CountDownLatch(1);
+			HttpClient establishingClient = client.doOnResponse((res, conn) -> {
+				Channel parent = conn.channel().parent();
+				if (parent != null && brokenParent.compareAndSet(null, parent)) {
+					parent.closeFuture().addListener(f -> brokenConnectionClosed.countDown());
+				}
+			});
 
-			// sever the proxy's server side: the pooled connection is now half-open,
-			// yet the pool still considers it usable
+			// establish the pooled connection with a successful request
+			assertThat(status(establishingClient)).isEqualTo(200);
+			assertThat(brokenParent.get()).as("captured the pooled HTTP/2 connection").isNotNull();
+
+			// sever the proxy's server side: the pooled connection is now half-open and idle
 			proxy.dropServerSide();
 
-			// a request on the broken connection can only time out
-			HttpClient timeoutClient = client.responseTimeout(Duration.ofSeconds(1));
-			assertThatExceptionOfType(ReadTimeoutException.class)
-					.isThrownBy(() -> status(timeoutClient));
+			// the idle PING liveness probe fires, receives no ACK, and evicts the broken connection
+			assertThat(brokenConnectionClosed.await(20, TimeUnit.SECONDS))
+					.as("broken connection is evicted by the PING liveness probe")
+					.isTrue();
 
-			// the pool must not hand out the broken connection again:
-			// the retry has to succeed on a newly established connection
+			// the pool hands out a freshly established connection for the next request
 			assertThat(status(client)).isEqualTo(200);
 		}
 		finally {

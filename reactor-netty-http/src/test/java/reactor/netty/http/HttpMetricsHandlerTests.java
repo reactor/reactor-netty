@@ -15,7 +15,6 @@
  */
 package reactor.netty.http;
 
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -728,7 +727,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity())
-				.doOnConnection(cnx -> ServerCloseHandler.INSTANCE.register(cnx.channel()))
+				.doOnConnection(cnx -> {
+					ServerCloseHandler.INSTANCE.register(cnx.channel());
+					if (!isHttp11) {
+						StreamCloseHandler.INSTANCE.register(cnx.channel());
+					}
+				})
 				.bindNow();
 
 		customizeClientOptions(httpClient, clientCtx, clientProtocols)
@@ -751,22 +755,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/6").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
-			// the response timeout is an IO error observed on the HTTP/2 stream, the client evicts the
-			// connection from the pool and closes it
-			// https://github.com/reactor/reactor-netty/issues/4245
-			// the stream close and the connection close are asynchronous, await the server to observe them
-			awaitGaugeValue(registry, SERVER_STREAMS_ACTIVE, 0, URI, HTTP, LOCAL_ADDRESS, address);
-			if (serverProtocols.length == 1) {
-				awaitGaugeValue(registry, SERVER_CONNECTIONS_TOTAL, 0, URI, HTTP, LOCAL_ADDRESS, address);
-			}
-			else {
-				// when the server is configured with multiple protocols, the connection close is not
-				// reflected in the connections gauge: the handler that recorded the opened connection
-				// is replaced when the pipeline is reconfigured for HTTP/2
-				assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(1);
-			}
+			// make sure the client stream is closed on the server side before checking server metrics
+			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(1);
+			assertGauge(registry, SERVER_STREAMS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			// https://github.com/reactor/reactor-netty/issues/3060
 			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/6").hasCountGreaterThanOrEqualTo(1);
+			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
 
@@ -851,7 +846,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, ServerRecorder.supplier(), Function.identity())
-				.doOnConnection(cnx -> ServerCloseHandler.INSTANCE.register(cnx.channel()))
+				.doOnConnection(cnx -> {
+					ServerCloseHandler.INSTANCE.register(cnx.channel());
+					if (!isHttp11) {
+						StreamCloseHandler.INSTANCE.register(cnx.channel());
+					}
+				})
 				.bindNow();
 
 		customizeClientOptions(httpClient, clientCtx, clientProtocols)
@@ -879,20 +879,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertCounter(registry, CLIENT_ERRORS, PROXY_ADDRESS, NA, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
-			// the response timeout is an IO error observed on the HTTP/2 stream, the client evicts the
-			// connection from the pool and closes it
-			// https://github.com/reactor/reactor-netty/issues/4245
-			// the connection close is asynchronous, await the recorder to observe it
-			int i = 0;
-			while (ServerRecorder.INSTANCE.onServerConnectionsAmount.get() != 0 && i++ < 100) {
-				Thread.sleep(100);
-			}
-			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
+			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 			// https://github.com/reactor/reactor-netty/issues/3060
 			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/7").hasCountGreaterThanOrEqualTo(1);
+			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
 
@@ -2035,18 +2029,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 	}
 
-	static void awaitGaugeValue(MeterRegistry registry, String name, double expected, String... tags)
-			throws InterruptedException {
-		for (int i = 0; i < 100; i++) {
-			Gauge gauge = registry.find(name).tags(tags).gauge();
-			if (gauge != null && gauge.value() == expected) {
-				return;
-			}
-			Thread.sleep(100);
-		}
-		assertGauge(registry, name, tags).hasValueEqualTo(expected);
-	}
-
 	/**
 	 * Server handler used to wait until the client socket is closed on the server side.
 	 * For HTTP1.1, the handler is placed before the ReactorBridge, so all previous handlers will see
@@ -2096,6 +2078,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				}
 			}
 			return true;
+		}
+	}
+
+	static final class StreamCloseHandler extends ServerCloseHandler {
+		static final StreamCloseHandler INSTANCE = new StreamCloseHandler();
+
+		@Override
+		void registerInternal(Channel channel) {
+			if (channel.pipeline().get(HANDLER_NAME) == null) {
+				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, HANDLER_NAME, this);
+			}
 		}
 	}
 
