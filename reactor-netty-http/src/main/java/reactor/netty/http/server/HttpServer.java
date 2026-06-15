@@ -1227,6 +1227,10 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param redirectHttpToHttps true enables redirecting HTTP to HTTPS by changing the
 	 *                            scheme only but otherwise leaving the port the same.
 	 *                            This configuration is applicable only for HTTP 1.x.
+	 *                            <p><strong>Note:</strong> This feature uses the {@code Host} header
+	 *                            to construct the redirect URL. The feature should only be enabled
+	 *                            if the server is deployed behind a trusted proxy that validates and
+	 *                            sanitises the {@code Host} header.
 	 * @return a new {@link HttpServer}
 	 * @since 1.0.5
 	 */
@@ -1284,6 +1288,10 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param redirectHttpToHttps true enables redirecting HTTP to HTTPS by changing the
 	 *                            scheme only but otherwise leaving the port the same.
 	 *                            This configuration is applicable only for HTTP 1.x.
+	 *                            <p><strong>Note:</strong> This feature uses the {@code Host} header
+	 *                            to construct the redirect URL. The feature should only be enabled
+	 *                            if the server is deployed behind a trusted proxy that validates and
+	 *                            sanitises the {@code Host} header.
 	 * @return a new {@link HttpServer}
 	 * @since 1.0.5
 	 */
