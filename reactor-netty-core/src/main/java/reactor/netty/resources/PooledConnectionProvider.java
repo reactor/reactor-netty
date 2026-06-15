@@ -624,11 +624,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			}
 
 			if (this.evictionPredicate != null) {
-				// Compose with the built-in liveness predicate so that a custom evictionPredicate
-				// augments, rather than replaces, the default check (dead/non-persistent connections
-				// must still be evicted on acquire). See https://github.com/reactor/reactor-netty/issues/4251
-				poolBuilder = poolBuilder.evictionPredicate(defaultEvictionPredicate.or(
-						(poolable, meta) -> this.evictionPredicate.test(poolable, new PooledConnectionMetadata(meta))));
+				poolBuilder = poolBuilder.evictionPredicate(
+						(poolable, meta) -> this.evictionPredicate.test(poolable, new PooledConnectionMetadata(meta)));
 			}
 			else {
 				poolBuilder = poolBuilder.evictionPredicate(defaultEvictionPredicate.or((poolable, meta) ->

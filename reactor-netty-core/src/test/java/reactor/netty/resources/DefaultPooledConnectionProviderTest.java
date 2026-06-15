@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -542,78 +542,6 @@ class DefaultPooledConnectionProviderTest {
 			disposableServer.disposeNow();
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(5));
-		}
-	}
-
-	@Test
-	void testIssue4251CustomEvictionPredicateKeepsLivenessCheck() throws Exception {
-		DisposableServer server =
-				TcpServer.create()
-				         .port(0)
-				         .wiretap(true)
-				         .bindNow();
-
-		EventLoopGroup group = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
-
-		// A custom evictionPredicate must not disable the built-in liveness check. Here the
-		// custom predicate is idle-only (never fires during the test); a connection that dies
-		// while idle in the pool must still be evicted on acquire, otherwise the dead connection
-		// is handed out and, after the single built-in re-acquire retry is exhausted by a second
-		// dead connection, acquire fails with IOException("Error while acquiring") (#4251).
-		ConnectionProvider provider =
-				ConnectionProvider.builder("testIssue4251")
-				                  .maxConnections(2)
-				                  .evictionPredicate(
-				                      (conn, meta) -> meta.idleTime() >= Duration.ofMinutes(3).toMillis())
-				                  .build();
-
-		try (AddressResolverGroup<?> resolver =
-				NameResolverProvider.builder().build().newNameResolverGroup(TcpResources.get(), true)) {
-			InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", server.port());
-			Supplier<? extends SocketAddress> remoteAddress = () -> address;
-			ConnectionObserver observer = ConnectionObserver.emptyListener();
-			ClientTransportConfigImpl config =
-					new ClientTransportConfigImpl(group, provider, Collections.emptyMap(), remoteAddress, resolver);
-
-			// acquire two connections
-			PooledConnection c1 = (PooledConnection) provider.acquire(config, observer, remoteAddress, config.resolverInternal())
-			                                                 .block(Duration.ofSeconds(30));
-			PooledConnection c2 = (PooledConnection) provider.acquire(config, observer, remoteAddress, config.resolverInternal())
-			                                                 .block(Duration.ofSeconds(30));
-			assertThat(c1).isNotNull();
-			assertThat(c2).isNotNull();
-
-			// release both connections back to the pool -> idle, channels stay open
-			c1.onStateChange(c1, ConnectionObserver.State.DISCONNECTING);
-			c2.onStateChange(c2, ConnectionObserver.State.DISCONNECTING);
-
-			InstrumentedPool<PooledConnection> channelPool = c1.pool;
-			long deadline = System.currentTimeMillis() + 5000;
-			while (channelPool.metrics().idleSize() < 2 && System.currentTimeMillis() < deadline) {
-				Thread.sleep(10);
-			}
-			assertThat(channelPool.metrics().idleSize()).as("both connections released to the pool").isEqualTo(2);
-
-			// kill both channels WHILE IDLE in the pool (owner is NOOP -> not auto-invalidated)
-			c1.channel.close().sync();
-			c2.channel.close().sync();
-			assertThat(c1.channel.isActive()).isFalse();
-			assertThat(c2.channel.isActive()).isFalse();
-
-			// re-acquire: a fresh, live connection must be allocated (dead idle connections evicted),
-			// instead of failing with IOException("Error while acquiring")
-			PooledConnection c3 = (PooledConnection) provider.acquire(config, observer, remoteAddress, config.resolverInternal())
-			                                                 .block(Duration.ofSeconds(30));
-			assertThat(c3).isNotNull();
-			assertThat(c3.channel.isActive()).as("a fresh, live connection was acquired").isTrue();
-			c3.onStateChange(c3, ConnectionObserver.State.DISCONNECTING);
-		}
-		finally {
-			server.disposeNow();
-			provider.disposeLater()
-			        .block(Duration.ofSeconds(5));
-			group.shutdownGracefully()
-			     .get(5, TimeUnit.SECONDS);
 		}
 	}
 

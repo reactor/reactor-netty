@@ -692,12 +692,10 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} custom eviction predicate.
-		 * <p>The connection is always evicted when not active or not persistent.
-		 * <p>If no custom eviction predicate is specified, the configured {@link #maxLifeTime(Duration)}
-		 * and {@link #maxIdleTime(Duration)} settings are also taken into account.
-		 * <p>If a custom eviction predicate is specified, it is evaluated in addition to the
-		 * not-active/not-persistent check; {@link #maxLifeTime(Duration)} still applies, while idle-time
-		 * eviction becomes the responsibility of the custom eviction predicate.
+		 * <p>Unless a custom eviction predicate is specified, the connection is evicted when not active or not persistent,
+		 * If {@link #maxLifeTime(Duration)} and/or {@link #maxIdleTime(Duration)} settings are configured,
+		 * they are also taken into account.
+		 * <p>Otherwise only the custom eviction predicate is invoked.
 		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
 		 * A TCP connection is always closed and never returned to the pool.
 		 *
