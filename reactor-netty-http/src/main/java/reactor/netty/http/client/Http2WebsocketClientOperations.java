@@ -94,16 +94,35 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
+			started = true;
+
 			FullHttpResponse response = (FullHttpResponse) msg;
-			HttpResponseStatus status = response.status();
-			response.content().release();
-			String errorMsg = !HttpResponseStatus.OK.equals(status) ?
-					"Invalid websocket handshake response status [" + status + "]." :
-					"Failed to upgrade to websocket. End of stream is received.";
-			recordHandshakeFailure(channel());
-			onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.close();
+
+			setNettyResponse(response);
+
+			try {
+				if (notRedirected(response) && authenticationNotRequired()) {
+					HttpResponseStatus status = response.status();
+					String errorMsg = !HttpResponseStatus.OK.equals(status) ?
+							"Invalid websocket handshake response status [" + status + "]." :
+							"Failed to upgrade to websocket. End of stream is received.";
+					recordHandshakeFailure(channel());
+					onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.close();
+				}
+				else {
+					if (redirecting != null) {
+						listener().onUncaughtException(this, redirecting);
+					}
+					else if (authenticating != null) {
+						listener().onUncaughtException(this, authenticating);
+					}
+				}
+			}
+			finally {
+				response.content().release();
+			}
 		}
 		else if (msg instanceof HttpResponse) {
 			started = true;
