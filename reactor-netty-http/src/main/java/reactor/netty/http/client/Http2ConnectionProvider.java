@@ -691,7 +691,13 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
 					isNotHttp2 = frameCodec == null;
 				}
-				return isNotHttp2 && maxIdleTime != -1 && meta.idleTime() >= maxIdleTime;
+				// This predicate replaces the parent provider's built-in liveness check, so it must carry
+				// it: an HTTP/1.1 connection that is no longer active or persistent has to be evicted
+				// regardless of idle time. HTTP/2 connections are owned by Http2Pool, hence the isNotHttp2
+				// gate. See https://github.com/reactor/reactor-netty/issues/4251
+				return isNotHttp2 &&
+						(!connection.channel().isActive() || !connection.isPersistent() ||
+								(maxIdleTime != -1 && meta.idleTime() >= maxIdleTime));
 			}
 		}
 
