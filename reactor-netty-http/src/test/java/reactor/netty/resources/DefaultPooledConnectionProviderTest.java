@@ -79,6 +79,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -1062,41 +1063,49 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 	}
 
-	@Test
-	void testIssue4235CustomRegistrarReceivesPendingAcquireSuccess() {
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("pendingAcquireScenarios")
+	void testIssue4235CustomRegistrarReceivesPendingAcquire(
+			String poolName,
+			boolean success,
+			long serverResponseDelayMillis,
+			int requestCount,
+			Consumer<ConnectionProvider.Builder> poolCustomizer) throws InterruptedException {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("testIssue4235")
-				                                                 .delayElement(Duration.ofMillis(100))))
+				                                                 .delayElement(Duration.ofMillis(serverResponseDelayMillis))))
 				        .bindNow();
 
 		MeterRegistrarImpl meterRegistrar = new MeterRegistrarImpl();
-		ConnectionProvider provider =
-				ConnectionProvider.builder("testIssue4235Success")
+		ConnectionProvider.Builder builder =
+				ConnectionProvider.builder(poolName)
 				                  .maxConnections(1)
-				                  .pendingAcquireMaxCount(10)
-				                  .metrics(true, () -> meterRegistrar)
-				                  .build();
+				                  .metrics(true, () -> meterRegistrar);
+		poolCustomizer.accept(builder);
+		ConnectionProvider provider = builder.build();
 
 		HttpClient client = createClient(provider, disposableServer.port());
 		try {
-			Flux.range(0, 2)
-			    .flatMapDelayError(i ->
-			        client.get()
-			              .uri("/")
-			              .responseContent()
-			              .aggregate()
-			              .asString(), 256, 32)
-			    .blockLast(Duration.ofSeconds(30));
+			Flux<String> responses =
+					Flux.range(0, requestCount)
+					    .flatMapDelayError(i ->
+					        client.get()
+					              .uri("/")
+					              .responseContent()
+					              .aggregate()
+					              .asString(), 256, 32);
+			if (success) {
+				responses.blockLast(Duration.ofSeconds(30));
+			}
+			else {
+				responses.materialize().blockLast(Duration.ofSeconds(30));
+			}
 
-			assertThat(meterRegistrar.pendingAcquireSuccessLatch.await(30, TimeUnit.SECONDS))
-					.as("pending acquire success latch")
-					.isTrue();
-			assertThat(meterRegistrar.pendingAcquireSuccessCount.get()).isGreaterThanOrEqualTo(1);
-		}
-		catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new RuntimeException(e);
+			CountDownLatch latch = success ? meterRegistrar.pendingAcquireSuccessLatch : meterRegistrar.pendingAcquireFailureLatch;
+			AtomicInteger count = success ? meterRegistrar.pendingAcquireSuccessCount : meterRegistrar.pendingAcquireFailureCount;
+			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(count.get()).isGreaterThanOrEqualTo(1);
 		}
 		finally {
 			provider.disposeLater()
@@ -1104,47 +1113,13 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 	}
 
-	@Test
-	void testIssue4235CustomRegistrarReceivesPendingAcquireFailure() {
-		disposableServer =
-				createServer()
-				        .handle((req, res) -> res.sendString(Mono.just("testIssue4235")
-				                                                 .delayElement(Duration.ofMillis(500))))
-				        .bindNow();
-
-		MeterRegistrarImpl meterRegistrar = new MeterRegistrarImpl();
-		ConnectionProvider provider =
-				ConnectionProvider.builder("testIssue4235Failure")
-				                  .maxConnections(1)
-				                  .pendingAcquireTimeout(Duration.ofMillis(10))
-				                  .metrics(true, () -> meterRegistrar)
-				                  .build();
-
-		HttpClient client = createClient(provider, disposableServer.port());
-		try {
-			Flux.range(0, 3)
-			    .flatMapDelayError(i ->
-			        client.get()
-			              .uri("/")
-			              .responseContent()
-			              .aggregate()
-			              .asString(), 256, 32)
-			    .materialize()
-			    .blockLast(Duration.ofSeconds(30));
-
-			assertThat(meterRegistrar.pendingAcquireFailureLatch.await(30, TimeUnit.SECONDS))
-					.as("pending acquire failure latch")
-					.isTrue();
-			assertThat(meterRegistrar.pendingAcquireFailureCount.get()).isGreaterThanOrEqualTo(1);
-		}
-		catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new RuntimeException(e);
-		}
-		finally {
-			provider.disposeLater()
-			        .block(Duration.ofSeconds(5));
-		}
+	static Stream<Arguments> pendingAcquireScenarios() {
+		return Stream.of(
+				Arguments.of("testIssue4235Success", true, 100L, 2,
+						(Consumer<ConnectionProvider.Builder>) b -> b.pendingAcquireMaxCount(10)),
+				Arguments.of("testIssue4235Failure", false, 500L, 3,
+						(Consumer<ConnectionProvider.Builder>) b -> b.pendingAcquireTimeout(Duration.ofMillis(10)))
+		);
 	}
 
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
