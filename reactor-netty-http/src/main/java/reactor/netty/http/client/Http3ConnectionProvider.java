@@ -53,6 +53,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.PooledConnectionProvider;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
+import reactor.netty.internal.shaded.reactor.pool.PoolMetricsRecorder;
 import reactor.netty.internal.shaded.reactor.pool.PooledRef;
 import reactor.netty.internal.shaded.reactor.pool.PooledRefMetadata;
 import reactor.util.Logger;
@@ -161,7 +162,20 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
 			SocketAddress remoteAddress,
 			@Nullable AddressResolverGroup<?> resolverGroup) {
-		return new PooledConnectionAllocator(id, name(), parent, config, poolFactory, remoteAddress, resolverGroup).pool;
+		return new PooledConnectionAllocator(parent, config, poolFactory, remoteAddress, resolverGroup,
+				new MicrometerPoolMetricsRecorder(id, name(), remoteAddress)).pool;
+	}
+
+	@Override
+	protected InstrumentedPool<Connection> createPool(
+			String id,
+			TransportConfig config,
+			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
+			SocketAddress remoteAddress,
+			@Nullable AddressResolverGroup<?> resolverGroup,
+			MeterRegistrar registrar) {
+		return new PooledConnectionAllocator(parent, config, poolFactory, remoteAddress, resolverGroup,
+				new MeterRegistrarPoolMetricsRecorder(registrar, name(), id, remoteAddress)).pool;
 	}
 
 	@Override
@@ -513,29 +527,25 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 				PoolFactory<Connection> poolFactory,
 				SocketAddress remoteAddress,
 				@Nullable AddressResolverGroup<?> resolver) {
-			this(null, null, parent, config, poolFactory, remoteAddress, resolver);
+			this(parent, config, poolFactory, remoteAddress, resolver, null);
 		}
 
-		@SuppressWarnings("NullAway")
 		PooledConnectionAllocator(
-				@Nullable String id,
-				@Nullable String name,
 				ConnectionProvider parent,
 				TransportConfig config,
 				PoolFactory<Connection> poolFactory,
 				SocketAddress remoteAddress,
-				@Nullable AddressResolverGroup<?> resolver) {
+				@Nullable AddressResolverGroup<?> resolver,
+				@Nullable PoolMetricsRecorder poolMetricsRecorder) {
 			this.parent = parent;
 			this.config = (HttpClientConfig) config;
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
-			this.pool = id == null ?
+			this.pool = poolMetricsRecorder == null ?
 					poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
 							poolConfig -> new Http3Pool(poolConfig, poolFactory.allocationStrategy())) :
-					// Deliberately suppress "NullAway"
-					// With id != null, this means name != null
 					poolFactory.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
-							new MicrometerPoolMetricsRecorder(id, name, remoteAddress),
+							poolMetricsRecorder,
 							poolConfig -> new Http3Pool(poolConfig, poolFactory.allocationStrategy()));
 		}
 

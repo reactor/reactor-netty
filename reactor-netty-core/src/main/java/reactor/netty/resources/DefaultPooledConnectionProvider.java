@@ -48,6 +48,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.transport.TransportConnector;
 import reactor.pool.InstrumentedPool;
+import reactor.pool.PoolMetricsRecorder;
 import reactor.pool.PooledRef;
 import reactor.pool.PooledRefMetadata;
 import reactor.util.Logger;
@@ -105,7 +106,20 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			PoolFactory<PooledConnection> poolFactory,
 			SocketAddress remoteAddress,
 			@Nullable AddressResolverGroup<?> resolverGroup) {
-		return new PooledConnectionAllocator(id, name, config, poolFactory, remoteAddress, resolverGroup).pool;
+		return new PooledConnectionAllocator(config, poolFactory, remoteAddress, resolverGroup,
+				new MicrometerPoolMetricsRecorder(id, name, remoteAddress)).pool;
+	}
+
+	@Override
+	protected InstrumentedPool<PooledConnection> createPool(
+			String id,
+			TransportConfig config,
+			PoolFactory<PooledConnection> poolFactory,
+			SocketAddress remoteAddress,
+			@Nullable AddressResolverGroup<?> resolverGroup,
+			MeterRegistrar registrar) {
+		return new PooledConnectionAllocator(config, poolFactory, remoteAddress, resolverGroup,
+				new MeterRegistrarPoolMetricsRecorder(registrar, name, id, remoteAddress)).pool;
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultPooledConnectionProvider.class);
@@ -523,26 +537,21 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				PoolFactory<PooledConnection> provider,
 				SocketAddress remoteAddress,
 				@Nullable AddressResolverGroup<?> resolver) {
-			this(null, null, config, provider, remoteAddress, resolver);
+			this(config, provider, remoteAddress, resolver, null);
 		}
 
-		@SuppressWarnings("NullAway")
 		PooledConnectionAllocator(
-				@Nullable String id,
-				@Nullable String name,
 				TransportConfig config,
 				PoolFactory<PooledConnection> provider,
 				SocketAddress remoteAddress,
-				@Nullable AddressResolverGroup<?> resolver) {
+				@Nullable AddressResolverGroup<?> resolver,
+				@Nullable PoolMetricsRecorder poolMetricsRecorder) {
 			this.config = config;
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
-			this.pool = id == null ?
+			this.pool = poolMetricsRecorder == null ?
 					provider.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE) :
-					provider.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
-							// Deliberately suppress "NullAway"
-							// With id != null, this means name != null
-							new MicrometerPoolMetricsRecorder(id, name, remoteAddress));
+					provider.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE, poolMetricsRecorder);
 		}
 
 		Publisher<PooledConnection> connectChannel() {

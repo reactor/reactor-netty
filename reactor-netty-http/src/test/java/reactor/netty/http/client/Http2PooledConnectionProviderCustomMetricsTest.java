@@ -25,6 +25,7 @@ import io.netty.pkitesting.X509Bundle;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
@@ -37,6 +38,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -163,6 +165,54 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	void measurePendingStreamsTimeSuccess() throws InterruptedException {
+		AtomicBoolean isRegistered = new AtomicBoolean();
+		AtomicBoolean isDeregistered = new AtomicBoolean();
+		AtomicReference<@Nullable HttpConnectionPoolMetrics> metrics = new AtomicReference<>();
+
+		disposableServer =
+				createServer()
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslServer))
+				        .handle((req, resp) -> resp.sendString(Mono.delay(Duration.ofMillis(100)).then(Mono.just("test"))))
+				        .bindNow();
+
+		CustomHttp2MeterRegistrar registrar = new CustomHttp2MeterRegistrar(isRegistered, isDeregistered, metrics);
+		ConnectionProvider pool =
+				ConnectionProvider.builder("custom-pool")
+				                  .metrics(true, () -> registrar)
+				                  .maxConnections(1)
+				                  .pendingAcquireMaxCount(10)
+				                  .build();
+
+		HttpClient httpClient =
+				createClient(pool, disposableServer::address)
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslClient))
+				        .http2Settings(builder -> {
+				            builder.maxStreams(1);
+				            builder.maxConcurrentStreams(1);
+				        });
+
+		try {
+			Flux.range(0, 5)
+			    .flatMapDelayError(i ->
+			        httpClient.get()
+			                  .uri("/")
+			                  .responseSingle((resp, bytes) -> bytes.asString()), 256, 32)
+			    .blockLast(Duration.ofSeconds(30));
+
+			assertThat(registrar.pendingAcquireSuccessLatch.await(30, TimeUnit.SECONDS))
+					.as("pending acquire success latch")
+					.isTrue();
+			assertThat(registrar.pendingAcquireSuccessCount.get()).isGreaterThanOrEqualTo(1);
+		}
+		finally {
+			pool.disposeLater().block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
 	void testIssue3804() throws Exception {
 		disposableServer =
 				createServer()
@@ -214,6 +264,10 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		AtomicBoolean isRegistered;
 		AtomicBoolean isDeregistered;
 		AtomicReference<@Nullable HttpConnectionPoolMetrics> metrics;
+		final AtomicInteger pendingAcquireSuccessCount = new AtomicInteger();
+		final AtomicInteger pendingAcquireFailureCount = new AtomicInteger();
+		final CountDownLatch pendingAcquireSuccessLatch = new CountDownLatch(1);
+		final CountDownLatch pendingAcquireFailureLatch = new CountDownLatch(1);
 
 		CustomHttp2MeterRegistrar(
 				AtomicBoolean isRegistered,
@@ -234,6 +288,18 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		@Override
 		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 			isDeregistered.set(true);
+		}
+
+		@Override
+		public void recordPendingAcquireSuccess(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
+			pendingAcquireSuccessCount.incrementAndGet();
+			pendingAcquireSuccessLatch.countDown();
+		}
+
+		@Override
+		public void recordPendingAcquireFailure(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
+			pendingAcquireFailureCount.incrementAndGet();
+			pendingAcquireFailureLatch.countDown();
 		}
 	}
 }

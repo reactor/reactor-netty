@@ -1062,10 +1062,99 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 	}
 
+	@Test
+	void testIssue4235CustomRegistrarReceivesPendingAcquireSuccess() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testIssue4235")
+				                                                 .delayElement(Duration.ofMillis(100))))
+				        .bindNow();
+
+		MeterRegistrarImpl meterRegistrar = new MeterRegistrarImpl();
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testIssue4235Success")
+				                  .maxConnections(1)
+				                  .pendingAcquireMaxCount(10)
+				                  .metrics(true, () -> meterRegistrar)
+				                  .build();
+
+		HttpClient client = createClient(provider, disposableServer.port());
+		try {
+			Flux.range(0, 2)
+			    .flatMapDelayError(i ->
+			        client.get()
+			              .uri("/")
+			              .responseContent()
+			              .aggregate()
+			              .asString(), 256, 32)
+			    .blockLast(Duration.ofSeconds(30));
+
+			assertThat(meterRegistrar.pendingAcquireSuccessLatch.await(30, TimeUnit.SECONDS))
+					.as("pending acquire success latch")
+					.isTrue();
+			assertThat(meterRegistrar.pendingAcquireSuccessCount.get()).isGreaterThanOrEqualTo(1);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException(e);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testIssue4235CustomRegistrarReceivesPendingAcquireFailure() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testIssue4235")
+				                                                 .delayElement(Duration.ofMillis(500))))
+				        .bindNow();
+
+		MeterRegistrarImpl meterRegistrar = new MeterRegistrarImpl();
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testIssue4235Failure")
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofMillis(10))
+				                  .metrics(true, () -> meterRegistrar)
+				                  .build();
+
+		HttpClient client = createClient(provider, disposableServer.port());
+		try {
+			Flux.range(0, 3)
+			    .flatMapDelayError(i ->
+			        client.get()
+			              .uri("/")
+			              .responseContent()
+			              .aggregate()
+			              .asString(), 256, 32)
+			    .materialize()
+			    .blockLast(Duration.ofSeconds(30));
+
+			assertThat(meterRegistrar.pendingAcquireFailureLatch.await(30, TimeUnit.SECONDS))
+					.as("pending acquire failure latch")
+					.isTrue();
+			assertThat(meterRegistrar.pendingAcquireFailureCount.get()).isGreaterThanOrEqualTo(1);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException(e);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
 		AtomicBoolean registered = new AtomicBoolean();
 		AtomicBoolean deRegistered = new AtomicBoolean();
 		final CountDownLatch latch = new CountDownLatch(1);
+		final AtomicInteger pendingAcquireSuccessCount = new AtomicInteger();
+		final AtomicInteger pendingAcquireFailureCount = new AtomicInteger();
+		final CountDownLatch pendingAcquireSuccessLatch = new CountDownLatch(1);
+		final CountDownLatch pendingAcquireFailureLatch = new CountDownLatch(1);
 
 		MeterRegistrarImpl() {
 		}
@@ -1079,6 +1168,18 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 			deRegistered.compareAndSet(false, true);
 			latch.countDown();
+		}
+
+		@Override
+		public void recordPendingAcquireSuccess(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
+			pendingAcquireSuccessCount.incrementAndGet();
+			pendingAcquireSuccessLatch.countDown();
+		}
+
+		@Override
+		public void recordPendingAcquireFailure(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
+			pendingAcquireFailureCount.incrementAndGet();
+			pendingAcquireFailureLatch.countDown();
 		}
 	}
 }

@@ -148,20 +148,34 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 				boolean metricsEnabled = poolFactory.metricsEnabled || config.metricsRecorder() != null;
 				String id = metricsEnabled ? poolKey.hashCode() + "" : null;
+				// Resolve the custom registrar (if any) once, so the same instance is used both for
+				// registerMetrics and for bridging the pending acquisition latencies to it.
+				MeterRegistrar registrar = metricsEnabled && poolFactory.registrar != null ? poolFactory.registrar.get() : null;
 
-				InstrumentedPool<T> newPool = metricsEnabled && poolFactory.registrar == null && Metrics.isMicrometerAvailable() ?
-						// Deliberately suppress "NullAway"
-						// With metricsEnabled == true, id is not null
-						createPool(id, config, poolFactory, remoteAddress, resolverGroup) :
-						createPool(config, poolFactory, remoteAddress, resolverGroup);
+				InstrumentedPool<T> newPool;
+				if (metricsEnabled && registrar != null) {
+					// A custom registrar is provided. Bridge the pending acquisition latencies to it so that
+					// it receives the same data the built-in Micrometer integration would collect.
+					// Deliberately suppress "NullAway"
+					// With metricsEnabled == true, id is not null
+					newPool = createPool(id, config, poolFactory, remoteAddress, resolverGroup, registrar);
+				}
+				else if (metricsEnabled && Metrics.isMicrometerAvailable()) {
+					// Deliberately suppress "NullAway"
+					// With metricsEnabled == true, id is not null
+					newPool = createPool(id, config, poolFactory, remoteAddress, resolverGroup);
+				}
+				else {
+					newPool = createPool(config, poolFactory, remoteAddress, resolverGroup);
+				}
 
 				if (metricsEnabled) {
 					// registrar is null when metrics are enabled on HttpClient level or
 					// with the `metrics(boolean metricsEnabled)` method on ConnectionProvider
-					if (poolFactory.registrar != null) {
+					if (registrar != null) {
 						// Deliberately suppress "NullAway"
 						// With metricsEnabled == true, id is not null
-						poolFactory.registrar.get().registerMetrics(
+						registrar.registerMetrics(
 								name, id, remoteAddress, delegateConnectionPoolMetrics(newPool.metrics()));
 					}
 					else if (Metrics.isMicrometerAvailable()) {
@@ -340,6 +354,30 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			PoolFactory<T> poolFactory,
 			SocketAddress remoteAddress,
 			@Nullable AddressResolverGroup<?> resolverGroup) {
+		return createPool(config, poolFactory, remoteAddress, resolverGroup);
+	}
+
+	/**
+	 * Creates a connection pool whose pending acquisition latencies are bridged to the provided
+	 * {@link MeterRegistrar}. The default implementation does not bridge the latencies and is provided for
+	 * backwards compatibility; concrete providers override it to wire the bridging recorder into the pool.
+	 *
+	 * @param id the pool id
+	 * @param config the transport configuration
+	 * @param poolFactory the pool factory
+	 * @param remoteAddress the remote address
+	 * @param resolverGroup the address resolver group
+	 * @param registrar the custom registrar that should receive the pending acquisition latencies
+	 * @return a new connection pool
+	 * @since 1.3.7
+	 */
+	protected InstrumentedPool<T> createPool(
+			String id,
+			TransportConfig config,
+			PoolFactory<T> poolFactory,
+			SocketAddress remoteAddress,
+			@Nullable AddressResolverGroup<?> resolverGroup,
+			MeterRegistrar registrar) {
 		return createPool(config, poolFactory, remoteAddress, resolverGroup);
 	}
 
