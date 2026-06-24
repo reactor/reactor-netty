@@ -133,6 +133,15 @@ final class SniProvider {
 
 		@Override
 		protected void onLookupComplete(ChannelHandlerContext ctx, String hostname, Future<SslProvider> future) {
+			if (!ctx.channel().isActive()) {
+				// The connection was closed before a complete TLS ClientHello was received (e.g. a bare
+				// TCP probe from a load balancer/health checker). Since Netty 4.2.14 the decoder cleanup
+				// path (channelInactive -> decodeLast -> decode -> select) reaches this method while the
+				// channel is already being torn down. There is nothing to match and nothing to configure,
+				// so short-circuit silently instead of propagating a misleading decode error.
+				return;
+			}
+
 			if (!future.isSuccess()) {
 				final Throwable cause = future.cause();
 				if (cause instanceof Error) {
