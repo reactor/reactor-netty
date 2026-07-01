@@ -633,6 +633,16 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				continue;
 			}
 
+			// check whether a connection liveness check (HTTP/2 PING probe) is in progress;
+			// the connection is temporarily excluded from acquisition until the probe completes
+			if (slot.connectionLivenessCheckInProgress()) {
+				offerSlot(resources, slot);
+				if (log.isDebugEnabled()) {
+					log.debug(format(slot.connection.channel(), "Connection liveness check is in progress, will not acquire"));
+				}
+				continue;
+			}
+
 			// check that the connection's max active streams has not been reached
 			if (!slot.canOpenStream()) {
 				offerSlot(resources, slot);
@@ -1038,6 +1048,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		volatile @Nullable ChannelHandlerContext http2MultiplexHandlerCtx;
 		volatile @Nullable ChannelHandlerContext h2cUpgradeHandlerCtx;
 
+		// Set on the event loop by Http2ConnectionLiveness when a PING liveness check starts/ends.
+		// Read on the acquire path so the connection is not handed out while it is being probed.
+		volatile boolean connectionLivenessCheckInProgress;
+
 		Slot(Http2Pool pool, Connection connection, long maxLifeTimeMs) {
 			this.connection = connection;
 			this.creationTimestamp = pool.clock.millis();
@@ -1130,6 +1144,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		boolean goAwayReceived() {
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
 			return frameCodec != null && ((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived();
+		}
+
+		boolean connectionLivenessCheckInProgress() {
+			return connectionLivenessCheckInProgress;
 		}
 
 		@Nullable ChannelHandlerContext http2FrameCodecCtx() {

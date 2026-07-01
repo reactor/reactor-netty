@@ -406,13 +406,15 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 			Http2Pool http2Pool = http2Pool();
 			if (http2Pool.evictionPredicate != null) {
-				ChannelHandlerContext frameCodec = http2PooledRef(pooledRef).slot.http2FrameCodecCtx();
+				Http2Pool.Slot slot = http2PooledRef(pooledRef).slot;
+				ChannelHandlerContext frameCodec = slot.http2FrameCodecCtx();
 				if (frameCodec != null) {
 					IdleTimeoutHandler.addIdleTimeoutHandler(channel.pipeline(), Duration.ofMillis(http2Pool.maxIdleTime),
 							new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
 									// Deliberately suppress "NullAway"
 									// http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null in this case
-									http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+									http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos(),
+									inProgress -> slot.connectionLivenessCheckInProgress = inProgress));
 				}
 			}
 
@@ -431,13 +433,15 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			else if (newState == UPGRADE_SUCCESSFUL) {
 				Http2Pool http2Pool = http2Pool();
 				if (http2Pool.evictionPredicate != null) {
-					ChannelHandlerContext frameCodec = http2PooledRef(pooledRef).slot.http2FrameCodecCtx();
+					Http2Pool.Slot slot = http2PooledRef(pooledRef).slot;
+					ChannelHandlerContext frameCodec = slot.http2FrameCodecCtx();
 					if (frameCodec != null) {
 						IdleTimeoutHandler.addIdleTimeoutHandler(connection.channel().pipeline(), Duration.ofMillis(http2Pool.maxIdleTime),
 								new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
 										// Deliberately suppress "NullAway"
 										// http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null in this case
-										http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+										http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos(),
+										inProgress -> slot.connectionLivenessCheckInProgress = inProgress));
 					}
 				}
 			}
