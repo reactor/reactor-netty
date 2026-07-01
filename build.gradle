@@ -325,7 +325,6 @@ subprojects {
 
 	repositories {
 		mavenCentral()
-		maven { url = "https://oss.sonatype.org/content/repositories/releases/" }
 		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
 			if (System.getenv()["GITHUB_ACTION"] == null) {
 				mavenLocal()
@@ -335,7 +334,6 @@ subprojects {
 			}
 			maven { url = 'https://repo.spring.io/snapshot' }
 			maven { url = 'https://central.sonatype.com/repository/maven-snapshots' }
-			maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
 		}
 	}
 
