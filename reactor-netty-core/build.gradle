@@ -16,14 +16,13 @@
 import aQute.bnd.gradle.BundleTaskExtension
 
 apply plugin: 'java-test-fixtures'
+apply plugin: 'com.gradleup.shadow'
+apply plugin: 'biz.aQute.bnd.builder'
 apply plugin: 'me.champeau.mrjar'
 
 multiRelease {
 	targetVersions 8, 11, 17
 }
-
-apply plugin: 'com.gradleup.shadow'
-apply plugin: 'biz.aQute.bnd.builder'
 
 ext {
 	bndOptions = [
