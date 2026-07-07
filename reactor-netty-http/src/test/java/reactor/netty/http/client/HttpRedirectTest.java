@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -397,6 +397,60 @@ class HttpRedirectTest extends BaseHttpTest {
 		          .blockLast(Duration.ofSeconds(5));
 
 		assertThat(followRedirects.get()).isEqualTo(4);
+	}
+
+	@Test
+	void queryRedirectsFollowRfc10008Semantics() {
+		disposableServer =
+				createServer()
+				          .host("localhost")
+				          .route(r -> r.query("/301", (req, res) -> res.status(301)
+				                                                     .header(HttpHeaderNames.LOCATION, "/query-target")
+				                                                     .send())
+				                       .query("/302", (req, res) -> res.status(302)
+				                                                     .header(HttpHeaderNames.LOCATION, "/query-target")
+				                                                     .send())
+				                       .query("/303", (req, res) -> res.status(303)
+				                                                     .header(HttpHeaderNames.LOCATION, "/get-target")
+				                                                     .send())
+				                       .query("/307", (req, res) -> res.status(307)
+				                                                     .header(HttpHeaderNames.LOCATION, "/query-target")
+				                                                     .send())
+				                       .query("/308", (req, res) -> res.status(308)
+				                                                     .header(HttpHeaderNames.LOCATION, "/query-target")
+				                                                     .send())
+				                       .query("/query-target", (req, res) ->
+				                               res.sendString(req.receive()
+				                                                 .aggregate()
+				                                                 .asString()
+				                                                 .map(body -> req.method().name() + ":" + body)))
+				                       .get("/get-target", (req, res) ->
+				                               res.sendString(req.receive()
+				                                                 .aggregate()
+				                                                 .asString()
+				                                                 .defaultIfEmpty("")
+				                                                 .map(body -> req.method().name() + ":" + body))))
+				          .bindNow();
+
+		HttpClient client = createClient(disposableServer::address)
+				.followRedirect(true);
+
+		Flux.just("/301", "/302", "/307", "/308")
+		    .flatMap(path -> client.query()
+		                           .uri(path)
+		                           .send((req, out) -> out.sendString(Mono.just("query-body")))
+		                           .responseSingle((res, bytes) -> bytes.asString()))
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .assertNext(bodies -> assertThat(bodies).containsOnly("QUERY:query-body"))
+		    .verifyComplete();
+
+		StepVerifier.create(client.query()
+		                          .uri("/303")
+		                          .send((req, out) -> out.sendString(Mono.just("query-body")))
+		                          .responseSingle((res, bytes) -> bytes.asString()))
+		            .expectNext("GET:")
+		            .verifyComplete();
 	}
 
 	@Test

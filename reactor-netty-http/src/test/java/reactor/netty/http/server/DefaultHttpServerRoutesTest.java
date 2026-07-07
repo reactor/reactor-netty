@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,23 @@
  */
 package reactor.netty.http.server;
 
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.publisher.Mono;
 import reactor.netty.NettyOutbound;
 import reactor.test.StepVerifier;
-
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -76,5 +80,53 @@ class DefaultHttpServerRoutesTest {
 				.expectComplete()
 				.verify(Duration.ofMillis(200));
 
+	}
+
+	@Test
+	void queryRouteTest() {
+		HttpServerRequest request = Mockito.mock(HttpServerRequest.class);
+		HttpServerResponse response = Mockito.mock(HttpServerResponse.class);
+		AtomicReference<Map<String, String>> params = new AtomicReference<>();
+		AtomicBoolean handlerInvoked = new AtomicBoolean();
+
+		Mockito.when(request.uri()).thenReturn("/test/123");
+		Mockito.when(request.method()).thenReturn(HttpMethod.valueOf("QUERY"));
+		Mockito.when(request.paramsResolver(Mockito.any()))
+		       .thenAnswer(invocation -> {
+			       @SuppressWarnings("unchecked")
+			       java.util.function.Function<? super String, Map<String, String>> resolver = invocation.getArgument(0);
+			       params.set(resolver.apply("/test/123"));
+			       return request;
+		       });
+
+		DefaultHttpServerRoutes routes = new DefaultHttpServerRoutes();
+		Publisher<Void> publisher = routes.query("/test/{id}", (req, res) -> {
+			handlerInvoked.set(true);
+			assertThat(params.get()).containsEntry("id", "123");
+			return Mono.empty();
+		}).apply(request, response);
+
+		StepVerifier.create(publisher).verifyComplete();
+		assertThat(handlerInvoked).isTrue();
+	}
+
+	@Test
+	void queryRouteDoesNotMatchOtherMethods() {
+		HttpServerRequest request = Mockito.mock(HttpServerRequest.class);
+		HttpServerResponse response = Mockito.mock(HttpServerResponse.class);
+		AtomicBoolean handlerInvoked = new AtomicBoolean();
+
+		Mockito.when(request.uri()).thenReturn("/test/123");
+		Mockito.when(request.method()).thenReturn(HttpMethod.GET);
+		Mockito.when(response.sendNotFound()).thenReturn(Mono.empty());
+
+		DefaultHttpServerRoutes routes = new DefaultHttpServerRoutes();
+		Publisher<Void> publisher = routes.query("/test/{id}", (req, res) -> {
+			handlerInvoked.set(true);
+			return Mono.empty();
+		}).apply(request, response);
+
+		StepVerifier.create(publisher).verifyComplete();
+		assertThat(handlerInvoked).isFalse();
 	}
 }
