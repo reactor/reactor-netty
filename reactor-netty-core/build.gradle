@@ -261,6 +261,7 @@ shadowJar {
 
 shadow {
 	addShadowVariantIntoJavaComponent = false
+	addTargetJvmVersionAttribute = false
 }
 afterEvaluate {
 	publishing.publications.mavenJava.artifact(shadowJar)
