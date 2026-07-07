@@ -1259,9 +1259,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	final Flux<HttpData> receiveFormInternal(HttpServerFormDecoderProvider config) {
 		boolean isMultipart = isMultipart();
-		if (!Objects.equals(method(), HttpMethod.POST) || !(isFormUrlencoded() || isMultipart)) {
+		HttpMethod method = method();
+		if (!(HttpMethod.POST.equals(method) || HttpMethod.QUERY.equals(method)) ||
+				!(isFormUrlencoded() || isMultipart)) {
 			return Flux.error(new IllegalStateException(
-					"Request is not POST or does not have Content-Type " +
+					"Request is not POST or QUERY or does not have Content-Type " +
 							"with value 'application/x-www-form-urlencoded' or 'multipart/form-data'"));
 		}
 		return Flux.defer(() ->

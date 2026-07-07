@@ -858,10 +858,12 @@ class HttpClientTest extends BaseHttpTest {
 				                       .put("/204", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                     .sendHeaders())
 				                       .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
+				                                                     .sendHeaders())
+				                       .query("/query", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .sendHeaders()))
 				          .bindNow();
 
-		CountDownLatch latch = new CountDownLatch(3);
+		CountDownLatch latch = new CountDownLatch(4);
 		AtomicInteger onReq = new AtomicInteger();
 		AtomicInteger afterReq = new AtomicInteger();
 		AtomicInteger onResp = new AtomicInteger();
@@ -895,10 +897,21 @@ class HttpClientTest extends BaseHttpTest {
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
 
+		createHttpClientForContextWithAddress()
+		        .doOnRequest((r, c) -> onReq.getAndIncrement())
+		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
+		        .doOnResponse((r, c) -> onResp.getAndIncrement())
+		        .doAfterResponseSuccess((r, c) -> latch.countDown())
+		        .query()
+		        .uri("/query")
+		        .send(Mono.just(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset()))))
+		        .responseContent()
+		        .blockLast(Duration.ofSeconds(30));
+
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		assertThat(onReq.get()).isEqualTo(3);
-		assertThat(afterReq.get()).isEqualTo(3);
-		assertThat(onResp.get()).isEqualTo(3);
+		assertThat(onReq.get()).isEqualTo(4);
+		assertThat(afterReq.get()).isEqualTo(4);
+		assertThat(onResp.get()).isEqualTo(4);
 	}
 
 	@Test
