@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -192,6 +192,24 @@ final class HttpPredicate
 	 */
 	public static Predicate<HttpServerRequest> put(String uri) {
 		return http(uri, null, HttpMethod.PUT);
+	}
+
+	/**
+	 * An alias for {@link HttpPredicate#http}.
+	 * <p>
+	 * Creates a {@link Predicate} based on a URI template filtering.
+	 * <p>
+	 * This will listen for QUERY Method.
+	 *
+	 * @param uri The string to compile into a URI template and use for matching
+	 *
+	 * @return The new {@link Predicate}.
+	 *
+	 * @see Predicate
+	 * @since 1.3.7
+	 */
+	public static Predicate<HttpServerRequest> query(String uri) {
+		return http(uri, null, HttpMethod.QUERY);
 	}
 
 	final @Nullable HttpVersion protocol;
