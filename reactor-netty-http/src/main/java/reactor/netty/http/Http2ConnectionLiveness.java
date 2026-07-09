@@ -24,6 +24,7 @@ import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2PingFrame;
+import io.netty.util.AttributeKey;
 import org.jspecify.annotations.Nullable;
 
 import java.util.concurrent.ScheduledFuture;
@@ -68,15 +69,28 @@ import static reactor.netty.ReactorNetty.format;
  */
 public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 
+	/**
+	 * Channel attribute, set by the connection pool on a pooled HTTP/2 connection, that lets the pool
+	 * observe the PING liveness probe: the listener is notified with {@code true} when a probe starts
+	 * and with {@code false} when it ends. This is the pool's signal to exclude the connection from
+	 * acquisition while it is being probed and to re-admit it once the probe completes. It is internal
+	 * wiring between the pool and this handler; the probe behaviour itself is unconditional and not
+	 * configurable.
+	 *
+	 * @since 1.3.7
+	 */
+	public static final AttributeKey<@Nullable Consumer<Boolean>> CONNECTION_LIVENESS_CHECK_LISTENER =
+			AttributeKey.valueOf(Http2ConnectionLiveness.class, "CONNECTION_LIVENESS_CHECK_LISTENER");
+
 	private final Http2FrameWriter http2FrameWriter;
 	private final int pingAckDropThreshold;
 	private final long pingAckTimeoutNanos;
-	private final @Nullable Consumer<Boolean> connectionLivenessCheckListener;
 
 	private boolean isPingAckPending;
 	private long lastSentPingData;
 	private @Nullable ScheduledFuture<?> pingScheduler;
 	private int pingAttempts;
+	private @Nullable Channel channel;
 
 	/**
 	 * Constructs a new {@code Http2ConnectionLiveness} instance.
@@ -86,25 +100,9 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	 * @param pingAckTimeoutNanos the timeout in nanoseconds for receiving a PING ACK response
 	 */
 	public Http2ConnectionLiveness(Http2FrameCodec http2FrameCodec, int pingAckDropThreshold, long pingAckTimeoutNanos) {
-		this(http2FrameCodec, pingAckDropThreshold, pingAckTimeoutNanos, null);
-	}
-
-	/**
-	 * Constructs a new {@code Http2ConnectionLiveness} instance.
-	 *
-	 * @param http2FrameCodec the HTTP/2 frame codec
-	 * @param pingAckDropThreshold the maximum number of PING frame transmission attempts before closing the connection
-	 * @param pingAckTimeoutNanos the timeout in nanoseconds for receiving a PING ACK response
-	 * @param connectionLivenessCheckListener notified with {@code true} when a liveness check (PING probe) starts and
-	 * with {@code false} when it ends; lets the connection pool exclude the connection from acquisition while probing
-	 * @since 1.3.7
-	 */
-	public Http2ConnectionLiveness(Http2FrameCodec http2FrameCodec, int pingAckDropThreshold, long pingAckTimeoutNanos,
-			@Nullable Consumer<Boolean> connectionLivenessCheckListener) {
 		this.http2FrameWriter = http2FrameCodec.encoder().frameWriter();
 		this.pingAckDropThreshold = pingAckDropThreshold;
 		this.pingAckTimeoutNanos = pingAckTimeoutNanos;
-		this.connectionLivenessCheckListener = connectionLivenessCheckListener;
 	}
 
 	/**
@@ -122,8 +120,11 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	}
 
 	private void notifyConnectionLivenessCheck(boolean inProgress) {
-		if (connectionLivenessCheckListener != null) {
-			connectionLivenessCheckListener.accept(inProgress);
+		if (channel != null) {
+			Consumer<Boolean> listener = channel.attr(CONNECTION_LIVENESS_CHECK_LISTENER).get();
+			if (listener != null) {
+				listener.accept(inProgress);
+			}
 		}
 	}
 
@@ -239,6 +240,7 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 		private void writePing() {
 			isPingAckPending = true;
 			pingAttempts++;
+			channel = ctx.channel();
 			notifyConnectionLivenessCheck(true);
 
 			lastSentPingData = ThreadLocalRandom.current().nextLong();

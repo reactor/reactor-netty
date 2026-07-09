@@ -399,8 +399,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 							new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
 									// Deliberately suppress "NullAway"
 									// http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null in this case
-									http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos(),
-									inProgress -> slot.connectionLivenessCheckInProgress = inProgress));
+									http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+					installConnectionLivenessCheckListener(channel, slot, http2Pool);
 				}
 			}
 
@@ -426,13 +426,25 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 								new Http2ConnectionLiveness(((Http2FrameCodec) frameCodec.handler()),
 										// Deliberately suppress "NullAway"
 										// http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null in this case
-										http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos(),
-										inProgress -> slot.connectionLivenessCheckInProgress = inProgress));
+										http2SettingsSpec.pingAckDropThreshold(), http2SettingsSpec.pingAckTimeout().toNanos()));
+						installConnectionLivenessCheckListener(connection.channel(), slot, http2Pool);
 					}
 				}
 			}
 
 			obs.onStateChange(connection, newState);
+		}
+
+		static void installConnectionLivenessCheckListener(Channel channel, Http2Pool.Slot slot, Http2Pool http2Pool) {
+			// While a PING liveness probe is in flight, the connection is excluded from acquisition;
+			// re-admit it and wake any pending acquire once the probe completes.
+			channel.attr(Http2ConnectionLiveness.CONNECTION_LIVENESS_CHECK_LISTENER)
+			       .set(inProgress -> {
+			           slot.connectionLivenessCheckInProgress = inProgress;
+			           if (!inProgress) {
+			               http2Pool.drain();
+			           }
+			       });
 		}
 
 		@Override
