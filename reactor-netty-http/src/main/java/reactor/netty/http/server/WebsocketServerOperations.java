@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -321,6 +322,13 @@ class WebsocketServerOperations extends HttpServerOperations
 			AtomicIntegerFieldUpdater.newUpdater(WebsocketServerOperations.class,
 					"closeSent");
 
+	/**
+	 * Replaces the {@code HttpMetricsHandler} slot after a WebSocket upgrade: it stops recording HTTP
+	 * request/response metrics (the exchange is over) while still carrying the connection/stream close
+	 * accounting via {@link #recordInactiveConnectionOrStream}. For the Micrometer recorder the
+	 * {@code ChannelMetricsHandler} is not present in the pipeline (see {@code HttpServerConfig}), so this
+	 * slot is the sole owner of that accounting.
+	 */
 	static final class WebsocketHttpServerMetricsHandler extends AbstractHttpServerMetricsHandler {
 
 		final HttpServerMetricsRecorder recorder;
@@ -347,11 +355,13 @@ class WebsocketServerOperations extends HttpServerOperations
 					recorder.recordServerConnectionClosed(ctx.channel().localAddress());
 				}
 
-				if (channelActivated) {
-					channelActivated = false;
-					// Always use the real connection local address without any proxy information
-					recorder.recordServerConnectionInactive(ctx.channel().localAddress());
+				// Dispatch on the channel type as the base handler does: an Http2StreamChannel close is a stream close.
+				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+				HttpServerOperations ops = null;
+				if (channelOps instanceof HttpServerOperations) {
+					ops = (HttpServerOperations) channelOps;
 				}
+				recordInactiveConnectionOrStream(ctx.channel(), ops);
 			}
 			catch (RuntimeException e) {
 				// Allow request-response exchange to continue, unaffected by metrics problem
