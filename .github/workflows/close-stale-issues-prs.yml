@@ -14,7 +14,7 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a899
+    - uses: actions/stale@1e223db275d687790206a7acac4d1a11bd6fe629
       with:
         stale-issue-message: 'If you would like us to look at this issue, please provide the requested information. If the information is not provided within the next 7 days this issue will be closed.'
         stale-pr-message: 'If you would like us to look at this PR, please provide the requested information. If the information is not provided within the next 7 days this PR will be closed.'
