@@ -17,6 +17,7 @@ package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2FrameCodec;
@@ -32,6 +33,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
+import reactor.netty.http.Http2ConnectionLiveness;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.internal.shaded.reactor.pool.PoolBuilder;
 import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
@@ -354,6 +356,215 @@ class Http2PoolTest {
 			for (PooledRef<Connection> ref : acquired) {
 				ref.release().block(Duration.ofSeconds(1));
 			}
+		}
+		finally {
+			for (EmbeddedChannel channel : channels) {
+				channel.finishAndReleaseAll();
+				Connection.from(channel).dispose();
+			}
+		}
+	}
+
+	@Test
+	void connectionLivenessCheckInProgressExcludesConnectionFromAcquisition() {
+		AtomicInteger allocator = new AtomicInteger();
+		ConcurrentLinkedQueue<EmbeddedChannel> channels = new ConcurrentLinkedQueue<>();
+
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               allocator.incrementAndGet();
+				               EmbeddedChannel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build(),
+				                   new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+				               channels.add(channel);
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 2);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(2)
+				.maxConcurrentStreams(10)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		List<PooledRef<Connection>> acquired = new ArrayList<>();
+		try {
+			// Warm up one pooled connection and return it to the pool as idle.
+			PooledRef<Connection> warm = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(warm).isNotNull();
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) warm).slot;
+			warm.release().block(Duration.ofSeconds(1));
+			assertThat(allocator).as("warm-up allocations").hasValue(1);
+
+			// A liveness check (HTTP/2 PING probe) is in progress on the cached connection.
+			slot.connectionLivenessCheckInProgress = true;
+
+			// Acquire while probing: the probed connection must not be handed out,
+			// so the pool allocates a fresh connection instead of reusing the cached one.
+			http2Pool.acquire().subscribe(acquired::add);
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+			assertThat(acquired).hasSize(1);
+			assertThat(acquired.get(0).poolable())
+					.as("must not reuse the connection being probed")
+					.isNotSameAs(warm.poolable());
+			assertThat(allocator).as("a fresh connection is allocated while probing").hasValue(2);
+
+			// Probe finished (ACK received): the connection is re-admitted; reuse resumes with no new allocation.
+			slot.connectionLivenessCheckInProgress = false;
+			acquired.get(0).release().block(Duration.ofSeconds(1));
+			http2Pool.acquire().subscribe(acquired::add);
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+			assertThat(acquired).hasSize(2);
+			assertThat(allocator).as("re-admitted connection is reused, no new allocation").hasValue(2);
+		}
+		finally {
+			for (EmbeddedChannel channel : channels) {
+				channel.finishAndReleaseAll();
+				Connection.from(channel).dispose();
+			}
+		}
+	}
+
+	@Test
+	void connectionLivenessProbeTogglesExclusionFlagThroughChannelAttribute() {
+		AtomicInteger allocator = new AtomicInteger();
+		ConcurrentLinkedQueue<EmbeddedChannel> channels = new ConcurrentLinkedQueue<>();
+
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               allocator.incrementAndGet();
+				               EmbeddedChannel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build(),
+				                   new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+				               channels.add(channel);
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 2);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(2)
+				.maxConcurrentStreams(10)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		List<PooledRef<Connection>> acquired = new ArrayList<>();
+		try {
+			// Warm up one pooled connection and return it to the pool as idle.
+			PooledRef<Connection> warm = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(warm).isNotNull();
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) warm).slot;
+			EmbeddedChannel channel = channels.peek();
+			assertThat(channel).isNotNull();
+			warm.release().block(Duration.ofSeconds(1));
+			assertThat(allocator).as("warm-up allocations").hasValue(1);
+
+			// Wire the production seam exactly as the pool does: install the listener under the channel
+			// attribute, then drive a real PING liveness probe on that channel through the handler.
+			Http2ConnectionProvider.DisposableAcquire.installConnectionLivenessCheckListener(channel, slot, http2Pool);
+			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
+			ChannelHandlerContext frameCodecCtx = channel.pipeline().context(Http2FrameCodec.class);
+			Http2ConnectionLiveness liveness =
+					new Http2ConnectionLiveness(frameCodec, 1, Duration.ofSeconds(1).toNanos());
+
+			assertThat(slot.connectionLivenessCheckInProgress).as("no probe in progress yet").isFalse();
+
+			// Probe starts: the handler reads the listener from the channel attribute and flips the flag.
+			liveness.check(frameCodecCtx);
+			channel.runPendingTasks();
+			assertThat(slot.connectionLivenessCheckInProgress)
+					.as("probe start excludes the connection through the channel attribute")
+					.isTrue();
+
+			// The flag was flipped through the real wiring, so the pool must not hand the connection out.
+			http2Pool.acquire().subscribe(acquired::add);
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+			assertThat(acquired).hasSize(1);
+			assertThat(acquired.get(0).poolable())
+					.as("must not reuse the connection being probed")
+					.isNotSameAs(warm.poolable());
+			assertThat(allocator).as("a fresh connection is allocated while probing").hasValue(2);
+
+			// Probe ends (PING ACK received): the handler clears the flag through the channel attribute,
+			// re-admitting the connection and draining pending acquires.
+			liveness.cancel();
+			assertThat(slot.connectionLivenessCheckInProgress)
+					.as("probe end re-admits the connection through the channel attribute")
+					.isFalse();
+		}
+		finally {
+			for (EmbeddedChannel channel : channels) {
+				channel.finishAndReleaseAll();
+				Connection.from(channel).dispose();
+			}
+		}
+	}
+
+	@Test
+	void connectionLivenessProbeCompletionDrainsPendingAcquire() {
+		AtomicInteger allocator = new AtomicInteger();
+		ConcurrentLinkedQueue<EmbeddedChannel> channels = new ConcurrentLinkedQueue<>();
+
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               allocator.incrementAndGet();
+				               EmbeddedChannel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build(),
+				                   new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+				               channels.add(channel);
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(10)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		List<PooledRef<Connection>> acquired = new ArrayList<>();
+		try {
+			// Warm up the single pooled connection and return it to the pool as idle.
+			PooledRef<Connection> warm = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(warm).isNotNull();
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) warm).slot;
+			EmbeddedChannel channel = channels.peek();
+			assertThat(channel).isNotNull();
+			warm.release().block(Duration.ofSeconds(1));
+			assertThat(allocator).as("warm-up allocations").hasValue(1);
+
+			// Install the production seam and start a real PING liveness probe on the only connection.
+			Http2ConnectionProvider.DisposableAcquire.installConnectionLivenessCheckListener(channel, slot, http2Pool);
+			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
+			ChannelHandlerContext frameCodecCtx = channel.pipeline().context(Http2FrameCodec.class);
+			Http2ConnectionLiveness liveness =
+					new Http2ConnectionLiveness(frameCodec, 1, Duration.ofSeconds(1).toNanos());
+
+			liveness.check(frameCodecCtx);
+			channel.runPendingTasks();
+			assertThat(slot.connectionLivenessCheckInProgress).as("probe in progress").isTrue();
+
+			// Acquire while probing: the only connection is excluded and the pool is at capacity,
+			// so the borrower parks pending rather than being served or allocating a new connection.
+			http2Pool.acquire().subscribe(acquired::add);
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+			assertThat(acquired).as("borrower parks while the only connection is probed").isEmpty();
+			assertThat(allocator).as("no new connection allocated at max capacity").hasValue(1);
+
+			// Probe completes (PING ACK): the listener clears the flag and drains the pool, which
+			// re-admits the connection and serves the parked borrower without waiting for a later poll.
+			liveness.cancel();
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+			assertThat(acquired).as("probe completion drains and serves the pending borrower").hasSize(1);
+			assertThat(acquired.get(0).poolable())
+					.as("the parked borrower is served by the re-admitted connection")
+					.isSameAs(warm.poolable());
+			assertThat(allocator).as("served by re-admission, not a new allocation").hasValue(1);
 		}
 		finally {
 			for (EmbeddedChannel channel : channels) {

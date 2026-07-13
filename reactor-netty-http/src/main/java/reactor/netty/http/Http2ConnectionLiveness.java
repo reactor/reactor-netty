@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,12 @@ import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2PingFrame;
+import io.netty.util.AttributeKey;
 import org.jspecify.annotations.Nullable;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static reactor.netty.ReactorNetty.format;
@@ -67,6 +69,19 @@ import static reactor.netty.ReactorNetty.format;
  */
 public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 
+	/**
+	 * Channel attribute, set by the connection pool on a pooled HTTP/2 connection, that lets the pool
+	 * observe the PING liveness probe: the listener is notified with {@code true} when a probe starts
+	 * and with {@code false} when it ends. This is the pool's signal to exclude the connection from
+	 * acquisition while it is being probed and to re-admit it once the probe completes. It is internal
+	 * wiring between the pool and this handler; the probe behaviour itself is unconditional and not
+	 * configurable.
+	 *
+	 * @since 1.3.7
+	 */
+	public static final AttributeKey<@Nullable Consumer<Boolean>> CONNECTION_LIVENESS_CHECK_LISTENER =
+			AttributeKey.valueOf(Http2ConnectionLiveness.class, "CONNECTION_LIVENESS_CHECK_LISTENER");
+
 	private final Http2FrameWriter http2FrameWriter;
 	private final int pingAckDropThreshold;
 	private final long pingAckTimeoutNanos;
@@ -75,6 +90,7 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	private long lastSentPingData;
 	private @Nullable ScheduledFuture<?> pingScheduler;
 	private int pingAttempts;
+	private @Nullable Channel channel;
 
 	/**
 	 * Constructs a new {@code Http2ConnectionLiveness} instance.
@@ -96,9 +112,19 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 	public void cancel() {
 		isPingAckPending = false;
 		pingAttempts = 0;
+		notifyConnectionLivenessCheck(false);
 		if (pingScheduler != null) {
 			pingScheduler.cancel(false);
 			pingScheduler = null;
+		}
+	}
+
+	private void notifyConnectionLivenessCheck(boolean inProgress) {
+		if (channel != null) {
+			Consumer<Boolean> listener = channel.attr(CONNECTION_LIVENESS_CHECK_LISTENER).get();
+			if (listener != null) {
+				listener.accept(inProgress);
+			}
 		}
 	}
 
@@ -214,6 +240,8 @@ public final class Http2ConnectionLiveness implements HttpConnectionLiveness {
 		private void writePing() {
 			isPingAckPending = true;
 			pingAttempts++;
+			channel = ctx.channel();
+			notifyConnectionLivenessCheck(true);
 
 			lastSentPingData = ThreadLocalRandom.current().nextLong();
 
