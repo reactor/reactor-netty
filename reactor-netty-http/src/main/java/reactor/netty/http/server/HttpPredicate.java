@@ -205,8 +205,8 @@ final class HttpPredicate
 	 *
 	 * @return The new {@link Predicate}.
 	 *
-	 * @see Predicate
 	 * @since 1.3.7
+	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> query(String uri) {
 		return http(uri, null, HttpMethod.QUERY);
