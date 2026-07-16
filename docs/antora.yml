@@ -21,7 +21,7 @@ asciidoc:
     http: 'example$reactor-netty-http'
     core: 'example$reactor-netty-core'
     quic: 'example$reactor-netty-quic'
-    reactor-netty-github-repo: 'https://github.com/reactor/reactor-netty/tree/main'
+    reactor-netty-github-repo: 'https://github.com/reactor/reactor-netty/tree/1.3.x'
     core-source-link: '{reactor-netty-github-repo}/reactor-netty-core/src/main/java'
     http-source-link: '{reactor-netty-github-repo}/reactor-netty-http/src/main/java'
     quic-source-link: '{reactor-netty-github-repo}/reactor-netty-quic/src/main/java'
