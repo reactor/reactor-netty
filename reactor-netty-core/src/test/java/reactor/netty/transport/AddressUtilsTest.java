@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 package reactor.netty.transport;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -274,6 +277,22 @@ class AddressUtilsTest {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> AddressUtils.updatePort(null, -1))
 				.withMessage("port out of range:-1");
+	}
+
+	@Test
+	void updatePortEvaluatesSupplierOnce() {
+		AtomicInteger evaluations = new AtomicInteger();
+		Supplier<SocketAddress> supplier = () -> {
+			evaluations.incrementAndGet();
+			return AddressUtils.createUnresolved("example.com", 8080);
+		};
+
+		SocketAddress updated = AddressUtils.updatePort(supplier, 9090);
+
+		assertThat(evaluations).hasValue(1);
+		assertThat(updated).isInstanceOf(InetSocketAddress.class);
+		assertThat(((InetSocketAddress) updated).getHostString()).isEqualTo("example.com");
+		assertThat(((InetSocketAddress) updated).getPort()).isEqualTo(9090);
 	}
 
 	@Test
