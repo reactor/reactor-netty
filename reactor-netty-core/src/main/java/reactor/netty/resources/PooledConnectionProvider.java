@@ -28,7 +28,6 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
@@ -459,7 +458,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 	final void scheduleInactivePoolsDisposal() {
 		if (!inactivePoolDisposeInterval.isZero()) {
-			Schedulers.parallel()
+			PoolMaintenanceScheduler.INSTANCE
 			          .schedule(this::disposeInactivePoolsInBackground, inactivePoolDisposeInterval.toMillis(), TimeUnit.MILLISECONDS);
 		}
 	}
@@ -653,7 +652,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				poolBuilder = poolBuilder.evictInBackground(evictionInterval, evictInBackgroundScheduler);
 			}
 			else {
-				poolBuilder = poolBuilder.evictInBackground(evictionInterval);
+				poolBuilder = poolBuilder.evictInBackground(evictionInterval, PoolMaintenanceScheduler.INSTANCE);
 			}
 
 			if (maxLifeTimeDuration != null) {
