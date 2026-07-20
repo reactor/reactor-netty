@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,12 @@ import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
  */
 final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> {
 
-	static final DefaultHttpForwardedHeaderHandler INSTANCE = new DefaultHttpForwardedHeaderHandler();
+	static final DefaultHttpForwardedHeaderHandler INSTANCE =
+			new DefaultHttpForwardedHeaderHandler(ForwardedHeaderMode.AUTO);
+	static final DefaultHttpForwardedHeaderHandler FORWARDED =
+			new DefaultHttpForwardedHeaderHandler(ForwardedHeaderMode.FORWARDED);
+	static final DefaultHttpForwardedHeaderHandler X_FORWARDED =
+			new DefaultHttpForwardedHeaderHandler(ForwardedHeaderMode.X_FORWARDED);
 
 	static final String  FORWARDED_HEADER         = "Forwarded";
 	static final String  X_FORWARDED_IP_HEADER    = "X-Forwarded-For";
@@ -61,13 +66,22 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final boolean DEFAULT_FORWARDED_HEADER_VALIDATION =
 			Boolean.parseBoolean(System.getProperty(FORWARDED_HEADER_VALIDATION, "true"));
 
+	private final ForwardedHeaderMode forwardedHeaderMode;
+
+	private DefaultHttpForwardedHeaderHandler(ForwardedHeaderMode forwardedHeaderMode) {
+		this.forwardedHeaderMode = forwardedHeaderMode;
+	}
+
 	@Override
 	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
-		String forwardedHeader = request.headers().get(FORWARDED_HEADER);
-		if (forwardedHeader != null) {
-			return parseForwardedInfo(connectionInfo, forwardedHeader);
+		if (forwardedHeaderMode != ForwardedHeaderMode.X_FORWARDED) {
+			String forwardedHeader = request.headers().get(FORWARDED_HEADER);
+			if (forwardedHeader != null) {
+				return parseForwardedInfo(connectionInfo, forwardedHeader);
+			}
 		}
-		return parseXForwardedInfo(connectionInfo, request);
+		return forwardedHeaderMode != ForwardedHeaderMode.FORWARDED ?
+				parseXForwardedInfo(connectionInfo, request) : connectionInfo;
 	}
 
 	@SuppressWarnings("NullAway")
