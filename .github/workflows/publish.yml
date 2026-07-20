@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: setup java
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: 'zulu'
           java-version: |
@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: setup java
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: 'zulu'
           java-version: |
@@ -58,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: setup java
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: 'zulu'
           java-version: |
@@ -74,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: setup java
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: 'zulu'
           java-version: |
@@ -94,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: setup java
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: 'zulu'
           java-version: |
@@ -124,7 +124,7 @@ jobs:
       - name: Install asciidoctor-pdf / rouge
         run: gem install asciidoctor-pdf rouge
       - name: setup java
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: 'zulu'
           java-version: |
@@ -173,7 +173,7 @@ jobs:
       - name: Install asciidoctor-pdf / rouge
         run: gem install asciidoctor-pdf rouge
       - name: setup java
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: 'zulu'
           java-version: |
