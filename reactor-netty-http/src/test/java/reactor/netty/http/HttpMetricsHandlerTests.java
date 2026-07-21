@@ -787,6 +787,48 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertGauge(registry, SERVER_CONNECTIONS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 	}
 
+	@Test
+	void testServerConnectionsWebsocketMicrometerHttp2() throws Exception {
+		// WebSocket-over-HTTP/2 server metrics gauge regression (#4290): the upgrade runs over an HTTP/2 stream, so
+		// after close streams.active must return to 0 while connections.active stays untouched.
+		// A fresh createServer() is required (not the shared httpServer): this path uses .handle(...) for the Extended
+		// CONNECT upgrade, which the shared .route(...) server would 404, and needs H2C + connectProtocolEnabled.
+		disposableServer =
+				createServer()
+						.channelGroup(group)
+						.host("127.0.0.1")
+						.protocol(HttpProtocol.H2C)
+						.http2Settings(spec -> spec.connectProtocolEnabled(true))
+						.metrics(true, Function.identity())
+						.handle((req, res) -> res.sendWebsocket((in, out) -> out.sendString(Mono.just("Hello World!"))))
+						.doOnConnection(cnx -> StreamCloseHandler.INSTANCE.register(cnx.channel()))
+						.bindNow();
+
+		String address = formatSocketAddress(disposableServer.address());
+
+		httpClient.protocol(HttpProtocol.H2C)
+		          .websocket()
+		          .uri("/ws")
+		          .handle((in, out) -> in.receive().aggregate().asString())
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// make sure the client stream is closed on the server side (pass-through channelInactive ran)
+		// before checking server metrics
+		assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+
+		// streams.active back to 0; connections.active never recorded (only counted for a SocketChannel, so on this
+		// stream path it is never created - pre-fix the erroneous recordServerConnectionInactive created it at -1).
+		assertGauge(registry, SERVER_STREAMS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
+		assertGauge(registry, SERVER_CONNECTIONS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address)
+				.as("connections.active must not be recorded for a WebSocket-over-HTTP/2 stream close (pre-fix it was -1)")
+				.isNull();
+		// The stream close must not disturb the parent connection's total.
+		assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(1);
+	}
+
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
