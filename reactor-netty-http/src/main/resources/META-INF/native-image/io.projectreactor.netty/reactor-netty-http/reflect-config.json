@@ -183,9 +183,23 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.server.AbstractWebSocketServerMetricsHandler"
+		},
+		"name": "reactor.netty.http.server.AbstractWebSocketServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.server.ContextAwareHttpServerMetricsHandler"
 		},
 		"name": "reactor.netty.http.server.ContextAwareHttpServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.ContextAwareWebSocketServerMetricsHandler"
+		},
+		"name": "reactor.netty.http.server.ContextAwareWebSocketServerMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
@@ -323,6 +337,13 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.server.MicrometerWebSocketServerMetricsHandler"
+		},
+		"name": "reactor.netty.http.server.MicrometerWebSocketServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.server.NonSslRedirectDetector"
 		},
 		"name": "reactor.netty.http.server.NonSslRedirectDetector",
@@ -340,6 +361,13 @@
 			"typeReachable": "reactor.netty.http.server.SimpleCompressionHandler"
 		},
 		"name": "reactor.netty.http.server.SimpleCompressionHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.WebSocketServerMetricsHandler"
+		},
+		"name": "reactor.netty.http.server.WebSocketServerMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
