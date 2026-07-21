@@ -18,16 +18,18 @@ package reactor.netty.resources;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import reactor.core.Disposable;
 import reactor.core.Disposables;
 import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * A minimal {@link Scheduler} dedicated to connection pool maintenance tasks: background
  * eviction and inactive pool disposal.
  *
- * <p>Tasks are submitted directly to a shared single daemon thread and deliberately do
+ * <p>Tasks are submitted directly to a shared daemon thread and deliberately do
  * NOT go through {@link reactor.core.scheduler.Schedulers} task decoration
  * ({@code Schedulers.onSchedule(...)}). Maintenance tasks are library-internal,
  * self-rescheduling and live as long as the application; decorating them with hooks such
@@ -44,8 +46,9 @@ final class PoolMaintenanceScheduler implements Scheduler {
 	final ScheduledThreadPoolExecutor executor;
 
 	private PoolMaintenanceScheduler() {
-		ScheduledThreadPoolExecutor e = new ScheduledThreadPoolExecutor(1, r -> {
-			Thread t = new Thread(r, "reactor-netty-pool-maintenance");
+		AtomicLong counter = new AtomicLong();
+		ScheduledThreadPoolExecutor e = new ScheduledThreadPoolExecutor(Schedulers.DEFAULT_POOL_SIZE, r -> {
+			Thread t = new Thread(r, "reactor-netty-pool-maintenance-" + counter.incrementAndGet());
 			t.setDaemon(true);
 			return t;
 		});
