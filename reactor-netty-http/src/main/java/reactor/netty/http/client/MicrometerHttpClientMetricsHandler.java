@@ -61,6 +61,9 @@ import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCa
  */
 final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetricsHandler {
 	final MicrometerHttpClientMetricsRecorder recorder;
+	// Fixed for the life of the connection; format once and reuse across every recorder dispatch.
+	final String remoteAddressStr;
+	final String proxyAddressStr;
 
 	@SuppressWarnings("NullAway")
 	// Deliberately suppress "NullAway"
@@ -78,11 +81,15 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			@Nullable Function<String, String> uriTagValue) {
 		super(remoteAddress, proxyAddress, uriTagValue);
 		this.recorder = recorder;
+		this.remoteAddressStr = formatSocketAddress(remoteAddress);
+		this.proxyAddressStr = proxyAddress != null ? formatSocketAddress(proxyAddress) : NA;
 	}
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsHandler copy) {
 		super(copy);
 		this.recorder = copy.recorder;
+		this.remoteAddressStr = copy.remoteAddressStr;
+		this.proxyAddressStr = copy.proxyAddressStr;
 
 		this.responseTimeHandlerContext = copy.responseTimeHandlerContext;
 		this.responseTimeObservation = copy.responseTimeObservation;
@@ -96,18 +103,10 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 	@Override
 	protected void recordRead(Channel channel) {
-		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(remoteAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+		recorder.recordDataReceivedTime(remoteAddressStr, proxyAddressStr, requireNonNull(path), requireNonNull(method), requireNonNull(status),
+				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-			recorder().recordDataReceived(remoteAddress, path, dataReceived);
-		}
-		else {
-			recorder().recordDataReceivedTime(remoteAddress, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
-
-			recorder().recordDataReceived(remoteAddress, proxyAddress, path, dataReceived);
-		}
+		recorder.recordDataReceived(remoteAddressStr, proxyAddressStr, path, dataReceived);
 
 		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
@@ -117,6 +116,14 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		responseTimeObservation.stop();
 
 		setChannelContext(channel, parentContextView);
+	}
+
+	@Override
+	protected void recordWrite() {
+		recorder.recordDataSentTime(remoteAddressStr, proxyAddressStr, requireNonNull(path), requireNonNull(method),
+				Duration.ofNanos(System.nanoTime() - dataSentTime));
+
+		recorder.recordDataSent(remoteAddressStr, proxyAddressStr, path, dataSent);
 	}
 
 	@Override

@@ -95,9 +95,18 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	void recordDataReceived(SocketAddress remoteAddress, String proxyAddress, long bytes) {
+		DistributionSummary ds = dataReceivedMeter(remoteAddress, proxyAddress);
+		if (ds != null) {
+			ds.record(bytes);
+		}
+	}
+
+	// Resolves the meter without recording, so a caller can cache the result and skip re-resolving it
+	// on every event.
+	@Nullable DistributionSummary dataReceivedMeter(SocketAddress remoteAddress, String proxyAddress) {
 		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, proxyAddress, null, null);
-		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, meterKey, key -> {
+		return MapUtils.computeIfAbsent(dataReceivedCache, meterKey, key -> {
 			DistributionSummary.Builder builder =
 					DistributionSummary.builder(name + DATA_RECEIVED)
 					                   .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
@@ -108,9 +117,6 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 			}
 			return filter(builder.register(REGISTRY));
 		});
-		if (ds != null) {
-			ds.record(bytes);
-		}
 	}
 
 	@Override
@@ -124,9 +130,16 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	void recordDataSent(SocketAddress remoteAddress, String proxyAddress, long bytes) {
+		DistributionSummary ds = dataSentMeter(remoteAddress, proxyAddress);
+		if (ds != null) {
+			ds.record(bytes);
+		}
+	}
+
+	@Nullable DistributionSummary dataSentMeter(SocketAddress remoteAddress, String proxyAddress) {
 		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, proxyAddress, null, null);
-		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, meterKey, key -> {
+		return MapUtils.computeIfAbsent(dataSentCache, meterKey, key -> {
 			DistributionSummary.Builder builder =
 					DistributionSummary.builder(name + DATA_SENT)
 					                   .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
@@ -137,9 +150,6 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 			}
 			return filter(builder.register(REGISTRY));
 		});
-		if (ds != null) {
-			ds.record(bytes);
-		}
 	}
 
 	@Override
