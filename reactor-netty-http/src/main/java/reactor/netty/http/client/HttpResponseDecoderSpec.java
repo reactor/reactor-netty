@@ -28,6 +28,7 @@ import reactor.netty.http.HttpDecoderSpec;
  *     <tr><td>{@link #DEFAULT_H2C_MAX_CONTENT_LENGTH}</td><td>65536</td></tr>
  *     <tr><td>{@link #DEFAULT_INITIAL_BUFFER_SIZE}</td><td>128</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_CHUNK_SIZE}</td><td>8192</td></tr>
+ *     <tr><td>{@link #DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE}</td><td>0</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_HEADER_SIZE}</td><td>8192</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_INITIAL_LINE_LENGTH}</td><td>4096</td></tr>
  *     <tr><td>{@link #DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST}</td><td>false</td></tr>
@@ -49,10 +50,18 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	 * the maximum length of the aggregated content.
 	 */
 	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 65536;
+
+	/**
+	 * The default maximum allowed size of the decompression buffer, in bytes, used when
+	 * decompressing a compressed HTTP response body. {@code 0} means that the maximum size
+	 * is not limited.
+	 */
+	public static final int DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE = 0;
 	// end::snippet-code[]
 
 	boolean failOnMissingResponse        = DEFAULT_FAIL_ON_MISSING_RESPONSE;
 	boolean parseHttpAfterConnectRequest = DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST;
+	int maxDecompressionBufferSize       = DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE;
 
 	HttpResponseDecoderSpec() {
 		this.h2cMaxContentLength = DEFAULT_H2C_MAX_CONTENT_LENGTH;
@@ -87,6 +96,39 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		return this;
 	}
 
+	/**
+	 * Configure the maximum allowed size, in bytes, of the buffer used to decompress a compressed
+	 * HTTP response body (applies to {@code gzip}/{@code deflate}/{@code br}/{@code zstd} when
+	 * {@link reactor.netty.http.client.HttpClient#compress(boolean) compression} is enabled). When
+	 * the decompression buffer reaches this size and cannot be expanded further, a
+	 * {@code io.netty.handler.codec.compression.DecompressionException} is thrown.
+	 * Defaults to {@link #DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE} ({@code 0}), which means that the
+	 * maximum size is not limited.
+	 *
+	 * @param value the maximum allowed size of the decompression buffer, in bytes;
+	 *              {@code 0} means the maximum size is not limited (non-negative)
+	 * @return this option builder for further configuration
+	 * @since 1.0.53
+	 */
+	public HttpResponseDecoderSpec maxDecompressionBufferSize(int value) {
+		if (value < 0) {
+			throw new IllegalArgumentException("maxDecompressionBufferSize must be positive or zero");
+		}
+		this.maxDecompressionBufferSize = value;
+		return this;
+	}
+
+	/**
+	 * Return the configured maximum allowed size, in bytes, of the buffer used to decompress a
+	 * compressed HTTP response body. {@code 0} means the maximum size is not limited.
+	 *
+	 * @return the configured maximum allowed size of the decompression buffer, in bytes
+	 * @since 1.0.53
+	 */
+	public int maxDecompressionBufferSize() {
+		return maxDecompressionBufferSize;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -100,7 +142,8 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		}
 		HttpResponseDecoderSpec that = (HttpResponseDecoderSpec) o;
 		return failOnMissingResponse == that.failOnMissingResponse &&
-				parseHttpAfterConnectRequest == that.parseHttpAfterConnectRequest;
+				parseHttpAfterConnectRequest == that.parseHttpAfterConnectRequest &&
+				maxDecompressionBufferSize == that.maxDecompressionBufferSize;
 	}
 
 	@Override
@@ -108,6 +151,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		int result = super.hashCode();
 		result = 31 * result + Boolean.hashCode(failOnMissingResponse);
 		result = 31 * result + Boolean.hashCode(parseHttpAfterConnectRequest);
+		result = 31 * result + maxDecompressionBufferSize;
 		return result;
 	}
 
@@ -126,6 +170,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		decoder.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
 		decoder.h2cMaxContentLength = h2cMaxContentLength;
 		decoder.allowPartialChunks = allowPartialChunks;
+		decoder.maxDecompressionBufferSize = maxDecompressionBufferSize;
 		return decoder;
 	}
 }

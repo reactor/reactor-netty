@@ -74,6 +74,7 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -625,6 +626,45 @@ class HttpClientTest extends BaseHttpTest {
 		            .expectNextMatches(tuple -> expectedResponse.equals(tuple.getT1()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void gzipResponseDecompressionBufferSizeLimit() {
+		char[] chars = new char[100_000];
+		Arrays.fill(chars, 'a');
+		String content = new String(chars);
+
+		disposableServer =
+				createServer()
+				        .compress(true)
+				        .handle((req, res) -> res.sendString(Mono.just(content)))
+				        .bindNow();
+
+		createHttpClientForContextWithPort()
+		        .compress(true)
+		        .httpResponseDecoder(spec -> spec.maxDecompressionBufferSize(1024))
+		        .headers(h -> h.set(ACCEPT_ENCODING, GZIP))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectError(DecompressionException.class)
+		        .verify(Duration.ofSeconds(30));
+
+		createHttpClientForContextWithPort()
+		        .compress(true)
+		        .headers(h -> h.set(ACCEPT_ENCODING, GZIP))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext(content)
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
