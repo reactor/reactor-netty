@@ -292,6 +292,17 @@ include::{examples-dir}/clientaddress/Application.java[tags=snippet-application]
 `HTTP` request headers, if possible.
 <2> Returns the address of the remote (client) peer.
 
+When both header formats can be present, you can choose to use only the `Forwarded` header or only the
+`X-Forwarded-*` headers:
+
+{examples-link}/clientaddress/ForwardedHeaderSelectionApplication.java
+[%unbreakable]
+----
+include::{examples-dir}/clientaddress/ForwardedHeaderSelectionApplication.java[tags=snippet-application]
+----
+<1> Specifies that information about the connection is to be obtained only from the `X-Forwarded-*` HTTP request headers.
+<2> Returns the address of the remote (client) peer.
+
 It is also possible to customize the behavior of the `Forwarded` or `X-Forwarded-*` header handler.
 The following example shows how to do so:
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,6 +91,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 				Arguments.of("https", false),
 				Arguments.of("wss", true),
 				Arguments.of("wss", false));
+	}
+
+	static Stream<Arguments> forwardedHeaderModeParams() {
+		return Stream.of(
+				Arguments.of(ForwardedHeaderMode.AUTO, "192.0.2.60"),
+				Arguments.of(ForwardedHeaderMode.FORWARDED, "192.0.2.60"),
+				Arguments.of(ForwardedHeaderMode.X_FORWARDED, "192.0.2.61"));
 	}
 
 	static @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> getForwardedHandler(boolean useCustomForwardedHandler) {
@@ -830,6 +837,21 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isPositive();
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
+	}
+
+	@ParameterizedTest
+	@MethodSource("forwardedHeaderModeParams")
+	void forwardedHeaderMode(ForwardedHeaderMode forwardedHeaderMode, String expectedRemoteAddress) {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("Forwarded", "for=192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-For", "192.0.2.61");
+				},
+				serverRequest -> Assertions.assertThat(serverRequest.remoteAddress().getHostString())
+				                           .isEqualTo(expectedRemoteAddress),
+				Function.identity(),
+				httpServer -> httpServer.forwarded(forwardedHeaderMode),
+				false);
 	}
 
 	@Test

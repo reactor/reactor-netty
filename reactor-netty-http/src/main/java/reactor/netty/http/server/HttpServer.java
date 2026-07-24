@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -543,6 +543,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 			return dup;
 		}
 		return this;
+	}
+
+	/**
+	 * Specifies which forwarded HTTP request headers are used for deriving information
+	 * about the connection.
+	 *
+	 * @param forwardedHeaderMode the forwarded header mode
+	 * @return a new {@link HttpServer}
+	 * @since 1.4.0
+	 */
+	public final HttpServer forwarded(ForwardedHeaderMode forwardedHeaderMode) {
+		Objects.requireNonNull(forwardedHeaderMode, "forwardedHeaderMode");
+		DefaultHttpForwardedHeaderHandler handler;
+		switch (forwardedHeaderMode) {
+			case FORWARDED:
+				handler = DefaultHttpForwardedHeaderHandler.FORWARDED;
+				break;
+			case X_FORWARDED:
+				handler = DefaultHttpForwardedHeaderHandler.X_FORWARDED;
+				break;
+			default:
+				handler = DefaultHttpForwardedHeaderHandler.INSTANCE;
+		}
+		if (configuration().forwardedHeaderHandler == handler) {
+			return this;
+		}
+		HttpServer dup = duplicate();
+		dup.configuration().forwardedHeaderHandler = handler;
+		return dup;
 	}
 
 	/**
