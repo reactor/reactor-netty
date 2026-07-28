@@ -78,6 +78,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 		return httpServer;
 	}
 
+	/**
+	 * Returns the scheme as derived from the channel, that is when no forwarded headers are applied.
+	 */
+	protected String expectedScheme() {
+		return "http";
+	}
+
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
 		ssc = new CertificateBuilder().subject("CN=localhost").setIsCertificateAuthority(true).buildSelfSigned();
@@ -587,7 +594,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 	void forwardedHeaderIgnoredWhenXForwardedHeadersUsed() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
-						"host=a.example.com:443;proto=https;for=192.0.2.60"),
+						"host=a.example.com:443;proto=wss;for=192.0.2.60"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
@@ -595,7 +602,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(expectedScheme());
 				},
 				false, false);
 	}
@@ -607,7 +614,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					clientRequestHeaders.add("X-Forwarded-For", "192.0.2.60");
 					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com");
 					clientRequestHeaders.add("X-Forwarded-Port", "8080");
-					clientRequestHeaders.add("X-Forwarded-Proto", "https");
+					clientRequestHeaders.add("X-Forwarded-Proto", "wss");
 				},
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
@@ -616,7 +623,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(expectedScheme());
 				},
 				true, false);
 	}
