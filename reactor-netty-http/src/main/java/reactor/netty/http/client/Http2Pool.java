@@ -49,7 +49,6 @@ import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
-import reactor.netty.internal.shaded.reactor.pool.AllocationStrategy;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquirePendingLimitException;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -165,7 +164,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	final @Nullable BiPredicate<Connection, PooledRefMetadata> evictionPredicate;
 	final long maxIdleTime;
 	final int streamBatchSize;
-	final AllocationStrategy allocationStrategy;
 
 	long lastInteractionTimestamp;
 
@@ -191,7 +189,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		this.poolConfig = poolConfig;
 		this.evictionPredicate = evictionPredicate;
 		this.maxIdleTime = maxIdleTime;
-		this.allocationStrategy = poolConfig.allocationStrategy();
 
 		recordInteractionTimestamp();
 		scheduleEviction();
@@ -214,7 +211,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 	@Override
 	public int allocatedSize() {
-		return allocationStrategy.permitGranted();
+		return poolConfig.allocationStrategy().permitGranted();
 	}
 
 	@Override
@@ -383,7 +380,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	void drainLoop() {
-		boolean interacted = false;
+		recordInteractionTimestamp();
 		int maxPending = poolConfig.maxPending();
 
 		for (;;) {
@@ -398,11 +395,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			int borrowersCount = pendingSize;
 
 			if (borrowersCount != 0) {
-				interacted = true;
 				// find a connection that can be used for opening a new stream
 				// when cached connections are below minimum connections, then allocate a new connection
 				boolean belowMinConnections = minConnections > 0 &&
-						allocationStrategy.permitGranted() < minConnections;
+						poolConfig.allocationStrategy().permitGranted() < minConnections;
 				boolean enableStrictReuse = strictConnectionReuse || minConnections > 0;
 				int resourcesCount = idleSize;
 				Slot slot = belowMinConnections ? null : findConnection(resources, resourcesCount);
@@ -447,11 +443,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				}
 				else {
 					if (enableStrictReuse && !belowMinConnections &&
-							allocationStrategy.permitGranted() > resourcesCount) {
+							poolConfig.allocationStrategy().permitGranted() > resourcesCount) {
 						// connections allocations were triggered
 					}
 					else {
-						int permits = allocationStrategy.getPermits(1);
+						int permits = poolConfig.allocationStrategy().getPermits(1);
 						if (permits <= 0) {
 							if (maxPending >= 0) {
 								borrowersCount = pendingSize;
@@ -467,11 +463,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 						else {
 							if (permits > 1) {
 								// warmup is not supported
-								allocationStrategy.returnPermits(permits - 1);
+								poolConfig.allocationStrategy().returnPermits(permits - 1);
 							}
 							Borrower borrower = pollPending(borrowers, true);
 							if (borrower == null || borrower.get()) {
-								allocationStrategy.returnPermits(1);
+								poolConfig.allocationStrategy().returnPermits(1);
 								continue;
 							}
 							if (isDisposed()) {
@@ -494,7 +490,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 									             else if (sig.isOnError()) {
 									                 Throwable error = sig.getThrowable();
 									                 assert error != null;
-									                 allocationStrategy.returnPermits(1);
+									                 poolConfig.allocationStrategy().returnPermits(1);
 									                 borrower.fail(error);
 									             }
 									         })
@@ -507,9 +503,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			}
 
 			if (WIP.decrementAndGet(this) == 0) {
-				if (interacted) {
-					recordInteractionTimestamp();
-				}
+				recordInteractionTimestamp();
 				break;
 			}
 		}
@@ -695,7 +689,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		int postOffer = addPending(pendingQueue, borrower, false);
 
 		long estimateStreamsCount = totalMaxConcurrentStreams - acquired;
-		int permits = allocationStrategy.estimatePermitCount();
+		int permits = poolConfig.allocationStrategy().estimatePermitCount();
 		if (permits + estimateStreamsCount < postOffer) {
 			borrower.pendingAcquireStart = clock.millis();
 			if (!borrower.acquireTimeout.isZero() && borrower.timeoutTask == Borrower.TIMEOUT_DISPOSED) {
@@ -709,7 +703,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		if (WIP.getAndIncrement(this) == 0) {
 			int maxPending = poolConfig.maxPending();
 			ConcurrentLinkedQueue<Slot> ir = connections;
-			if (maxPending >= 0 && postOffer > maxPending && ir.isEmpty() && allocationStrategy.estimatePermitCount() == 0) {
+			if (maxPending >= 0 && postOffer > maxPending && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
 				Borrower toCull = pollPending(pendingQueue, false);
 				if (toCull != null) {
 					pendingAcquireLimitReached(toCull, maxPending);
@@ -1234,7 +1228,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Channel removed from pool"));
 				}
-				pool.allocationStrategy.returnPermits(1);
+				pool.poolConfig.allocationStrategy().returnPermits(1);
 				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, -maxConcurrentStreams);
 				maxConcurrentStreams = 0;
 			}

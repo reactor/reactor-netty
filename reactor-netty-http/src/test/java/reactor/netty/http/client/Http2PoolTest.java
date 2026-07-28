@@ -43,11 +43,7 @@ import reactor.netty.internal.shaded.reactor.pool.PooledRef;
 import reactor.test.StepVerifier;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -59,7 +55,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -172,31 +167,6 @@ class Http2PoolTest {
 			assertThat(slot.goAwayReceived()).as("GO_AWAY read via the memoized connection").isTrue();
 
 			ref.invalidate().block(Duration.ofSeconds(1));
-		}
-		finally {
-			channel.finishAndReleaseAll();
-			Connection.from(channel).dispose();
-		}
-	}
-
-	@Test
-	void emptyDrainDoesNotReadClock() {
-		TestClock clock = new TestClock();
-		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
-				Http2FrameCodecBuilder.forClient().build(),
-				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
-		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
-				PoolBuilder.from(Mono.just(Connection.from(channel)))
-				           .idleResourceReuseLruOrder()
-				           .maxPendingAcquireUnbounded()
-				           .clock(clock)
-				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
-
-		try {
-			int before = clock.reads();
-			http2Pool.drain(); // no pending borrowers -> empty drainLoop
-			assertThat(clock.reads() - before).as("empty drain performs no clock reads").isEqualTo(0);
 		}
 		finally {
 			channel.finishAndReleaseAll();
@@ -2260,41 +2230,6 @@ class Http2PoolTest {
 				ch.finishAndReleaseAll();
 				Connection.from(ch).dispose();
 			}
-		}
-	}
-
-	static final class TestClock extends Clock {
-
-		final AtomicLong millis = new AtomicLong();
-		final AtomicInteger reads = new AtomicInteger();
-
-		void set(long value) {
-			millis.set(value);
-		}
-
-		int reads() {
-			return reads.get();
-		}
-
-		@Override
-		public long millis() {
-			reads.incrementAndGet();
-			return millis.get();
-		}
-
-		@Override
-		public Instant instant() {
-			return Instant.ofEpochMilli(millis.get());
-		}
-
-		@Override
-		public ZoneId getZone() {
-			return ZoneOffset.UTC;
-		}
-
-		@Override
-		public Clock withZone(ZoneId zone) {
-			return this;
 		}
 	}
 
