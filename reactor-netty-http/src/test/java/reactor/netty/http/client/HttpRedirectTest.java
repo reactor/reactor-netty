@@ -449,7 +449,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		                          .uri("/303")
 		                          .send((req, out) -> out.sendString(Mono.just("query-body")))
 		                          .responseSingle((res, bytes) -> bytes.asString()))
-		            .expectNext("GET:")
+		            .expectNext("GET:query-body")
 		            .verifyComplete();
 	}
 

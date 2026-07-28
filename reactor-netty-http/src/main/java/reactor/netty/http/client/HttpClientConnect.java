@@ -496,7 +496,6 @@ class HttpClientConnect extends HttpClient {
 		volatile UriEndpoint                    toURI;
 		volatile @Nullable UriEndpoint          fromURI;
 		volatile Supplier<String> @Nullable []  redirectedFrom;
-		volatile boolean                        redirectedAsGet;
 		volatile boolean                        shouldRetry;
 		volatile @Nullable HttpHeaders          previousRequestHeaders;
 
@@ -596,10 +595,6 @@ class HttpClientConnect extends HttpClient {
 					headers.set(HttpHeaderNames.ACCEPT, ALL);
 				}
 
-				if (redirectedAsGet && redirectedFrom != null) {
-					removeContentHeaders(headers);
-				}
-
 				ch.followRedirectPredicate(followRedirectPredicate);
 				ch.authenticationPredicate(authenticationPredicate);
 
@@ -663,9 +658,7 @@ class HttpClientConnect extends HttpClient {
 
 					ch.redirectRequestConsumer(consumer);
 					if (handler != null) {
-						Publisher<Void> publisher = redirectedAsGet && redirectedFrom != null &&
-								!(handler instanceof HttpClient.RedirectSendHandler) ?
-								ch.send() : handler.apply(ch, ch);
+						Publisher<Void> publisher = handler.apply(ch, ch);
 						result = ch.equals(publisher) ? ch.send() : publisher;
 					}
 					else {
@@ -746,16 +739,6 @@ class HttpClientConnect extends HttpClient {
 			}
 		}
 
-		static void removeContentHeaders(HttpHeaders headers) {
-			headers.remove(HttpHeaderNames.EXPECT)
-			       .remove(HttpHeaderNames.CONTENT_LENGTH)
-			       .remove(HttpHeaderNames.TRANSFER_ENCODING)
-			       .remove(HttpHeaderNames.CONTENT_TYPE)
-			       .remove(HttpHeaderNames.CONTENT_ENCODING)
-			       .remove(HttpHeaderNames.CONTENT_LANGUAGE)
-			       .remove(HttpHeaderNames.CONTENT_LOCATION);
-		}
-
 		void channel(HttpClientOperations ops) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
 			if (redirectedFrom != null) {
@@ -771,7 +754,6 @@ class HttpClientConnect extends HttpClient {
 				RedirectClientException re = (RedirectClientException) throwable;
 				if (HttpResponseStatus.SEE_OTHER.equals(re.status)) {
 					method = HttpMethod.GET;
-					redirectedAsGet = true;
 				}
 				redirect(re.location);
 				return true;
