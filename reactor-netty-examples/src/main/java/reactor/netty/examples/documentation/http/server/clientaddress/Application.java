@@ -25,7 +25,7 @@ public class Application {
 	public static void main(String[] args) {
 		DisposableServer server =
 				HttpServer.create()
-				          .forwarded(true) //<1>
+				          .forwarded(false, false) //<1>
 				          .route(routes ->
 				              routes.get("/clientip",
 				                  (request, response) ->

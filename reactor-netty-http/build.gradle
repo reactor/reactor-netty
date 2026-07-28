@@ -211,6 +211,7 @@ jar {
 
 japicmp {
 	methodExcludes = [
+			'reactor.netty.http.server.HttpServer#forwarded(boolean)'
 	]
 }
 

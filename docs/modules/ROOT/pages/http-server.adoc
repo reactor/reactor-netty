@@ -280,7 +280,17 @@ has to be checked. Also note that enabling this property effectively ignores `ma
 In addition to the metadata that you can obtain from the request, you can also receive the
 `host (server)` address, the `remote (client)` address and the `scheme`. Depending on the
 chosen factory method, you can retrieve the information directly from the channel or by
-using the `Forwarded` or `X-Forwarded-*` `HTTP` request headers.
+using the standard `Forwarded` `HTTP` request header or the `X-Forwarded-*` alternative
+`HTTP` request headers.
+
+WARNING: An application cannot know if forwarded headers were added by a trusted proxy or by
+a malicious client. It is imperative that a proxy at the edge of trust is configured to drop
+forwarded headers from the outside, including both the standard `Forwarded` header and the
+`X-Forwarded-*` alternative headers.
+
+Proxies are typically configured to support either the standard `Forwarded` header or the
+`X-Forwarded-*` header. Accordingly, an application must indicate which of the two
+alternatives it expects. Support for `X-Forwarded-Prefix` is enabled separately.
 The following example shows how to do so:
 
 {examples-link}/clientaddress/Application.java
@@ -288,8 +298,8 @@ The following example shows how to do so:
 ----
 include::{examples-dir}/clientaddress/Application.java[tags=snippet-application]
 ----
-<1> Specifies that the information about the connection is to be obtained from the `Forwarded` and `X-Forwarded-*`
-`HTTP` request headers, if possible.
+<1> Specifies that the information about the connection is to be obtained from the `X-Forwarded-*`
+alternative `HTTP` request headers, if possible, and that `X-Forwarded-Prefix` is not used.
 <2> Returns the address of the remote (client) peer.
 
 It is also possible to customize the behavior of the `Forwarded` or `X-Forwarded-*` header handler.
