@@ -506,6 +506,10 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Specifies a custom request handler for deriving information about the connection.
+	 * <p>An application cannot know if forwarded headers were added by a trusted proxy or by
+	 * a malicious client. It is imperative that a proxy at the edge of trust is configured to
+	 * drop forwarded headers from the outside, including both the standard {@code "Forwarded"}
+	 * header and the {@code "X-Forwarded-*"} alternative headers.
 	 *
 	 * @param handler the forwarded header handler
 	 * @return a new {@link HttpServer}
