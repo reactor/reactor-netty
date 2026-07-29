@@ -194,11 +194,13 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	/**
-	 * Returns whether that {@link HttpServer} supports the {@code "Forwarded"} and {@code "X-Forwarded-*"}
-	 * HTTP request headers for deriving information about the connection.
+	 * Returns whether that {@link HttpServer} supports the standard {@code "Forwarded"} HTTP request
+	 * header or the {@code "X-Forwarded-*"} alternative HTTP request headers for deriving information
+	 * about the connection.
 	 *
-	 * @return true if that {@link HttpServer} supports the {@code "Forwarded"} and {@code "X-Forwarded-*"}
-	 * HTTP request headers for deriving information about the connection
+	 * @return true if that {@link HttpServer} supports the standard {@code "Forwarded"} HTTP request
+	 * header or the {@code "X-Forwarded-*"} alternative HTTP request headers for deriving information
+	 * about the connection
 	 */
 	public boolean isForwarded() {
 		return forwardedHeaderHandler != null;

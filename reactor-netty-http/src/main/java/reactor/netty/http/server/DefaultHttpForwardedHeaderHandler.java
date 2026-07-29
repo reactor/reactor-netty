@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +27,29 @@ import reactor.netty.transport.AddressUtils;
 import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
 
 /**
- * Default implementation for handling {@code X-Forwarded}/{@code Forwarded} headers.
+ * Default implementation for handling the standard {@code Forwarded} header or the
+ * {@code X-Forwarded-*} alternative headers. Support for {@code X-Forwarded-Prefix} is
+ * enabled separately.
  *
  * @author Andrey Shlykov
  * @since 0.9.12
  */
 final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> {
 
-	static final DefaultHttpForwardedHeaderHandler INSTANCE = new DefaultHttpForwardedHeaderHandler();
+	static final DefaultHttpForwardedHeaderHandler FORWARDED = new DefaultHttpForwardedHeaderHandler(true, false);
+	static final DefaultHttpForwardedHeaderHandler FORWARDED_WITH_PREFIX = new DefaultHttpForwardedHeaderHandler(true, true);
+	static final DefaultHttpForwardedHeaderHandler X_FORWARDED = new DefaultHttpForwardedHeaderHandler(false, false);
+	static final DefaultHttpForwardedHeaderHandler X_FORWARDED_WITH_PREFIX = new DefaultHttpForwardedHeaderHandler(false, true);
+
+	/**
+	 * Handles the standard {@code Forwarded} header when it is present, otherwise falls back to the
+	 * {@code X-Forwarded-*} alternative headers, {@code X-Forwarded-Prefix} included.
+	 *
+	 * @deprecated as of 1.4.0. This instance exists only for {@link HttpServer#forwarded(boolean)}
+	 * and will be removed in version 1.5.0.
+	 */
+	@Deprecated
+	static final DefaultHttpForwardedHeaderHandler LEGACY = new DefaultHttpForwardedHeaderHandler(true, true, true);
 
 	static final String  FORWARDED_HEADER         = "Forwarded";
 	static final String  X_FORWARDED_IP_HEADER    = "X-Forwarded-For";
@@ -61,13 +76,55 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final boolean DEFAULT_FORWARDED_HEADER_VALIDATION =
 			Boolean.parseBoolean(System.getProperty(FORWARDED_HEADER_VALIDATION, "true"));
 
+	final boolean useStandardHeader;
+
+	final boolean useForwardedPrefix;
+
+	/**
+	 * Whether both alternatives are handled, the standard {@code Forwarded} header taking precedence.
+	 * Used only by {@link #LEGACY}, it will be removed in version 1.5.0.
+	 */
+	final boolean legacy;
+
+	private DefaultHttpForwardedHeaderHandler(boolean useStandardHeader, boolean useForwardedPrefix) {
+		this(useStandardHeader, useForwardedPrefix, false);
+	}
+
+	private DefaultHttpForwardedHeaderHandler(boolean useStandardHeader, boolean useForwardedPrefix, boolean legacy) {
+		this.useStandardHeader = useStandardHeader;
+		this.useForwardedPrefix = useForwardedPrefix;
+		this.legacy = legacy;
+	}
+
+	static DefaultHttpForwardedHeaderHandler instance(boolean useStandardHeader, boolean useForwardedPrefix) {
+		if (useStandardHeader) {
+			return useForwardedPrefix ? FORWARDED_WITH_PREFIX : FORWARDED;
+		}
+		return useForwardedPrefix ? X_FORWARDED_WITH_PREFIX : X_FORWARDED;
+	}
+
 	@Override
 	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
-		String forwardedHeader = request.headers().get(FORWARDED_HEADER);
-		if (forwardedHeader != null) {
-			return parseForwardedInfo(connectionInfo, forwardedHeader);
+		if (legacy) {
+			String forwardedHeader = request.headers().get(FORWARDED_HEADER);
+			if (forwardedHeader != null) {
+				return parseForwardedInfo(connectionInfo, forwardedHeader);
+			}
+			return parseForwardedPrefixInfo(parseXForwardedInfo(connectionInfo, request), request);
 		}
-		return parseXForwardedInfo(connectionInfo, request);
+		if (useStandardHeader) {
+			String forwardedHeader = request.headers().get(FORWARDED_HEADER);
+			if (forwardedHeader != null) {
+				connectionInfo = parseForwardedInfo(connectionInfo, forwardedHeader);
+			}
+		}
+		else {
+			connectionInfo = parseXForwardedInfo(connectionInfo, request);
+		}
+		if (useForwardedPrefix) {
+			connectionInfo = parseForwardedPrefixInfo(connectionInfo, request);
+		}
+		return connectionInfo;
 	}
 
 	@SuppressWarnings("NullAway")
@@ -133,9 +190,13 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			}
 		}
 
+		return connectionInfo;
+	}
+
+	private static ConnectionInfo parseForwardedPrefixInfo(ConnectionInfo connectionInfo, HttpRequest request) {
 		String prefixHeader = request.headers().get(X_FORWARDED_PREFIX_HEADER);
 		if (prefixHeader != null) {
-			connectionInfo = connectionInfo.withForwardedPrefix(parseForwardedPrefix(prefixHeader));
+			return connectionInfo.withForwardedPrefix(parseForwardedPrefix(prefixHeader));
 		}
 		return connectionInfo;
 	}

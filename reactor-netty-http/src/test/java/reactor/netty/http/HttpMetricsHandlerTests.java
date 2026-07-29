@@ -673,7 +673,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 					ServerCloseHandler.INSTANCE.register(cnx.channel());
 				});
 
-		disposableServer = server.forwarded(true).bindNow();
+		disposableServer = server.forwarded(false, false).bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
 		httpClient = httpClient
@@ -1202,9 +1202,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 
 		AtomicReference<SocketAddress> clientSA = new AtomicReference<>();
-		disposableServer = bindServer.apply(customizeServerOptions(httpServer, serverCtx, serverProtocols))
-				.metrics(true, () -> contextAware ? ContextAwareServerRecorderBadUri.INSTANCE : ServerRecorderBadUri.INSTANCE, Function.identity())
-				.forwarded(xForwardedFor != null || xForwardedPort != -1)
+		HttpServer localServer = bindServer.apply(customizeServerOptions(httpServer, serverCtx, serverProtocols))
+				.metrics(true, () -> contextAware ? ContextAwareServerRecorderBadUri.INSTANCE : ServerRecorderBadUri.INSTANCE, Function.identity());
+		localServer = xForwardedFor != null || xForwardedPort != -1 ?
+				localServer.forwarded(false, false) : localServer.noForwarded();
+		disposableServer = localServer
 				.childObserve((conn, state) -> {
 					if (state == ConnectionObserver.State.CONNECTED) {
 						if (xForwardedFor != null && xForwardedPort != -1) {
