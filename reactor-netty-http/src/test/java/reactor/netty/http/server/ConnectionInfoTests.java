@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 
 	protected HttpServer customizeServerOptions(HttpServer httpServer) {
 		return httpServer;
+	}
+
+	/**
+	 * Returns the scheme as derived from the channel, that is when no forwarded headers are applied.
+	 */
+	protected String expectedScheme() {
+		return "http";
 	}
 
 	@BeforeAll
@@ -333,6 +340,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
 				false,
+				true,
+				false,
 				true);
 	}
 
@@ -421,7 +430,9 @@ class ConnectionInfoTests extends BaseHttpTest {
 				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
-				false);
+				false,
+				false,
+				true);
 	}
 
 	@ParameterizedTest
@@ -442,6 +453,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
+				false,
+				true,
 				false,
 				true);
 	}
@@ -536,6 +549,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.secure(ssl -> ssl.sslContext(serverSslContext)),
+				true,
+				false,
 				true);
 	}
 
@@ -557,6 +572,119 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
+	}
+
+	@Test
+	void xForwardedPrefixNotEnabled() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix"),
+				serverRequest -> Assertions.assertThat(serverRequest.forwardedPrefix()).isNull(),
+				false, false);
+	}
+
+	@Test
+	void xForwardedPrefixWithStandardHeader() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix"),
+				serverRequest -> Assertions.assertThat(serverRequest.forwardedPrefix()).isEqualTo("/test-prefix"),
+				true, true);
+	}
+
+	@Test
+	void forwardedHeaderIgnoredWhenXForwardedHeadersUsed() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
+						"host=a.example.com:443;proto=wss;for=192.0.2.60"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostName()).containsPattern("^\\[::1\\]|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(expectedScheme());
+				},
+				false, false);
+	}
+
+	@Test
+	void xForwardedHeadersIgnoredWhenForwardedHeaderUsed() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-For", "192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "8080");
+					clientRequestHeaders.add("X-Forwarded-Proto", "wss");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostName()).containsPattern("^\\[::1\\]|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(expectedScheme());
+				},
+				true, false);
+	}
+
+	@Test
+	void deprecatedForwardedEnabledStandardHeaderTakesPrecedence() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("Forwarded", "host=a.example.com:8080;proto=https;for=192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-Host", "b.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "9090");
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.0.2.60");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
+				},
+				Function.identity(), httpServer -> httpServer.forwarded(true), false);
+	}
+
+	@Test
+	void deprecatedForwardedEnabledFallsBackToXForwardedHeaders() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-For", "192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-Host", "b.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "9090");
+					clientRequestHeaders.add("X-Forwarded-Proto", "https");
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(9090);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.0.2.60");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isEqualTo("/test-prefix");
+				},
+				Function.identity(), httpServer -> httpServer.forwarded(true), false);
+	}
+
+	@Test
+	void deprecatedForwardedDisabled() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("Forwarded", "host=a.example.com:8080;proto=wss;for=192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-Host", "b.example.com");
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(expectedScheme());
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
+				},
+				Function.identity(), httpServer -> httpServer.forwarded(false), false);
 	}
 
 	@Test
@@ -846,18 +974,28 @@ class ConnectionInfoTests extends BaseHttpTest {
 	                               Consumer<HttpServerRequest> serverRequestConsumer,
 	                               boolean useCustomForwardedHandler) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, getForwardedHandler(useCustomForwardedHandler),
-				Function.identity(), Function.identity(), false);
+				Function.identity(), Function.identity(), false, false, true);
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer) {
-		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null, Function.identity(), Function.identity(), false);
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null,
+				Function.identity(), Function.identity(), false, true, false);
+	}
+
+	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+			Consumer<HttpServerRequest> serverRequestConsumer,
+			boolean useStandardHeader,
+			boolean useForwardedPrefix) {
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null,
+				Function.identity(), Function.identity(), false, useStandardHeader, useForwardedPrefix);
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
 			BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
-		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler, Function.identity(), Function.identity(), false);
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler,
+				Function.identity(), Function.identity(), false, false, true);
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
@@ -865,7 +1003,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 			Function<HttpClient, HttpClient> clientConfigFunction,
 			Function<HttpServer, HttpServer> serverConfigFunction,
 			boolean useHttps) {
-		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null, clientConfigFunction, serverConfigFunction, useHttps);
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null, clientConfigFunction,
+				serverConfigFunction, useHttps, false, false);
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
@@ -873,9 +1012,11 @@ class ConnectionInfoTests extends BaseHttpTest {
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Function<HttpClient, HttpClient> clientConfigFunction,
 			Function<HttpServer, HttpServer> serverConfigFunction,
-			boolean useHttps) {
+			boolean useHttps,
+			boolean useStandardHeader,
+			boolean useForwardedPrefix) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler,
-				clientConfigFunction, serverConfigFunction, useHttps, false);
+				clientConfigFunction, serverConfigFunction, useHttps, false, useStandardHeader, useForwardedPrefix);
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
@@ -884,9 +1025,11 @@ class ConnectionInfoTests extends BaseHttpTest {
 				Function<HttpClient, HttpClient> clientConfigFunction,
 				Function<HttpServer, HttpServer> serverConfigFunction,
 				boolean useHttps,
-				boolean is400BadRequest) {
+				boolean is400BadRequest,
+				boolean useStandardHeader,
+				boolean useForwardedPrefix) {
 
-		HttpServer server = createServer().forwarded(true);
+		HttpServer server = createServer().forwarded(useStandardHeader, useForwardedPrefix);
 		if (forwardedHeaderHandler != null) {
 			server = server.forwarded(forwardedHeaderHandler);
 		}

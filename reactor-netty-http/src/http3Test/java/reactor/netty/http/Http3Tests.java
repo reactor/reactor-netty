@@ -284,7 +284,7 @@ class Http3Tests {
 				            });
 				            return resp.send();
 				        })
-				        .forwarded(true)
+				        .forwarded(true, false)
 				        .accessLog(true, args -> {
 				            ConnectionInformation connectionInformation = args.connectionInformation();
 				            return connectionInformation != null ?
