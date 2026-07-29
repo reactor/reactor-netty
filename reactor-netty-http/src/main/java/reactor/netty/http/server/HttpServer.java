@@ -519,6 +519,45 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Specifies whether support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers for deriving information about the connection is enabled.
+	 * <p>An application cannot know if forwarded headers were added by a trusted proxy or by
+	 * a malicious client. It is imperative that a proxy at the edge of trust is configured to
+	 * drop forwarded headers from the outside, including both the standard {@code "Forwarded"}
+	 * header and the {@code "X-Forwarded-*"} alternative headers.
+	 * <p>When enabled, the standard {@code "Forwarded"} header takes precedence and the
+	 * {@code "X-Forwarded-*"} alternative headers, {@code "X-Forwarded-Prefix"} included,
+	 * are used only when the standard header is absent.
+	 *
+	 * @param forwardedEnabled if true support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers for deriving information about the connection is enabled,
+	 * otherwise disabled.
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.7
+	 * @deprecated as of 1.4.0. Prefer using {@link #forwarded(boolean, boolean)} in order to select
+	 * explicitly between the standard {@code "Forwarded"} header and the {@code "X-Forwarded-*"}
+	 * alternative headers, or {@link #noForwarded()} in order to disable the support.
+	 * This method will be removed in version 1.5.0.
+	 */
+	@Deprecated
+	public final HttpServer forwarded(boolean forwardedEnabled) {
+		if (forwardedEnabled) {
+			if (configuration().forwardedHeaderHandler == DefaultHttpForwardedHeaderHandler.LEGACY) {
+				return this;
+			}
+			HttpServer dup = duplicate();
+			dup.configuration().forwardedHeaderHandler = DefaultHttpForwardedHeaderHandler.LEGACY;
+			return dup;
+		}
+		else if (configuration().forwardedHeaderHandler != null) {
+			HttpServer dup = duplicate();
+			dup.configuration().forwardedHeaderHandler = null;
+			return dup;
+		}
+		return this;
+	}
+
+	/**
 	 * Specifies whether to use the standard {@code "Forwarded"} HTTP request header or the
 	 * {@code "X-Forwarded-*"} alternative HTTP request headers for deriving information
 	 * about the connection.

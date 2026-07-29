@@ -629,6 +629,68 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
+	void deprecatedForwardedEnabledStandardHeaderTakesPrecedence() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("Forwarded", "host=a.example.com:8080;proto=https;for=192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-Host", "b.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "9090");
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.0.2.60");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
+				},
+				Function.identity(), httpServer -> httpServer.forwarded(true), false);
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void deprecatedForwardedEnabledFallsBackToXForwardedHeaders() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-For", "192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-Host", "b.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "9090");
+					clientRequestHeaders.add("X-Forwarded-Proto", "https");
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(9090);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.0.2.60");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isEqualTo("/test-prefix");
+				},
+				Function.identity(), httpServer -> httpServer.forwarded(true), false);
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void deprecatedForwardedDisabled() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("Forwarded", "host=a.example.com:8080;proto=wss;for=192.0.2.60");
+					clientRequestHeaders.add("X-Forwarded-Host", "b.example.com");
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(expectedScheme());
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
+				},
+				Function.identity(), httpServer -> httpServer.forwarded(false), false);
+	}
+
+	@Test
 	void customForwardedHandlerForMultipleHost() {
 		testClientRequest(
 				clientRequestHeaders ->
