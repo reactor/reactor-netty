@@ -1099,16 +1099,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		private int computeMaxConcurrentStreams() {
 			assert connection.channel().eventLoop().inEventLoop();
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
-			if (frameCodec != null) {
-				// Memoize the connection on the event loop so goAwayReceived() can read it off-loop
-				// without re-walking the pipeline.
-				Http2Connection conn = ((Http2FrameCodec) frameCodec.handler()).connection();
-				this.http2Connection = conn;
-				if (http2MultiplexHandlerCtx() != null) {
-					int maxActiveStreams = conn.local().maxActiveStreams();
-					return pool.maxConcurrentStreams == -1 ? maxActiveStreams :
-							Math.min(pool.maxConcurrentStreams, maxActiveStreams);
-				}
+			Http2Connection conn = http2Connection;
+			if (frameCodec != null && conn != null && http2MultiplexHandlerCtx() != null) {
+				int maxActiveStreams = conn.local().maxActiveStreams();
+				return pool.maxConcurrentStreams == -1 ? maxActiveStreams :
+						Math.min(pool.maxConcurrentStreams, maxActiveStreams);
 			}
 			return 0;
 		}
