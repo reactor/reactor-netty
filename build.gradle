@@ -102,7 +102,7 @@ ext {
 	braveVersion = '6.3.1'
 	zipkinSenderVersion = '3.5.3'
 
-	jspecifyVersion = '1.0.0'
+	jspecifyVersion = '1.0.1'
 
 	// Logging
 	slf4jVersion = '1.7.36'
