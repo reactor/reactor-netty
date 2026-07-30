@@ -1169,6 +1169,12 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			}
 			ctx = connection.channel().pipeline().context(Http2FrameCodec.class);
 			http2FrameCodecCtx = ctx;
+			if (ctx != null) {
+				// Memoized here rather than in computeMaxConcurrentStreams() so goAwayReceived()
+				// sees the connection whenever the codec is present, including after an h2c
+				// upgrade installs it. Written off the event loop too, hence volatile.
+				http2Connection = ((Http2FrameCodec) ctx.handler()).connection();
+			}
 			return ctx;
 		}
 

@@ -175,9 +175,7 @@ class Http2PoolTest {
 	}
 
 	@Test
-	void initMaxConcurrentStreamsMemoizesConnectionAfterH2cUpgrade() throws Exception {
-		// On the h2c upgrade path the slot is created before the frame codec exists, so
-		// goAwayReceived() reads null until H2CleartextCodec re-runs initMaxConcurrentStreams().
+	void memoizesConnectionWhenFrameCodecIsInstalledAfterSlotCreation() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(), new ChannelHandlerAdapter() {});
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
@@ -191,8 +189,8 @@ class Http2PoolTest {
 			assertThat(slot.http2Connection).as("nothing to memoize pre-upgrade").isNull();
 			assertThat(slot.goAwayReceived()).as("pre-upgrade slot reports no GO_AWAY").isFalse();
 
-			// The upgrade completes: the frame codec joins the pipeline and H2CleartextCodec
-			// re-runs initMaxConcurrentStreams().
+			// Stands in for the h2c upgrade, the one path where the codec joins the pipeline
+			// after the slot already exists.
 			Http2FrameCodec frameCodec = Http2FrameCodecBuilder.forClient().build();
 			channel.pipeline().addFirst(frameCodec);
 			channel.runPendingTasks();
