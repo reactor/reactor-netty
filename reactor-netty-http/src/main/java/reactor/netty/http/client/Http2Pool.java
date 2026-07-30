@@ -1208,13 +1208,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				return ctx;
 			}
 			ctx = connection.channel().pipeline().context(NettyPipeline.H2CUpgradeHandler);
+			h2cUpgradeHandlerCtx = ctx;
 			if (ctx == null) {
 				// The upgrade handler is added once at channel init and removes itself after the
 				// upgrade; it is never re-added, so a miss is permanent — stop re-walking.
 				h2cUpgradeHandlerAbsent = true;
-			}
-			else {
-				h2cUpgradeHandlerCtx = ctx;
 			}
 			return ctx;
 		}
