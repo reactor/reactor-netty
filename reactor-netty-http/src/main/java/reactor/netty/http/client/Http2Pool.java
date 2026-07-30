@@ -1154,17 +1154,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 		boolean goAwayReceived() {
 			Http2Connection conn = http2Connection;
-			if (conn == null) {
-				// Not yet memoized on the event loop (before the first deliver, or an h2c slot
-				// pre-upgrade / plain HTTP/1.1 slot): resolve once via the pipeline and cache.
-				ChannelHandlerContext frameCodec = http2FrameCodecCtx();
-				if (frameCodec == null) {
-					return false;
-				}
-				conn = ((Http2FrameCodec) frameCodec.handler()).connection();
-				http2Connection = conn;
-			}
-			return conn.goAwayReceived();
+			return conn != null && conn.goAwayReceived();
 		}
 
 		boolean connectionLivenessCheckInProgress() {
