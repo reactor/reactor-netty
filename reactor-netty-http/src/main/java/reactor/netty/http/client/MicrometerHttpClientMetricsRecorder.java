@@ -62,8 +62,12 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	private final ConcurrentMap<MeterKey, Counter> errorsCache = new ConcurrentHashMap<>();
 
+	// Constant per recorder; precomputed to avoid rebuilding the response-time meter name every request.
+	final String responseTimeName;
+
 	private MicrometerHttpClientMetricsRecorder() {
 		super(HTTP_CLIENT_PREFIX, "http", false);
+		this.responseTimeName = name() + RESPONSE_TIME;
 	}
 
 	@Override
