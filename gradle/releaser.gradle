@@ -98,8 +98,9 @@ if (project.hasProperty("artifactory_publish_password")) {
 			}
 			clientConfig.includeEnvVars = false
 			buildInfo {
-				setBuildName('Reactor - Netty')
+				setBuildName('reactor-netty-commercial-' + (p.version.endsWith('-SNAPSHOT') ? '1.4.x-internal' : p.version))
 				setBuildNumber(buildNumber)
+				setProject('spring')
 				if (System.getenv("GITHUB_ACTIONS") == "true") {
 					setBuildUrl(System.getenv("GITHUB_SERVER_URL") + "/" + System.getenv("GITHUB_REPOSITORY") + "/actions/runs/" + System.getenv("GITHUB_RUN_ID"))
 					setVcsRevision(System.getenv("GITHUB_SHA"))
