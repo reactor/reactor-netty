@@ -2,9 +2,8 @@ name: publish
 on:
   push:
     branches: # For branches, better to list them explicitly than regexp include
-      - main
-      - 1.3.x
-permissions: {}
+      - 1.3.x-internal
+permissions: read-all
 
 jobs:
   # General job notes: we DON'T want to cancel any previous runs, especially in the case of a "back to snapshots" build right after a release push
@@ -12,7 +11,7 @@ jobs:
   reactor-netty-core:
     # Notes on reactor-netty-core: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-core
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu22-2-8
     outputs:
       versionType: ${{ steps.version.outputs.versionType }}
       fullVersion: ${{ steps.version.outputs.fullVersion }}
@@ -27,18 +26,28 @@ jobs:
             11
             17
       - name: interpret version
+        env:
+          COMMERCIAL_REPO_USERNAME: ${{secrets.COMMERCIAL_ARTIFACTORY_USERNAME}}
+          COMMERCIAL_REPO_PASSWORD: ${{secrets.COMMERCIAL_ARTIFACTORY_PASSWORD}}
+          COMMERCIAL_RELEASE_REPO_URL: ${{vars.COMMERCIAL_RELEASE_REPO_URL}}
+          COMMERCIAL_SNAPSHOT_REPO_URL: ${{vars.COMMERCIAL_SNAPSHOT_REPO_URL}}
         id: version
         #we only run the qualifyVersionGha task so that no other console printing can hijack this step's output
         #output: versionType, fullVersion
         #fails if versionType is BAD, which interrupts the workflow
         run: ./gradlew qualifyVersionGha
       - name: run reactor-netty-core checks
+        env:
+          COMMERCIAL_REPO_USERNAME: ${{secrets.COMMERCIAL_ARTIFACTORY_USERNAME}}
+          COMMERCIAL_REPO_PASSWORD: ${{secrets.COMMERCIAL_ARTIFACTORY_PASSWORD}}
+          COMMERCIAL_RELEASE_REPO_URL: ${{vars.COMMERCIAL_RELEASE_REPO_URL}}
+          COMMERCIAL_SNAPSHOT_REPO_URL: ${{vars.COMMERCIAL_SNAPSHOT_REPO_URL}}
         id: reactor-netty-core-checks
         run: ./gradlew reactor-netty-core:check -x :reactor-netty-core:java17Test -x :reactor-netty-core:java11Test
   reactor-netty-http:
     # Notes on reactor-netty-http: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-http
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu22-2-8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: setup java
@@ -49,12 +58,17 @@ jobs:
             8
             17
       - name: run reactor-netty-http checks
+        env:
+          COMMERCIAL_REPO_USERNAME: ${{secrets.COMMERCIAL_ARTIFACTORY_USERNAME}}
+          COMMERCIAL_REPO_PASSWORD: ${{secrets.COMMERCIAL_ARTIFACTORY_PASSWORD}}
+          COMMERCIAL_RELEASE_REPO_URL: ${{vars.COMMERCIAL_RELEASE_REPO_URL}}
+          COMMERCIAL_SNAPSHOT_REPO_URL: ${{vars.COMMERCIAL_SNAPSHOT_REPO_URL}}
         id: reactor-netty-http-checks
         run: ./gradlew reactor-netty-http:check
   reactor-netty-http-brave:
     # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-http-brave
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu22-2-8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: setup java
@@ -65,12 +79,17 @@ jobs:
             8
             17
       - name: run reactor-netty-http-brave checks
+        env:
+          COMMERCIAL_REPO_USERNAME: ${{secrets.COMMERCIAL_ARTIFACTORY_USERNAME}}
+          COMMERCIAL_REPO_PASSWORD: ${{secrets.COMMERCIAL_ARTIFACTORY_PASSWORD}}
+          COMMERCIAL_RELEASE_REPO_URL: ${{vars.COMMERCIAL_RELEASE_REPO_URL}}
+          COMMERCIAL_SNAPSHOT_REPO_URL: ${{vars.COMMERCIAL_SNAPSHOT_REPO_URL}}
         id: reactor-netty-http-brave-checks
         run: ./gradlew reactor-netty-http-brave:check
   reactor-netty-quic:
     # Notes on reactor-netty-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-quic
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu22-2-8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: setup java
@@ -81,13 +100,18 @@ jobs:
             8
             17
       - name: run reactor-netty-quic checks
+        env:
+          COMMERCIAL_REPO_USERNAME: ${{secrets.COMMERCIAL_ARTIFACTORY_USERNAME}}
+          COMMERCIAL_REPO_PASSWORD: ${{secrets.COMMERCIAL_ARTIFACTORY_PASSWORD}}
+          COMMERCIAL_RELEASE_REPO_URL: ${{vars.COMMERCIAL_RELEASE_REPO_URL}}
+          COMMERCIAL_SNAPSHOT_REPO_URL: ${{vars.COMMERCIAL_SNAPSHOT_REPO_URL}}
         id: reactor-netty-quic-checks
         run: ./gradlew reactor-netty-quic:check
 
   #deploy the snapshot artifacts to Artifactory
   deploySnapshot:
     name: deploySnapshot
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu22-2-8
     needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic ]
     if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
@@ -103,138 +127,11 @@ jobs:
             17
       - name: deploy
         env:
-          ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_SNAPSHOT_USERNAME}}
-          ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
+          COMMERCIAL_REPO_USERNAME: ${{secrets.COMMERCIAL_ARTIFACTORY_USERNAME}}
+          COMMERCIAL_REPO_PASSWORD: ${{secrets.COMMERCIAL_ARTIFACTORY_PASSWORD}}
+          COMMERCIAL_RELEASE_REPO_URL: ${{vars.COMMERCIAL_RELEASE_REPO_URL}}
+          COMMERCIAL_SNAPSHOT_REPO_URL: ${{vars.COMMERCIAL_SNAPSHOT_REPO_URL}}
+          ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.COMMERCIAL_ARTIFACTORY_USERNAME}}
+          ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.COMMERCIAL_ARTIFACTORY_PASSWORD}}
         run: |
-          ./gradlew assemble artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io -Partifactory_publish_repoKey=libs-snapshot-local
-
-  #sign the milestone artifacts and deploy them to Artifactory
-  deployMilestone:
-    name: deployMilestone
-    runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic ]
-    if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
-    environment: releases
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Set up Ruby for asciidoctor-pdf
-        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
-        with:
-          ruby-version: 3.3.0
-      - name: Install asciidoctor-pdf / rouge
-        run: gem install asciidoctor-pdf rouge
-      - name: setup java
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
-        with:
-          distribution: 'zulu'
-          java-version: |
-            8
-            11
-            17
-      - name: deploy
-        env:
-          ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
-          ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
-          ORG_GRADLE_PROJECT_signingKey: ${{secrets.SIGNING_KEY}}
-          ORG_GRADLE_PROJECT_signingPassword: ${{secrets.SIGNING_PASSPHRASE}}
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{secrets.SONATYPE_USERNAME}}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{secrets.SONATYPE_PASSWORD}}
-        run: |
-          ./gradlew assemble sign artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io -Partifactory_publish_repoKey=libs-milestone-local publishMavenJavaPublicationToSonatypeRepository
-      - name: Stage the milestone
-        env:
-            ORG_GRADLE_PROJECT_sonatypeUsername: ${{secrets.SONATYPE_USERNAME}}
-            ORG_GRADLE_PROJECT_sonatypePassword: ${{secrets.SONATYPE_PASSWORD}}
-        run: |
-            GRADLE_PUBLISH_MAVEN_AUTHORIZATION=$(echo "${ORG_GRADLE_PROJECT_sonatypeUsername}:${ORG_GRADLE_PROJECT_sonatypePassword}" | base64)
-            echo "Searching for opened repository..."
-            REPOSITORY_RESPONSE=$(curl -s -X GET \
-            -H "Authorization: Bearer ${GRADLE_PUBLISH_MAVEN_AUTHORIZATION}" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?state=open")
-            REPOSITORY_KEY=$(echo "${REPOSITORY_RESPONSE}" | grep -o '"key":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"')
-            echo "Triggering uploading..."
-            curl -s -X POST \
-            -H "Authorization: Bearer ${GRADLE_PUBLISH_MAVEN_AUTHORIZATION}" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/${REPOSITORY_KEY}?publishing_type=user_managed"
-
-  #sign the release artifacts and deploy them to Artifactory
-  deployRelease:
-    name: deployRelease
-    runs-on: ubuntu-22.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic ]
-    if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
-    environment: releases
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Set up Ruby for asciidoctor-pdf
-        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
-        with:
-          ruby-version: 3.3.0
-      - name: Install asciidoctor-pdf / rouge
-        run: gem install asciidoctor-pdf rouge
-      - name: setup java
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
-        with:
-          distribution: 'zulu'
-          java-version: |
-            8
-            11
-            17
-      - name: deploy
-        env:
-          ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
-          ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
-          ORG_GRADLE_PROJECT_signingKey: ${{secrets.SIGNING_KEY}}
-          ORG_GRADLE_PROJECT_signingPassword: ${{secrets.SIGNING_PASSPHRASE}}
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{secrets.SONATYPE_USERNAME}}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{secrets.SONATYPE_PASSWORD}}
-        run: |
-          ./gradlew assemble sign artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io  -Partifactory_publish_repoKey=libs-release-local publishMavenJavaPublicationToSonatypeRepository
-      - name: Stage the release
-        env:
-            ORG_GRADLE_PROJECT_sonatypeUsername: ${{secrets.SONATYPE_USERNAME}}
-            ORG_GRADLE_PROJECT_sonatypePassword: ${{secrets.SONATYPE_PASSWORD}}
-        run: |
-            GRADLE_PUBLISH_MAVEN_AUTHORIZATION=$(echo "${ORG_GRADLE_PROJECT_sonatypeUsername}:${ORG_GRADLE_PROJECT_sonatypePassword}" | base64)
-            echo "Searching for opened repository..."
-            REPOSITORY_RESPONSE=$(curl -s -X GET \
-            -H "Authorization: Bearer ${GRADLE_PUBLISH_MAVEN_AUTHORIZATION}" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?state=open")
-            REPOSITORY_KEY=$(echo "${REPOSITORY_RESPONSE}" | grep -o '"key":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"')
-            echo "Triggering uploading..."
-            curl -s -X POST \
-            -H "Authorization: Bearer ${GRADLE_PUBLISH_MAVEN_AUTHORIZATION}" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/${REPOSITORY_KEY}?publishing_type=user_managed"
-
-  tagMilestone:
-    name: Tag milestone
-    needs: [ reactor-netty-core, deployMilestone ]
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: tag
-        run: |
-          git config --local user.name 'reactorbot'
-          git config --local user.email '32325210+reactorbot@users.noreply.github.com'
-          git tag -m "Release milestone ${{ needs.reactor-netty-core.outputs.fullVersion }}" v${{ needs.reactor-netty-core.outputs.fullVersion }} ${{ github.sha }}
-          git push --tags
-
-  tagRelease:
-    name: Tag release
-    needs: [ reactor-netty-core, deployRelease ]
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: tag
-        run: |
-          git config --local user.name 'reactorbot'
-          git config --local user.email '32325210+reactorbot@users.noreply.github.com'
-          git tag -m "Release version ${{ needs.reactor-netty-core.outputs.fullVersion }}" v${{ needs.reactor-netty-core.outputs.fullVersion }} ${{ github.sha }}
-          git push --tags
-
-# For Gradle configuration of signing, see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
-# publishMavenJavaPublicationToSonatypeRepository only sends to a staging repository
+          ./gradlew assemble artifactoryPublish -x :docs:antora -Partifactory_publish_contextUrl=https://usw1.packages.broadcom.com -Partifactory_publish_repoKey=spring-enterprise-maven-dev-local
