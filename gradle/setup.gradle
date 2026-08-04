@@ -46,7 +46,7 @@ static def qualifyVersion(String v) {
 
 	if (qualifier.size() == 0) return "RELEASE" //new scheme
 	if (qualifier.matches("(?:M|RC)\\d+")) return "MILESTONE"
-	if (qualifier == "SNAPSHOT") return "SNAPSHOT"
+	if (qualifier == "SNAPSHOT" || qualifier == "INTERNAL-SNAPSHOT") return "SNAPSHOT"
 
 	return "BAD"
 }
@@ -92,16 +92,6 @@ publishing {
 		maven {
 			name = "mock"
 			url = rootProject.layout.buildDirectory.dir("mockRepo").get().asFile.toURI().toString()
-		}
-		if (qualifyVersion("$version") in ["RELEASE", "MILESTONE"]) {
-			maven {
-				name = "sonatype"
-				url = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
-				credentials {
-					username findProperty("sonatypeUsername")
-					password findProperty("sonatypePassword")
-				}
-			}
 		}
 	}
 }
@@ -175,23 +165,6 @@ if (rootProject.hasProperty("artifactory_publish_password")) {
 	afterEvaluate {
 		artifactoryPublish {
 			publications(publishing.publications.mavenJava)
-		}
-	}
-}
-
-if (qualifyVersion("$version") in ["RELEASE", "MILESTONE"] || rootProject.hasProperty("forceSigning")) {
-	apply plugin: 'signing'
-
-	signing {
-		//requiring signature if there is a publish task that is not to MavenLocal
-		required { gradle.taskGraph.allTasks.any { it.name.toLowerCase().contains("publish") && !it.name.contains("MavenLocal") } }
-		def signingKey = findProperty("signingKey")
-		def signingPassword = findProperty("signingPassword")
-
-		useInMemoryPgpKeys(signingKey, signingPassword)
-
-		afterEvaluate {
-			sign publishing.publications.mavenJava
 		}
 	}
 }
