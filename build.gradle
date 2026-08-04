@@ -35,7 +35,20 @@ plugins {
 description = 'Reactive Streams Netty driver'
 
 repositories { //needed at root for nohttp-checkstyle
-	mavenCentral()
+	// On CI use only USW1 (proxies Maven Central) to avoid 429 from Maven Central
+	if (System.getenv("GITHUB_ACTION") != null && System.getenv("GITHUB_ACTOR") != "dependabot[bot]") {
+		maven {
+			name = "usw1-spring-maven-virtual"
+			url = "https://usw1.packages.broadcom.com/artifactory/spring-maven-virtual"
+			credentials {
+				username = System.getenv("COMMERCIAL_REPO_USERNAME")
+				password = System.getenv("COMMERCIAL_REPO_PASSWORD")
+			}
+		}
+	}
+	else {
+		mavenCentral()
+	}
 }
 
 static def parseVersionParts(String v) {
@@ -132,7 +145,7 @@ ext {
 	junitVersion = '5.14.4'
 	junitPlatformLauncherVersion = '1.14.4'
 	mockitoVersion = '4.11.0'
-	blockHoundVersion = '1.0.19.BUILD-SNAPSHOT'
+	blockHoundVersion = '1.0.19.BUILD-INTERNAL-SNAPSHOT'
 	reflectionsVersion = '0.10.2'
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
@@ -333,7 +346,30 @@ subprojects {
 	}
 
 	repositories {
-		mavenCentral()
+		if (System.getenv()["GITHUB_ACTION"] != null) {
+			maven {
+				name "spring-commercial-release"
+				url System.env.COMMERCIAL_RELEASE_REPO_URL
+				credentials {
+					username System.env.COMMERCIAL_REPO_USERNAME
+					password System.env.COMMERCIAL_REPO_PASSWORD
+				}
+			}
+		}
+		// On CI use only USW1 (proxies Maven Central) to avoid 429 from Maven Central
+		if (System.getenv("GITHUB_ACTION") != null && System.getenv("GITHUB_ACTOR") != "dependabot[bot]") {
+			maven {
+				name = "usw1-spring-maven-virtual"
+				url = "https://usw1.packages.broadcom.com/artifactory/spring-maven-virtual"
+				credentials {
+					username = System.getenv("COMMERCIAL_REPO_USERNAME")
+					password = System.getenv("COMMERCIAL_REPO_PASSWORD")
+				}
+			}
+		}
+		else {
+			mavenCentral()
+		}
 		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
 			if (System.getenv()["GITHUB_ACTION"] == null) {
 				mavenLocal()
@@ -343,6 +379,16 @@ subprojects {
 			}
 			maven { url = 'https://repo.spring.io/snapshot' }
 			maven { url = 'https://central.sonatype.com/repository/maven-snapshots' }
+			if (System.getenv()["GITHUB_ACTION"] != null) {
+				maven {
+					name "spring-commercial-snapshot"
+					url System.env.COMMERCIAL_SNAPSHOT_REPO_URL
+					credentials {
+						username System.env.COMMERCIAL_REPO_USERNAME
+						password System.env.COMMERCIAL_REPO_PASSWORD
+					}
+				}
+			}
 		}
 	}
 
