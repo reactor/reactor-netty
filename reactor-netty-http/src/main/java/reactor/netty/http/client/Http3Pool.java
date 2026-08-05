@@ -102,6 +102,11 @@ final class Http3Pool extends Http2Pool {
 		}
 
 		@Override
+		boolean isH2cUpgrade() {
+			return false;
+		}
+
+		@Override
 		void updateMaxConcurrentStreams(@SuppressWarnings("unused") long remoteMaxConcurrentStreams) {
 			int peerAllowed = peerAllowedMaxStreams();
 			int newMaxConcurrentStreams = pool.maxConcurrentStreams == -1 ?
