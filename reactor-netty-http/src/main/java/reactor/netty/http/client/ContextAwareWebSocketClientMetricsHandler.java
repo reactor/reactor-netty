@@ -98,32 +98,32 @@ final class ContextAwareWebSocketClientMetricsHandler extends AbstractWebSocketC
 	}
 
 	@Override
-	protected void recordWrite(SocketAddress address, long sentBytes, long sentTimeNanos) {
+	protected void recordWrite(long sentBytes, long sentTimeNanos) {
 		Duration duration = Duration.ofNanos(System.nanoTime() - sentTimeNanos);
 		if (proxyAddress == null) {
-			recorder.recordDataSentTime(contextView, address, path, method, duration);
+			recorder.recordDataSentTime(contextView, remoteAddress, path, method, duration);
 
-			recorder.recordDataSent(contextView, address, path, sentBytes);
+			recorder.recordDataSent(contextView, remoteAddress, path, sentBytes);
 		}
 		else {
-			recorder.recordDataSentTime(contextView, address, proxyAddress, path, method, duration);
+			recorder.recordDataSentTime(contextView, remoteAddress, proxyAddress, path, method, duration);
 
-			recorder.recordDataSent(contextView, address, proxyAddress, path, sentBytes);
+			recorder.recordDataSent(contextView, remoteAddress, proxyAddress, path, sentBytes);
 		}
 	}
 
 	@Override
-	protected void recordRead(SocketAddress address) {
+	protected void recordRead() {
 		Duration duration = Duration.ofNanos(System.nanoTime() - dataReceivedTime);
 		if (proxyAddress == null) {
-			recorder.recordDataReceivedTime(contextView, address, path, method, "n/a", duration);
+			recorder.recordDataReceivedTime(contextView, remoteAddress, path, method, "n/a", duration);
 
-			recorder.recordDataReceived(contextView, address, path, dataReceived);
+			recorder.recordDataReceived(contextView, remoteAddress, path, dataReceived);
 		}
 		else {
-			recorder.recordDataReceivedTime(contextView, address, proxyAddress, path, method, "n/a", duration);
+			recorder.recordDataReceivedTime(contextView, remoteAddress, proxyAddress, path, method, "n/a", duration);
 
-			recorder.recordDataReceived(contextView, address, proxyAddress, path, dataReceived);
+			recorder.recordDataReceived(contextView, remoteAddress, proxyAddress, path, dataReceived);
 		}
 		dataReceived = 0;
 	}
