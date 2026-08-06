@@ -149,8 +149,7 @@ ext {
 					"https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.2/api/",
-					"https://projectreactor.io/docs/netty/release/api/",
-					"https://javadoc.io/doc/io.micrometer/micrometer-core/${micrometerVersion}/"] as String[]
+					"https://projectreactor.io/docs/netty/release/api/"] as String[]
 }
 
 nohttp {
