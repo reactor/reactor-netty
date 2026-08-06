@@ -68,19 +68,16 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		recordDataReceivedTime(remoteAddress, NA, uri, method, status, time);
+		recordDataReceivedTime(formatSocketAddress(remoteAddress), NA, uri, method, status, time);
 	}
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, String status, Duration time) {
-		recordDataReceivedTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, status, time);
+		recordDataReceivedTime(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, status, time);
 	}
 
-	void recordDataReceivedTime(SocketAddress remoteAddress, String proxyAddress, String uri, String method, String status, Duration time) {
-		recordDataReceivedTime(formatSocketAddress(remoteAddress), proxyAddress, uri, method, status, time);
-	}
-
-	// Fast path: the caller already has the formatted address, so it isn't rebuilt per request.
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
 	void recordDataReceivedTime(String remoteAddress, String proxyAddress, String uri, String method, String status, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, method, status);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
@@ -98,18 +95,16 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-		recordDataSentTime(remoteAddress, NA, uri, method, time);
+		recordDataSentTime(formatSocketAddress(remoteAddress), NA, uri, method, time);
 	}
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, Duration time) {
-		recordDataSentTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, time);
+		recordDataSentTime(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, time);
 	}
 
-	void recordDataSentTime(SocketAddress remoteAddress, String proxyAddress, String uri, String method, Duration time) {
-		recordDataSentTime(formatSocketAddress(remoteAddress), proxyAddress, uri, method, time);
-	}
-
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
 	void recordDataSentTime(String remoteAddress, String proxyAddress, String uri, String method, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, method, null);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
@@ -150,18 +145,16 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-		recordDataReceived(remoteAddress, NA, uri, bytes);
+		recordDataReceived(formatSocketAddress(remoteAddress), NA, uri, bytes);
 	}
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, long bytes) {
-		recordDataReceived(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
+		recordDataReceived(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, bytes);
 	}
 
-	void recordDataReceived(SocketAddress remoteAddress, String proxyAddress, String uri, long bytes) {
-		recordDataReceived(Metrics.formatSocketAddress(remoteAddress), proxyAddress, uri, bytes);
-	}
-
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
 	void recordDataReceived(String remoteAddress, String proxyAddress, String uri, long bytes) {
 		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, null, null);
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
@@ -178,18 +171,16 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-		recordDataSent(remoteAddress, NA, uri, bytes);
+		recordDataSent(formatSocketAddress(remoteAddress), NA, uri, bytes);
 	}
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, long bytes) {
-		recordDataSent(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
+		recordDataSent(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, bytes);
 	}
 
-	void recordDataSent(SocketAddress remoteAddress, String proxyAddress, String uri, long bytes) {
-		recordDataSent(Metrics.formatSocketAddress(remoteAddress), proxyAddress, uri, bytes);
-	}
-
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
 	void recordDataSent(String remoteAddress, String proxyAddress, String uri, long bytes) {
 		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, null, null);
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
