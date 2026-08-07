@@ -76,17 +76,31 @@ final class NonSslRedirectHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	private static @Nullable String getRequestedUrlInHttps(HttpRequest request) {
-		String uri = request.uri();
-		boolean isAbsoluteUri = uri.startsWith(HTTP_PROTOCOL);
-		if (isAbsoluteUri) {
-			// Don't use String#replace because of its bad performance due to regex
-			return HTTPS_PROTOCOL + uri.substring(HTTP_PROTOCOL.length());
-		}
 		String host = request.headers().get(HOST);
 		if (host == null) {
 			return null;
 		}
+		String uri = request.uri();
+		if (uri.startsWith(HTTP_PROTOCOL)) {
+			// Absolute-form request target, e.g. "GET http://host/path HTTP/1.1".
+			// This feature is documented to build the redirect from the Host header, so we
+			// intentionally ignore the authority carried in the request line and keep only the
+			// path/query/fragment. This keeps the redirect on the same host and changes the
+			// scheme only, as documented.
+			int pathStart = indexOfPathStart(uri, HTTP_PROTOCOL.length());
+			uri = pathStart < 0 ? "/" : uri.substring(pathStart);
+		}
 		return HTTPS_PROTOCOL + host + uri;
+	}
+
+	private static int indexOfPathStart(String uri, int from) {
+		for (int i = from; i < uri.length(); i++) {
+			char c = uri.charAt(i);
+			if (c == '/' || c == '?' || c == '#') {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 }
