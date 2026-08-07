@@ -100,12 +100,12 @@ class WebsocketClientOperations extends HttpClientOperations
 			PerMessageDeflateClientExtensionHandshaker perMessageDeflateClientExtensionHandshaker =
 					new PerMessageDeflateClientExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 							MAX_WINDOW_SIZE, websocketClientSpec.compressionAllowClientNoContext(),
-							websocketClientSpec.compressionRequestedServerNoContext(), 0);
+							websocketClientSpec.compressionRequestedServerNoContext(), websocketClientSpec.maxDecompressionBufferSize());
 			addHandlerFirst(NettyPipeline.WsCompressionHandler,
 					new WebSocketClientExtensionHandler(
 							perMessageDeflateClientExtensionHandshaker,
-							new DeflateFrameClientExtensionHandshaker(6, false, 0),
-							new DeflateFrameClientExtensionHandshaker(6, true, 0)));
+							new DeflateFrameClientExtensionHandshaker(6, false, websocketClientSpec.maxDecompressionBufferSize()),
+							new DeflateFrameClientExtensionHandshaker(6, true, websocketClientSpec.maxDecompressionBufferSize())));
 		}
 
 		String subprotocols = websocketClientSpec.protocols();
