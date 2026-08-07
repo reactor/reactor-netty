@@ -381,6 +381,20 @@ class Http2WebsocketTest extends WebsocketTest {
 
 	@ParameterizedTest
 	@MethodSource("http2CompatibleCombinations")
+	void websocketOverH2TestMaxDecompressionBufferSizeServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
+		doTestMaxDecompressionBufferSizeServer(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx));
+	}
+
+	@ParameterizedTest
+	@MethodSource("http2CompatibleCombinations")
+	void websocketOverH2TestMaxDecompressionBufferSizeClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) {
+		doTestMaxDecompressionBufferSizeClient(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx));
+	}
+
+	@ParameterizedTest
+	@MethodSource("http2CompatibleCombinations")
 	void websocketOverH2TestIssue1485_CloseFrameSentByClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
 		doTestIssue1485_CloseFrameSentByClient(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx));
