@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,11 +58,33 @@ public interface WebsocketSpec {
 	 */
 	boolean compress();
 
+	/**
+	 * Returns the configured maximum allowed size, in bytes, of the buffer used to decompress
+	 * a websocket message/frame when the compression extension is enabled. {@code 0} means the
+	 * maximum size is not limited.
+	 * <p>Note: This setting has no effect unless {@link #compress()} is enabled.
+	 *
+	 * @return the configured maximum allowed size of the decompression buffer, in bytes
+	 * @since 1.0.53
+	 */
+	default int maxDecompressionBufferSize() {
+		return 0;
+	}
+
 	class Builder<SPEC extends Builder<SPEC>> implements Supplier<SPEC> {
+
+		/**
+		 * The default maximum allowed size of the decompression buffer, in bytes, used when
+		 * decompressing a websocket message/frame. {@code 0} means that the maximum size
+		 * is not limited.
+		 */
+		static final int DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE = 0;
+
 		@Nullable String protocols;
 		int maxFramePayloadLength = 65536;
 		boolean handlePing;
 		boolean compress;
+		int maxDecompressionBufferSize = DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE;
 
 		protected Builder() {
 		}
@@ -120,6 +142,27 @@ public interface WebsocketSpec {
 		 */
 		public final SPEC compress(boolean compress) {
 			this.compress = compress;
+			return get();
+		}
+
+		/**
+		 * Configure the maximum allowed size, in bytes, of the buffer used to decompress a
+		 * websocket message/frame when the compression extension is enabled.
+		 * Defaults to {@link #DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE} ({@code 0}), which means that
+		 * the maximum size is not limited.
+		 * <p>Note: This setting has no effect unless {@link #compress(boolean)} is enabled.
+		 *
+		 * @param maxDecompressionBufferSize the maximum allowed size of the decompression buffer,
+		 * in bytes; {@code 0} means the maximum size is not limited (non-negative)
+		 * @return {@literal this}
+		 * @throws IllegalArgumentException if maxDecompressionBufferSize is negative
+		 * @since 1.0.53
+		 */
+		public final SPEC maxDecompressionBufferSize(int maxDecompressionBufferSize) {
+			if (maxDecompressionBufferSize < 0) {
+				throw new IllegalArgumentException("maxDecompressionBufferSize must be positive or zero");
+			}
+			this.maxDecompressionBufferSize = maxDecompressionBufferSize;
 			return get();
 		}
 

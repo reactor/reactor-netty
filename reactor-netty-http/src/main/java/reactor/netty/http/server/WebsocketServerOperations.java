@@ -123,11 +123,11 @@ class WebsocketServerOperations extends HttpServerOperations
 				PerMessageDeflateServerExtensionHandshaker perMessageDeflateServerExtensionHandshaker =
 						new PerMessageDeflateServerExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 								MAX_WINDOW_SIZE, websocketServerSpec.compressionAllowServerNoContext(),
-								websocketServerSpec.compressionPreferredClientNoContext(), 0);
+								websocketServerSpec.compressionPreferredClientNoContext(), websocketServerSpec.maxDecompressionBufferSize());
 				WebSocketServerExtensionHandler wsServerExtensionHandler =
 						new WebSocketServerExtensionHandler(
 								perMessageDeflateServerExtensionHandshaker,
-								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, 0));
+								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, websocketServerSpec.maxDecompressionBufferSize()));
 				try {
 					ChannelPipeline pipeline = channel.pipeline();
 					wsServerExtensionHandler.channelRead(pipeline.context(NettyPipeline.ReactiveBridge), request);
