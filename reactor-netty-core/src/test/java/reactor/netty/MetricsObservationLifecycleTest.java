@@ -44,14 +44,17 @@ class MetricsObservationLifecycleTest {
 	void trackedConfigOverridesEveryPublicObservationConfigMutator() {
 		// TrackedObservationConfig detects customization only through the fluent mutators it overrides. If a
 		// Micrometer upgrade adds a new one, this must fail until the matching override is added — not stay
-		// green while the new mutator silently bypasses detection.
+		// green while the new mutator silently bypasses detection. Match on full signature, not name: an
+		// overload of an existing mutator is just as much a hole as a brand-new one.
 		Set<String> fluentMutators = Arrays.stream(ObservationRegistry.ObservationConfig.class.getMethods())
 				.filter(m -> m.getReturnType() == ObservationRegistry.ObservationConfig.class)
-				.map(Method::getName)
+				.map(MetricsObservationLifecycleTest::signature)
 				.collect(Collectors.toSet());
 		Set<String> trackedOverrides = Arrays.stream(Metrics.TrackedObservationConfig.class.getDeclaredMethods())
-				.map(Method::getName)
+				.map(MetricsObservationLifecycleTest::signature)
 				.collect(Collectors.toSet());
+		// A covariant return type upstream would empty the filter and make containsAll vacuously true.
+		assertThat(fluentMutators).as("fluent mutators discovered on ObservationConfig").isNotEmpty();
 		assertThat(trackedOverrides).containsAll(fluentMutators);
 	}
 
@@ -115,5 +118,9 @@ class MetricsObservationLifecycleTest {
 		// so the bypass disengages. This is intentionally the last test — it cannot be undone.
 		Metrics.OBSERVATION_REGISTRY.observationConfig().observationHandler(context -> true);
 		assertThat(Metrics.observationLifecycleRequired()).isTrue();
+	}
+
+	static String signature(Method method) {
+		return method.getName() + Arrays.toString(method.getParameterTypes());
 	}
 }

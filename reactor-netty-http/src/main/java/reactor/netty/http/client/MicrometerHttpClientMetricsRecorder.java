@@ -125,7 +125,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, formatSocketAddress(remoteAddress), NA, uri, method, status);
+		Timer responseTime = getResponseTimeTimer(responseTimeName, formatSocketAddress(remoteAddress), NA, uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
@@ -133,7 +133,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, String status, Duration time) {
-		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, status);
+		Timer responseTime = getResponseTimeTimer(responseTimeName, formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
