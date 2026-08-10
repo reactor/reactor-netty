@@ -17,6 +17,7 @@ package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
@@ -494,12 +495,11 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			if (future.isSuccess()) {
 				Channel channel = pooledRef.poolable().channel();
 				Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
-				ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
+				Http2Connection http2Connection = http2PooledRef.slot.http2Connection;
 				Http2StreamChannel ch = future.getNow();
 
-				if (!channel.isActive() || frameCodec == null ||
-						((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived() ||
-						!((Http2FrameCodec) frameCodec.handler()).connection().local().canOpenStream()) {
+				if (!channel.isActive() || http2Connection == null || http2Connection.goAwayReceived()
+				    || !http2Connection.local().canOpenStream()) {
 					invalidate(this);
 					if (!retried) {
 						if (log.isDebugEnabled()) {
