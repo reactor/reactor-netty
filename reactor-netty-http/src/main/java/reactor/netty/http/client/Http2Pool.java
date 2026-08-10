@@ -1056,7 +1056,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		volatile @Nullable ChannelHandlerContext http2MultiplexHandlerCtx;
 		volatile @Nullable ChannelHandlerContext h2cUpgradeHandlerCtx;
 		volatile @Nullable Http2Connection http2Connection;
-		volatile boolean h2cUpgradeHandlerAbsent;
+
+		// Not volatile: confined to the channel event loop, see the assert in h2cUpgradeHandlerCtx()
+		boolean h2cUpgradeHandlerAbsent;
 
 		// Set on the event loop by Http2ConnectionLiveness when a PING liveness check starts/ends.
 		// Read on the acquire path so the connection is not handed out while it is being probed.
@@ -1168,10 +1170,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				return ctx;
 			}
 			ctx = connection.channel().pipeline().context(Http2FrameCodec.class);
+			// Kept in lockstep with the context, so the memoized connection never outlives the codec
+			http2Connection = ctx != null ? ((Http2FrameCodec) ctx.handler()).connection() : null;
+			// Written last, so the fast path above never returns a context without the matching connection
 			http2FrameCodecCtx = ctx;
-			if (ctx != null) {
-				http2Connection = ((Http2FrameCodec) ctx.handler()).connection();
-			}
 			return ctx;
 		}
 
@@ -1187,6 +1189,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		@Nullable ChannelHandlerContext h2cUpgradeHandlerCtx() {
+			assert connection.channel().eventLoop().inEventLoop();
 			if (h2cUpgradeHandlerAbsent) {
 				return null;
 			}
