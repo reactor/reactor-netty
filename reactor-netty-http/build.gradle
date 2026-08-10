@@ -194,6 +194,7 @@ dependencies {
 	http3TestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	http3TestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	http3TestImplementation "io.netty:netty-codec-native-quic:$nettyVersion$os_suffix"
+	http3TestImplementation "io.netty:netty-codec-haproxy:$nettyVersion"
 	http3TestImplementation "io.netty:netty-pkitesting:$nettyVersion"
 	http3TestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	http3TestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
