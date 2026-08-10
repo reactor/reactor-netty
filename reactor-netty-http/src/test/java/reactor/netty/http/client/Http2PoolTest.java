@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -125,6 +126,110 @@ class Http2PoolTest {
 			acquired.get(1).invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).as("activeStreams after invalidation").isEqualTo(0);
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void goAwayReceivedUsesMemoizedConnection() throws Exception {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(2)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		try {
+			PooledRef<Connection> ref = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref).isNotNull();
+			channel.runPendingTasks();
+
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) ref).slot;
+			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
+
+			// deliver() ran computeMaxConcurrentStreams() on the event loop, memoizing the connection
+			assertThat(slot.http2Connection).as("connection memoized on deliver")
+					.isSameAs(frameCodec.connection());
+			assertThat(slot.goAwayReceived()).as("no GO_AWAY yet").isFalse();
+
+			frameCodec.connection().goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			assertThat(slot.goAwayReceived()).as("GO_AWAY read via the memoized connection").isTrue();
+
+			ref.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void memoizesConnectionWhenFrameCodecIsInstalledAfterSlotCreation() throws Exception {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(), new ChannelHandlerAdapter() {});
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		try {
+			Http2Pool.Slot slot = http2Pool.createSlot(Connection.from(channel));
+			assertThat(slot.http2Connection).as("nothing to memoize pre-upgrade").isNull();
+			assertThat(slot.goAwayReceived()).as("pre-upgrade slot reports no GO_AWAY").isFalse();
+
+			// Stands in for the h2c upgrade, the one path where the codec joins the pipeline
+			// after the slot already exists.
+			Http2FrameCodec frameCodec = Http2FrameCodecBuilder.forClient().build();
+			channel.pipeline().addFirst(frameCodec);
+			channel.runPendingTasks();
+			slot.initMaxConcurrentStreams();
+
+			assertThat(slot.http2Connection).as("connection memoized by the post-upgrade re-init")
+					.isSameAs(frameCodec.connection());
+
+			frameCodec.connection().goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			assertThat(slot.goAwayReceived()).as("GO_AWAY read via the memoized connection").isTrue();
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void h2cUpgradeNegativeLookupIsCached() {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		try {
+			Http2Pool.Slot slot = http2Pool.createSlot(Connection.from(channel));
+			assertThat(slot.h2cUpgradeHandlerAbsent).as("not resolved yet").isFalse();
+
+			// No H2C upgrade handler in the pipeline (direct H2): the lookup misses...
+			assertThat(slot.isH2cUpgrade()).as("not an h2c upgrade").isFalse();
+
+			// ...and the negative result is cached so later calls skip the pipeline walk.
+			assertThat(slot.h2cUpgradeHandlerAbsent).as("negative lookup cached").isTrue();
 		}
 		finally {
 			channel.finishAndReleaseAll();
