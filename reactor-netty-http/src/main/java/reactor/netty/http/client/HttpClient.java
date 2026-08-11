@@ -65,6 +65,7 @@ import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.internal.util.Metrics;
+import reactor.netty.lang.CheckReturnValue;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
@@ -114,6 +115,7 @@ import static reactor.netty.http.internal.Http3.isHttp3Available;
  * @author Violeta Georgieva
  * @author raccoonback
  */
+@CheckReturnValue
 public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientConfig> {
 
 	public static final String USER_AGENT = String.format("ReactorNetty/%s", reactorNettyVersion());
@@ -121,6 +123,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	/**
 	 * A URI configuration.
 	 */
+	@CheckReturnValue
 	public interface UriConfiguration<S extends UriConfiguration<?>> {
 
 		/**
@@ -131,6 +134,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return the appropriate sending or receiving contract
 		 */
+		@CheckReturnValue
 		S uri(String uri);
 
 		/**
@@ -141,6 +145,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return the appropriate sending or receiving contract
 		 */
+		@CheckReturnValue
 		S uri(Mono<String> uri);
 
 		/**
@@ -150,6 +155,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * @param uri target URI which is an absolute, fully constructed {@link URI}
 		 * @return the appropriate sending or receiving contract
 		 */
+		@CheckReturnValue
 		S uri(URI uri);
 	}
 
@@ -157,6 +163,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * Allow a request body configuration before calling one of the terminal, {@link
 	 * Publisher} based, {@link ResponseReceiver} API.
 	 */
+	@CheckReturnValue
 	public interface RequestSender extends ResponseReceiver<RequestSender> {
 
 		/**
@@ -176,6 +183,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
+		@CheckReturnValue
 		ResponseReceiver<?> send(Publisher<? extends ByteBuf> body);
 
 		/**
@@ -197,6 +205,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
+		@CheckReturnValue
 		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
 
 		/**
@@ -217,6 +226,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
+		@CheckReturnValue
 		default ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback) {
 			return sendForm(formCallback, null);
 		}
@@ -240,6 +250,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
+		@CheckReturnValue
 		ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
 				@Nullable Consumer<Flux<Long>> progress);
 	}
@@ -248,6 +259,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * Allow a request body configuration before calling one of the terminal, {@link
 	 * Publisher} based, {@link WebsocketReceiver} API.
 	 */
+	@CheckReturnValue
 	public interface WebsocketSender extends WebsocketReceiver<WebsocketSender> {
 
 		/**
@@ -259,6 +271,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
+		@CheckReturnValue
 		WebsocketReceiver<?> send(Function<? super HttpClientRequest, ? extends Publisher<Void>> sender);
 	}
 
@@ -267,6 +280,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * {@link ResponseReceiver} API returns {@link Flux} or {@link Mono},
 	 * requesting is always deferred to {@link Publisher#subscribe(Subscriber)}.
 	 */
+	@CheckReturnValue
 	public interface ResponseReceiver<S extends ResponseReceiver<?>>
 			extends UriConfiguration<S> {
 
@@ -278,6 +292,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return the response status and headers as {@link HttpClientResponse}
 		 */
+		@CheckReturnValue
 		Mono<HttpClientResponse> response();
 
 		/**
@@ -291,6 +306,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link Flux} forwarding the returned {@link Publisher} sequence
 		 */
+		@CheckReturnValue
 		<V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver);
 
 		/**
@@ -305,6 +321,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link Flux} forwarding the returned {@link Publisher} sequence
 		 */
+		@CheckReturnValue
 		<V> Flux<V> responseConnection(BiFunction<? super HttpClientResponse, ? super Connection, ? extends Publisher<V>> receiver);
 
 		/**
@@ -315,6 +332,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return the response body chunks as {@link ByteBufFlux}.
 		 */
+		@CheckReturnValue
 		ByteBufFlux responseContent();
 
 		/**
@@ -329,6 +347,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link Mono} forwarding the returned {@link Mono} result
 		 */
+		@CheckReturnValue
 		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver);
 	}
 
@@ -337,6 +356,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * {@link Flux} or {@link Mono}, requesting is always deferred to
 	 * {@link Publisher#subscribe(Subscriber)}.
 	 */
+	@CheckReturnValue
 	public interface WebsocketReceiver<S extends WebsocketReceiver<?>> extends UriConfiguration<S> {
 		/**
 		 * Negotiate a websocket upgrade and return a {@link Mono} of {@link Connection}. If
@@ -348,6 +368,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link Mono} of {@link Connection}
 		 */
+		@CheckReturnValue
 		Mono<? extends Connection> connect();
 
 		/**
@@ -366,6 +387,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link Flux} of the extracted data via the returned {@link Publisher}
 		 */
+		@CheckReturnValue
 		<V> Flux<V> handle(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver);
 
 		/**
@@ -379,6 +401,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link ByteBufFlux} of the inbound websocket content
 		 */
+		@CheckReturnValue
 		ByteBufFlux receive();
 	}
 
@@ -404,6 +427,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public static HttpClient create() {
 		return new HttpClientConnect(new HttpConnectionProvider());
 	}
@@ -416,6 +440,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param connectionProvider the {@link ConnectionProvider} to be used
 	 * @return a {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public static HttpClient create(ConnectionProvider connectionProvider) {
 		Objects.requireNonNull(connectionProvider, "connectionProvider");
 		return new HttpClientConnect(new HttpConnectionProvider(connectionProvider));
@@ -485,6 +510,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
+	@CheckReturnValue
 	public static HttpClient from(TcpClient tcpClient) {
 		Objects.requireNonNull(tcpClient, "tcpClient");
 		return HttpClientConnect.applyTcpClientConfig(tcpClient.configuration());
@@ -497,6 +523,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public static HttpClient newConnection() {
 		return new HttpClientConnect(new HttpConnectionProvider(ConnectionProvider.newConnection()));
 	}
@@ -511,6 +538,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return the appropriate sending or receiving contract
 	 */
+	@CheckReturnValue
 	public final HttpClient baseUrl(String baseUrl) {
 		Objects.requireNonNull(baseUrl, "baseUrl");
 		HttpClient dup = duplicate();
@@ -528,6 +556,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param compressionEnabled if true, compression (gzip, Brotli, and zstd) is enabled, otherwise disabled (default: false)
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient compress(boolean compressionEnabled) {
 		if (compressionEnabled) {
 			// Enabling the compression means at least "acceptGzip" is enabled.
@@ -571,6 +600,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient cookie(Cookie cookie) {
 		Objects.requireNonNull(cookie, "cookie");
 		if (!cookie.value().isEmpty()) {
@@ -592,6 +622,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @deprecated as of 1.1.0. Use {@link #cookie(Cookie)} for configuring cookies. This will be removed in 2.0.0.
 	 */
 	@Deprecated
+	@CheckReturnValue
 	public final HttpClient cookie(String name, Consumer<? super Cookie> cookieBuilder) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
@@ -611,6 +642,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
 	@Deprecated
+	@CheckReturnValue
 	public final HttpClient cookieCodec(ClientCookieEncoder encoder) {
 		Objects.requireNonNull(encoder, "encoder");
 		ClientCookieDecoder decoder = encoder == ClientCookieEncoder.LAX ?
@@ -629,6 +661,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
 	@Deprecated
+	@CheckReturnValue
 	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
 		Objects.requireNonNull(encoder, "encoder");
 		Objects.requireNonNull(decoder, "decoder");
@@ -645,6 +678,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient cookiesWhen(String name, Function<? super Cookie, Mono<? extends Cookie>> cookieBuilder) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
@@ -670,6 +704,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to prepare the content for response
 	 */
+	@CheckReturnValue
 	public final RequestSender delete() {
 		return request(HttpMethod.DELETE);
 	}
@@ -684,6 +719,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.6
 	 */
+	@CheckReturnValue
 	public final HttpClient disableRetry(boolean disableRetry) {
 		if (disableRetry == configuration().retryDisabled) {
 			return this;
@@ -701,6 +737,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient doAfterRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest) {
 		Objects.requireNonNull(doAfterRequest, "doAfterRequest");
 		HttpClient dup = duplicate();
@@ -721,6 +758,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.5
 	 */
+	@CheckReturnValue
 	public final HttpClient doAfterResponseSuccess(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess) {
 		Objects.requireNonNull(doAfterResponseSuccess, "doAfterResponseSuccess");
 		HttpClient dup = duplicate();
@@ -744,6 +782,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient doOnError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError,
 			BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError) {
 		Objects.requireNonNull(doOnRequestError, "doOnRequestError");
@@ -775,6 +814,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.6
 	 */
+	@CheckReturnValue
 	public final HttpClient doOnRedirect(BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect) {
 		Objects.requireNonNull(doOnRedirect, "doOnRedirect");
 		HttpClient dup = duplicate();
@@ -793,6 +833,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
 		Objects.requireNonNull(doOnRequest, "doOnRequest");
 		HttpClient dup = duplicate();
@@ -813,6 +854,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient doOnRequestError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError) {
 		Objects.requireNonNull(doOnRequestError, "doOnRequestError");
 		HttpClient dup = duplicate();
@@ -831,6 +873,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
 		Objects.requireNonNull(doOnResponse, "doOnResponse");
 		HttpClient dup = duplicate();
@@ -849,6 +892,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient doOnResponseError(BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError) {
 		Objects.requireNonNull(doOnResponseError, "doOnResponseError");
 		HttpClient dup = duplicate();
@@ -879,6 +923,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @see #followRedirect(boolean) for automatic redirect on standard 30x status codes
 	 */
+	@CheckReturnValue
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
 		return followRedirect(predicate, (Consumer<HttpClientRequest>) null);
 	}
@@ -913,6 +958,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.12
 	 * @see #followRedirect(boolean, BiConsumer) for automatic redirect on standard 30x status codes
 	 */
+	@CheckReturnValue
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
 			@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer) {
 		Objects.requireNonNull(predicate, "predicate");
@@ -952,6 +998,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.5
 	 * @see #followRedirect(boolean, Consumer) for automatic redirect on standard 30x status codes
 	 */
+	@CheckReturnValue
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
 			@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		Objects.requireNonNull(predicate, "predicate");
@@ -978,6 +1025,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @see #followRedirect(BiPredicate) for custom redirect logic based on a user-provided predicate
 	 */
+	@CheckReturnValue
 	public final HttpClient followRedirect(boolean followRedirect) {
 		if (!followRedirect && configuration().followRedirectPredicate == null &&
 					configuration().redirectRequestConsumer == null &&
@@ -1017,6 +1065,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.12
 	 * @see #followRedirect(BiPredicate, BiConsumer) for custom redirect logic based on a user-provided predicate
 	 */
+	@CheckReturnValue
 	public final HttpClient followRedirect(boolean followRedirect,
 			@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer) {
 		if (followRedirect) {
@@ -1060,6 +1109,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.5
 	 * @see #followRedirect(BiPredicate, Consumer) for custom redirect logic based on a user-provided predicate
 	 */
+	@CheckReturnValue
 	public final HttpClient followRedirect(boolean followRedirect, @Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		if (followRedirect) {
 			return followRedirect(HttpClientConfig.FOLLOW_REDIRECT_PREDICATE, redirectRequestConsumer);
@@ -1078,6 +1128,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to consume for response
 	 */
+	@CheckReturnValue
 	public final ResponseReceiver<?> get() {
 		return request(HttpMethod.GET);
 	}
@@ -1087,6 +1138,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to consume for response
 	 */
+	@CheckReturnValue
 	public final ResponseReceiver<?> head() {
 		return request(HttpMethod.HEAD);
 	}
@@ -1098,6 +1150,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient headers(Consumer<? super HttpHeaders> headerBuilder) {
 		Objects.requireNonNull(headerBuilder, "headerBuilder");
 		HttpClient dup = duplicate();
@@ -1114,6 +1167,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient headersWhen(Function<? super HttpHeaders, Mono<? extends HttpHeaders>> headerBuilder) {
 		Objects.requireNonNull(headerBuilder, "headerBuilder");
 		HttpClient dup = duplicate();
@@ -1135,6 +1189,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param http2Settings configures {@link Http2SettingsSpec} before requesting
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient http2Settings(Consumer<Http2SettingsSpec.Builder> http2Settings) {
 		Objects.requireNonNull(http2Settings, "http2Settings");
 		Http2SettingsSpec.Builder builder = Http2SettingsSpec.builder();
@@ -1155,6 +1210,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 1.2.0
 	 */
+	@CheckReturnValue
 	public final HttpClient http3Settings(Consumer<Http3SettingsSpec.Builder> http3Settings) {
 		Objects.requireNonNull(http3Settings, "http3Settings");
 		if (!isHttp3Available()) {
@@ -1188,6 +1244,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 1.0.24
 	 */
+	@CheckReturnValue
 	public final HttpClient httpMessageLogFactory(HttpMessageLogFactory httpMessageLogFactory) {
 		Objects.requireNonNull(httpMessageLogFactory, "httpMessageLogFactory");
 		HttpClient dup = duplicate();
@@ -1201,6 +1258,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param responseDecoderOptions a function to mutate the provided Http response decoder options
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient httpResponseDecoder(Function<HttpResponseDecoderSpec, HttpResponseDecoderSpec> responseDecoderOptions) {
 		Objects.requireNonNull(responseDecoderOptions, "responseDecoderOptions");
 		HttpResponseDecoderSpec decoder = responseDecoderOptions.apply(new HttpResponseDecoderSpec()).build();
@@ -1219,6 +1277,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient keepAlive(boolean keepAlive) {
 		HttpClient dup = duplicate();
 		HttpHeaders headers = configuration().headers.copy();
@@ -1236,6 +1295,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient mapConnect(
 			Function<? super Mono<? extends Connection>, ? extends Mono<? extends Connection>> connector) {
 		Objects.requireNonNull(connector, "mapConnect");
@@ -1273,6 +1333,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.7
 	 */
+	@CheckReturnValue
 	public final HttpClient metrics(boolean enable, Function<String, String> uriTagValue) {
 		if (enable) {
 			if (!Metrics.isMicrometerAvailable() && !Metrics.isTracingAvailable()) {
@@ -1303,6 +1364,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	@Override
+	@CheckReturnValue
 	public final HttpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		return super.metrics(enable, recorder);
 	}
@@ -1323,6 +1385,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * that will be used when the metrics are propagated to the recorder.
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder, Function<String, String> uriValue) {
 		if (enable) {
 			HttpClient dup = duplicate();
@@ -1346,6 +1409,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient noSSL() {
 		if (configuration().isSecure()) {
 			HttpClient dup = duplicate();
@@ -1356,6 +1420,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	@Override
+	@CheckReturnValue
 	public final HttpClient observe(ConnectionObserver observer) {
 		return super.observe(observer);
 	}
@@ -1365,6 +1430,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to consume for response
 	 */
+	@CheckReturnValue
 	public final ResponseReceiver<?> options() {
 		return request(HttpMethod.OPTIONS);
 	}
@@ -1374,6 +1440,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
+	@CheckReturnValue
 	public final RequestSender patch() {
 		return request(HttpMethod.PATCH);
 	}
@@ -1387,6 +1454,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 */
 	@Override
+	@CheckReturnValue
 	public final HttpClient port(int port) {
 		return super.port(port);
 	}
@@ -1396,6 +1464,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
+	@CheckReturnValue
 	public final RequestSender post() {
 		return request(HttpMethod.POST);
 	}
@@ -1407,6 +1476,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient protocol(HttpProtocol... supportedProtocols) {
 		Objects.requireNonNull(supportedProtocols, "supportedProtocols");
 		HttpClient dup = duplicate();
@@ -1438,11 +1508,13 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
+	@CheckReturnValue
 	public final RequestSender put() {
 		return request(HttpMethod.PUT);
 	}
 
 	@Override
+	@CheckReturnValue
 	public final HttpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
 		return super.remoteAddress(remoteAddressSupplier);
 	}
@@ -1454,6 +1526,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
+	@CheckReturnValue
 	public RequestSender request(HttpMethod method) {
 		Objects.requireNonNull(method, "method");
 		HttpClientFinalizer dup = new HttpClientFinalizer(new HttpClientConfig(configuration()));
@@ -1478,6 +1551,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.11
 	 * @see io.netty.handler.timeout.ReadTimeoutHandler
 	 */
+	@CheckReturnValue
 	public final HttpClient responseTimeout(@Nullable Duration maxReadOperationInterval) {
 		if (Objects.equals(maxReadOperationInterval, configuration().responseTimeout)) {
 			return this;
@@ -1501,6 +1575,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient secure() {
 		SslProvider sslProvider = HttpClientSecure.defaultSslProvider(configuration());
 		if (sslProvider.equals(configuration().sslProvider)) {
@@ -1526,6 +1601,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public final HttpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
 		SslProvider.SslContextSpec builder = SslProvider.builder();
@@ -1560,6 +1636,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param sslProvider The provider to set when configuring SSL
 	 * @return a new {@link HttpClient}
 	 */
+	@CheckReturnValue
 	public HttpClient secure(SslProvider sslProvider) {
 		Objects.requireNonNull(sslProvider, "sslProvider");
 		HttpClient dup = duplicate();
@@ -1643,6 +1720,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")
+	@CheckReturnValue
 	public final HttpClient tcpConfiguration(Function<? super TcpClient, ? extends TcpClient> tcpMapper) {
 		Objects.requireNonNull(tcpMapper, "tcpMapper");
 		HttpClientTcpConfig tcpClient = new HttpClientTcpConfig(this);
@@ -1665,6 +1743,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 1.0.3
 	 */
 	@Override
+	@CheckReturnValue
 	public Mono<Void> warmup() {
 		return Mono.when(
 				super.warmup(),
@@ -1692,6 +1771,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @see #resolver(AddressResolverGroup)
 	 * @see #resolver(Consumer)
 	 */
+	@CheckReturnValue
 	public final HttpClient proxyWhen(
 			BiFunction<HttpClientConfig, ? super ProxyProvider.TypeSpec, Mono<? extends ProxyProvider.Builder>> proxyBuilder) {
 		Objects.requireNonNull(proxyBuilder, "proxyBuilder");
@@ -1718,6 +1798,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
 	 */
+	@CheckReturnValue
 	public final WebsocketSender websocket() {
 		return websocket(WebsocketClientSpec.builder().build());
 	}
@@ -1729,6 +1810,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a {@link WebsocketSender} ready to consume for response
 	 * @since 0.9.7
 	 */
+	@CheckReturnValue
 	public final WebsocketSender websocket(WebsocketClientSpec websocketClientSpec) {
 		Objects.requireNonNull(websocketClientSpec, "websocketClientSpec");
 		WebsocketFinalizer dup = new WebsocketFinalizer(new HttpClientConfig(configuration()));
@@ -1738,6 +1820,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	@Override
+	@CheckReturnValue
 	public final HttpClient wiretap(boolean enable) {
 		return super.wiretap(enable);
 	}
@@ -1786,6 +1869,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @see #httpAuthentication(BiPredicate, BiConsumer, int)
 	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction)
 	 */
+	@CheckReturnValue
 	public final HttpClient httpAuthentication(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator) {
@@ -1836,6 +1920,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 1.3.1
 	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction, int)
 	 */
+	@CheckReturnValue
 	public final HttpClient httpAuthentication(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiConsumer<? super HttpClientRequest, ? super SocketAddress> authenticator,
@@ -1896,6 +1981,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @see #httpAuthenticationWhen(BiPredicate, BiFunction, int)
 	 * @see #httpAuthentication(BiPredicate, BiConsumer)
 	 */
+	@CheckReturnValue
 	public final HttpClient httpAuthenticationWhen(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator) {
@@ -1947,6 +2033,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 1.3.1
 	 * @see #httpAuthentication(BiPredicate, BiConsumer, int)
 	 */
+	@CheckReturnValue
 	public final HttpClient httpAuthenticationWhen(
 			BiPredicate<? super HttpClientRequest, ? super HttpClientResponse> predicate,
 			BiFunction<? super HttpClientRequest, ? super SocketAddress, ? extends Mono<Void>> authenticator,

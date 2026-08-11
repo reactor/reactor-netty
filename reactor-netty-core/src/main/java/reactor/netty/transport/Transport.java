@@ -34,6 +34,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableChannel;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.internal.util.Metrics;
+import reactor.netty.lang.CheckReturnValue;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
@@ -48,6 +49,7 @@ import reactor.util.Loggers;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
+@CheckReturnValue
 public abstract class Transport<T extends Transport<T, C>, C extends TransportConfig> {
 
 	/**
@@ -58,6 +60,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param <A> the attribute type
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public <A> T attr(AttributeKey<A> key, @Nullable A value) {
 		Objects.requireNonNull(key, "key");
 		T dup = duplicate();
@@ -71,6 +74,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param bindAddressSupplier A supplier of the address to bind to.
 	 * @return a new {@link Transport}
 	 */
+	@CheckReturnValue
 	public T bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
 		T dup = duplicate();
@@ -90,6 +94,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param channelGroup a {@link ChannelGroup}
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T channelGroup(ChannelGroup channelGroup) {
 		Objects.requireNonNull(channelGroup, "channelGroup");
 		T dup = duplicate();
@@ -102,6 +107,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 *
 	 * @return a {@link TransportConfig}
 	 */
+	@CheckReturnValue
 	public abstract C configuration();
 
 	/**
@@ -110,6 +116,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param doOnChannelInit configure the channel pipeline while initializing the channel
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T doOnChannelInit(ChannelPipelineConfigurer doOnChannelInit) {
 		Objects.requireNonNull(doOnChannelInit, "doOnChannelInit");
 		T dup = duplicate();
@@ -161,6 +168,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param recorder a supplier for the {@link ChannelMetricsRecorder}
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		if (enable) {
 			T dup = duplicate();
@@ -185,6 +193,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param observer the {@link ConnectionObserver} to be set or add
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T observe(ConnectionObserver observer) {
 		Objects.requireNonNull(observer, "observer");
 		T dup = duplicate();
@@ -203,6 +212,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @return a new {@link Transport} reference
 	 */
 	@SuppressWarnings("ReferenceEquality")
+	@CheckReturnValue
 	public <O> T option(ChannelOption<O> key, @Nullable O value) {
 		Objects.requireNonNull(key, "key");
 		// Reference comparison is deliberate
@@ -225,6 +235,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param eventLoopGroup an eventLoopGroup to share
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T runOn(EventLoopGroup eventLoopGroup) {
 		return runOn(new EventLoopGroupLoopResources(eventLoopGroup));
 	}
@@ -238,6 +249,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * returning an eventLoopGroup
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T runOn(LoopResources channelResources) {
 		Objects.requireNonNull(channelResources, "channelResources");
 		return runOn(channelResources, LoopResources.DEFAULT_NATIVE);
@@ -250,6 +262,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param preferNative should prefer running on epoll, io_uring, kqueue or similar instead of java NIO
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T runOn(LoopResources loopResources, boolean preferNative) {
 		Objects.requireNonNull(loopResources, "loopResources");
 		T dup = duplicate();
@@ -267,6 +280,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param enable specifies whether the wire logger configuration will be added to the pipeline
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T wiretap(boolean enable) {
 		if (enable) {
 			T dup = duplicate();
@@ -293,6 +307,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param category the logger category
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T wiretap(String category) {
 		Objects.requireNonNull(category, "category");
 		return wiretap(category, LogLevel.DEBUG);
@@ -307,6 +322,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param level the logger level
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public T wiretap(String category, LogLevel level) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
@@ -331,6 +347,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param format the {@link ByteBuf} format
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public final T wiretap(String category, LogLevel level, AdvancedByteBufFormat format) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
@@ -358,6 +375,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param charset  the charset
 	 * @return a new {@link Transport} reference
 	 */
+	@CheckReturnValue
 	public final T wiretap(String category, LogLevel level, AdvancedByteBufFormat format, Charset charset) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");

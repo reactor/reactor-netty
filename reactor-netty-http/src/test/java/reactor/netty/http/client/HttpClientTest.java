@@ -2853,7 +2853,8 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
+	// intentional: configuration() is called only to trigger UnsupportedOperationException, its return value is unused by design
+	@SuppressWarnings({"deprecation", "CheckReturnValue"})
 	void testTcpConfigurationUnsupported_4() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpClient.create()
