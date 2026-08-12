@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package reactor.netty.http.server.compression;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.Zstd;
+import io.netty.handler.codec.http.HttpContentEncoder;
+
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -37,6 +39,7 @@ public final class HttpCompressionOptionsSpec {
 	private GzipOption gzip;
 	private SnappyOption snappy;
 	private @Nullable ZstdOption zstd;
+	private int maxPipelineDepth = HttpContentEncoder.DEFAULT_MAX_PIPELINE_DEPTH;
 
 	private HttpCompressionOptionsSpec() {
 		gzip = GzipOption.provideDefault();
@@ -73,6 +76,18 @@ public final class HttpCompressionOptionsSpec {
 		else if (Zstd.isAvailable() && option instanceof ZstdOption) {
 			this.zstd = (ZstdOption) option;
 		}
+	}
+
+	public HttpCompressionOptionsSpec maxPipelineDepth(int maxPipelineDepth) {
+		if (maxPipelineDepth <= 0) {
+			throw new IllegalArgumentException("maxPipelineDepth : " + maxPipelineDepth + " (expected: > 0)");
+		}
+		this.maxPipelineDepth = maxPipelineDepth;
+		return this;
+	}
+
+	public int maxPipelineDepth() {
+		return this.maxPipelineDepth;
 	}
 
 	public CompressionOptions[] adapt() {

@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.http.HttpContentEncoder;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
@@ -385,10 +386,62 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @since 1.2.3
 	 */
 	public final HttpServer compressOptions(HttpCompressionOption... compressionOptions) {
+		return compressOptions(HttpContentEncoder.DEFAULT_MAX_PIPELINE_DEPTH, compressionOptions);
+	}
+
+	/**
+	 * Specifies compression options for GZip, Deflate, Brotli, and Zstd algorithms.
+	 * The server supports the following compression algorithms:
+     * <ul>
+     * <li>{@link reactor.netty.http.server.compression.GzipOption} - always available, configurable</li>
+     * <li>{@link reactor.netty.http.server.compression.DeflateOption} - always available, configurable</li>
+     * <li>Brotli - available when the {@code com.aayushatharva.brotli4j:brotli4j} dependency is present,
+     * uses default settings (no explicit configuration needed)</li>
+     * <li>{@link reactor.netty.http.server.compression.ZstdOption} - available when the
+     * {@code com.github.luben:zstd-jni} dependency is present, configurable</li>
+     * </ul>
+     *
+     * <p><b>Brotli and Zstd Availability:</b></p>
+     * <ul>
+     * <li>Brotli becomes available only when the Brotli4j native library is present on the classpath.</li>
+     * <li>Zstd becomes available only when the Zstd-jni native library to be present on the classpath.</li>
+     * <li>When these dependencies are not available, the respective compression algorithms will be silently skipped.</li>
+     * </ul>
+     *
+	 * @param maxPipelineDepth configures maximum pipeline depth
+	 * @param compressionOptions configures {@link HttpCompressionOption} after enabling compression
+	 *
+	 * <pre>
+     * {@code
+     * // Example with GZip and Zstd (when Zstd is available)
+     * HttpServer.create()
+     *           .compress(true)
+     *           .compressOptions(512,
+     *                   GzipOption.builder()
+     *                             .compressionLevel(6)
+     *                             .windowBits(15)
+     *                             .memoryLevel(8)
+     *                             .build(),
+     *                   ZstdOption.builder()
+     *                             .compressionLevel(3)
+     *                             .build()
+     *           )
+     *           .bindNow();
+     * }
+     * </pre>
+	 * @return a new {@link HttpServer}
+	 * @since 1.3.7
+	 */
+	public final HttpServer compressOptions(int maxPipelineDepth, HttpCompressionOption... compressionOptions) {
 		Objects.requireNonNull(compressionOptions, "compressionOptions");
 
+		if (maxPipelineDepth <= 0) {
+			throw new IllegalArgumentException("maxPipelineDepth : " + maxPipelineDepth + " (expected: > 0)");
+		}
+
 		HttpServer dup = duplicate();
-		dup.configuration().compressionOptions = new HttpCompressionOptionsSpec(compressionOptions);
+		dup.configuration().compressionOptions = new HttpCompressionOptionsSpec(compressionOptions)
+			.maxPipelineDepth(maxPipelineDepth);
 		return dup;
 	}
 
