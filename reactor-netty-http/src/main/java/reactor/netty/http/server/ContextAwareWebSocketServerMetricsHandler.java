@@ -26,7 +26,7 @@ import java.time.Duration;
  * {@link reactor.util.context.ContextView}.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 final class ContextAwareWebSocketServerMetricsHandler extends AbstractWebSocketServerMetricsHandler {
 

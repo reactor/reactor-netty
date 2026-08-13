@@ -37,7 +37,7 @@ import static reactor.netty.ReactorNetty.format;
  * {@link ChannelDuplexHandler} for handling WebSocket {@link HttpServer} metrics.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 abstract class AbstractWebSocketServerMetricsHandler extends ChannelDuplexHandler {
 

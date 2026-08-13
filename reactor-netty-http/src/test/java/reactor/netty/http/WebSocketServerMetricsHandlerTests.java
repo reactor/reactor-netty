@@ -72,7 +72,7 @@ import static reactor.netty.micrometer.TimerAssert.assertTimer;
  * ({@code uriTagValue} mapper, {@code HTTP/2}, an injected handler that fails the handshake write).
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 class WebSocketServerMetricsHandlerTests extends BaseHttpTest {
 

@@ -73,7 +73,7 @@ public class Metrics {
 	 * Name prefix that will be used for the WebSocket server's metrics
 	 * registered in Micrometer's global registry.
 	 *
-	 * @since 1.3.7
+	 * @since 1.3.8
 	 */
 	public static final String WEBSOCKET_SERVER_PREFIX = "reactor.netty.websocket.server";
 

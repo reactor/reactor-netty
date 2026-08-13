@@ -22,7 +22,7 @@ import java.time.Duration;
  * Interface for collecting metrics on WebSocket server level.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 public interface WebSocketServerMetricsRecorder extends HttpServerMetricsRecorder {
 

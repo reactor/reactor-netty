@@ -23,7 +23,7 @@ import io.micrometer.core.instrument.docs.MeterDocumentation;
  * WebSocket {@link HttpServer} meters.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 enum WebSocketServerMeters implements MeterDocumentation {
 

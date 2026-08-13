@@ -44,7 +44,7 @@ import static reactor.netty.http.server.WebSocketServerObservations.HandshakeTim
  * {@link AbstractWebSocketServerMetricsHandler} for Reactor Netty built-in integration with Micrometer.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 final class MicrometerWebSocketServerMetricsHandler extends AbstractWebSocketServerMetricsHandler {
 	final MicrometerWebSocketServerMetricsRecorder recorder;

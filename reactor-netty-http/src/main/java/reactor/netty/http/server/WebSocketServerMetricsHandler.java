@@ -23,7 +23,7 @@ import java.net.SocketAddress;
  * {@link AbstractWebSocketServerMetricsHandler} for collecting metrics on WebSocket {@link HttpServer} level.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 final class WebSocketServerMetricsHandler extends AbstractWebSocketServerMetricsHandler {
 

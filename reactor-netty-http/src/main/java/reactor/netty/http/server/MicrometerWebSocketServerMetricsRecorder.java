@@ -43,7 +43,7 @@ import static reactor.netty.Metrics.WEBSOCKET_SERVER_PREFIX;
  * {@link WebSocketServerMetricsRecorder} for Reactor Netty built-in integration with Micrometer.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 final class MicrometerWebSocketServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements WebSocketServerMetricsRecorder {
 

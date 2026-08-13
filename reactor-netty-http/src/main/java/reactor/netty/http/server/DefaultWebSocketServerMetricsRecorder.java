@@ -22,7 +22,7 @@ import java.time.Duration;
  * {@link WebSocketServerMetricsRecorder} that delegates to a {@link HttpServerMetricsRecorder}.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 final class DefaultWebSocketServerMetricsRecorder implements WebSocketServerMetricsRecorder {
 

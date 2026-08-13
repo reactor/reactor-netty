@@ -22,7 +22,7 @@ import io.micrometer.observation.docs.ObservationDocumentation;
  * WebSocket {@link HttpServer} observations.
  *
  * @author LivingLikeKrillin
- * @since 1.3.7
+ * @since 1.3.8
  */
 enum WebSocketServerObservations implements ObservationDocumentation {
 
