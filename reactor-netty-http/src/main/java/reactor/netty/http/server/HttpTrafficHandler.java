@@ -578,9 +578,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			ctx.executor().execute(this);
 		}
 		else {
-			IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout, HttpConnectionLiveness.CLOSE);
-			ctx.read();
+			requestRead();
 		}
+	}
+
+	void requestRead() {
+		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout, HttpConnectionLiveness.CLOSE);
+		ctx.read();
 	}
 
 	@Override
@@ -662,6 +666,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			}
 		}
 		overflow = false;
+
+		// The queue drained without dispatching a request, so no HttpServerOperations will terminate
+		// and resume the read; without this the next request stays unread until the peer gives up.
+		if (nextRequest == null && persistentConnection) {
+			requestRead();
+		}
 	}
 
 	@Override

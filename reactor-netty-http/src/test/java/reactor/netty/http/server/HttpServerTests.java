@@ -17,10 +17,13 @@ package reactor.netty.http.server;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -105,6 +108,7 @@ import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AttributeKey;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
@@ -408,6 +412,50 @@ class HttpServerTests extends BaseHttpTest {
 				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
 				          .block(Duration.ofSeconds(5));
 		assertThat(code).isEqualTo(500);
+	}
+
+	@Test
+	void pipelinedRequestResumesReadWhenOnlyTrailingContentIsQueued() throws Exception {
+		disposableServer =
+				createServer()
+				        .route(r -> r.get("/slow", (req, res) ->
+				                             res.sendString(Mono.delay(Duration.ofMillis(500)).thenReturn("slow")))
+				                     .get("/fast", (req, res) -> res.sendString(Mono.just("fast")))
+				                     .get("/next", (req, res) -> res.sendString(Mono.just("next"))))
+				        .bindNow();
+
+		try (Socket socket = new Socket("localhost", disposableServer.port())) {
+			socket.setSoTimeout(10_000);
+			OutputStream out = socket.getOutputStream();
+			InputStream in = socket.getInputStream();
+
+			// One write, so /fast is buffered while /slow is still in flight and is then answered off
+			// the pipelined queue, leaving only its own trailing content behind.
+			out.write((getRequest("/slow") + getRequest("/fast")).getBytes(CharsetUtil.US_ASCII));
+			out.flush();
+			assertThat(readUntil(in, "fast")).contains("slow", "fast");
+
+			out.write(getRequest("/next").getBytes(CharsetUtil.US_ASCII));
+			out.flush();
+			assertThat(readUntil(in, "next")).contains("next");
+		}
+	}
+
+	private static String getRequest(String uri) {
+		return "GET " + uri + " HTTP/1.1\r\nHost: localhost\r\n\r\n";
+	}
+
+	private static String readUntil(InputStream in, String token) throws IOException {
+		StringBuilder received = new StringBuilder();
+		byte[] buffer = new byte[256];
+		while (received.indexOf(token) < 0) {
+			int read = in.read(buffer);
+			if (read < 0) {
+				throw new IOException("Connection closed before receiving '" + token + "': " + received);
+			}
+			received.append(new String(buffer, 0, read, CharsetUtil.US_ASCII));
+		}
+		return received.toString();
 	}
 
 	@ParameterizedTest
