@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscription;
@@ -221,7 +222,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if (log.isDebugEnabled()) {
 					log.debug(format(parent.channel(), "{}: dropping frame {}"), this, parent.asDebugLogMessage(o));
 				}
-				ReferenceCountUtil.release(o);
+				try {
+					ReferenceCountUtil.release(o);
+				}
+				catch (IllegalReferenceCountException e) {
+					if (log.isDebugEnabled()) {
+						log.debug("", e);
+					}
+				}
 			}
 		}
 	}
