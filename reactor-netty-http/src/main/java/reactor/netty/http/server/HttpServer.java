@@ -440,8 +440,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 
 		HttpServer dup = duplicate();
-		dup.configuration().compressionOptions = new HttpCompressionOptionsSpec(compressionOptions)
-			.maxPipelineDepth(maxPipelineDepth);
+		dup.configuration().compressionOptions = new HttpCompressionOptionsSpec(maxPipelineDepth, compressionOptions);
 		return dup;
 	}
 

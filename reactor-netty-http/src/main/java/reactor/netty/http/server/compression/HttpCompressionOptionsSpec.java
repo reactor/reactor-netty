@@ -56,7 +56,15 @@ public final class HttpCompressionOptionsSpec {
 	}
 
 	public HttpCompressionOptionsSpec(HttpCompressionOption... compressionOptions) {
+		this(HttpContentEncoder.DEFAULT_MAX_PIPELINE_DEPTH, compressionOptions);
+	}
+	
+	public HttpCompressionOptionsSpec(int maxPipelineDepth, HttpCompressionOption... compressionOptions) {
 		this();
+		if (maxPipelineDepth <= 0) {
+			throw new IllegalArgumentException("maxPipelineDepth : " + maxPipelineDepth + " (expected: > 0)");
+		}
+		this.maxPipelineDepth = maxPipelineDepth;
 		Arrays.stream(compressionOptions).forEach(this::initializeOption);
 	}
 
@@ -78,14 +86,10 @@ public final class HttpCompressionOptionsSpec {
 		}
 	}
 
-	public HttpCompressionOptionsSpec maxPipelineDepth(int maxPipelineDepth) {
-		if (maxPipelineDepth <= 0) {
-			throw new IllegalArgumentException("maxPipelineDepth : " + maxPipelineDepth + " (expected: > 0)");
-		}
-		this.maxPipelineDepth = maxPipelineDepth;
-		return this;
-	}
-
+	/**
+	 * The maximum allowed depth of the encoding pipeline queue, the default
+	 * value is set to {@link DEFAULT_MAX_PIPELINE_DEPTH}
+	 */
 	public int maxPipelineDepth() {
 		return this.maxPipelineDepth;
 	}
