@@ -17,7 +17,7 @@ import java.text.SimpleDateFormat
 import org.gradle.api.attributes.java.TargetJvmVersion
 
 plugins {
-	id "com.diffplug.spotless" version "8.9.0"
+	id "com.diffplug.spotless" version "8.10.0"
 	id 'com.google.osdetector' version '1.7.3'
 	id 'org.gradle.test-retry' version '1.6.5'
 	id 'io.spring.nohttp' version '0.0.11'
@@ -25,7 +25,7 @@ plugins {
 	id 'com.jfrog.artifactory' version '6.0.4' apply false
 	id 'me.champeau.gradle.japicmp' version '0.4.6' apply false
 	id 'de.undercouch.download' version '5.7.0' apply false
-	id 'biz.aQute.bnd.builder' version '7.3.0' apply false
+	id 'biz.aQute.bnd.builder' version '7.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.11.5' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
 	id 'net.ltgt.errorprone' version '5.1.0' apply false
@@ -86,8 +86,8 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.17.0' //optional baseline
-	micrometerTracingVersion = '1.7.0' //optional baseline
+	micrometerVersion = '1.18.0-M1' //optional baseline
+	micrometerTracingVersion = '1.8.0-M1' //optional baseline
 	micrometerDocsVersion = '1.0.4' //optional baseline
 
 	contextPropagationDefaultVersion = '1.2.0' //optional baseline
@@ -121,13 +121,13 @@ ext {
 
 	// Testing
 	brotli4jVersion = '1.23.0'
-	zstdJniVersion = '1.5.7-12'
-	jacksonDatabindVersion = '2.22.1'
+	zstdJniVersion = '1.5.7-15'
+	jacksonDatabindVersion = '2.22.2'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.27.7'
 	awaitilityVersion = '4.3.0'
 	hoverflyJavaVersion = '0.19.1'
-	tomcatVersion = '9.0.120'
+	tomcatVersion = '9.0.121'
 	boringSslVersion = '2.0.81.Final'
 	junitVersion = '5.14.4'
 	junitPlatformLauncherVersion = '1.14.4'

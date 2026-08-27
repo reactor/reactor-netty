@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -46,6 +47,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.reactivestreams.Publisher;
@@ -938,6 +940,57 @@ class WebsocketTest extends BaseHttpTest {
 				clientBuilder.build();
 		sendRequest(client, websocketClientSpec, "/", receiver, predicate);
 		assertThat(clientHandler.get()).isEqualTo(compress);
+	}
+
+	void doTestMaxDecompressionBufferSizeServer(HttpServer server, HttpClient client) throws Exception {
+		String payload = StringUtils.repeat("a", 100_000);
+
+		AtomicReference<Throwable> serverError = new AtomicReference<>();
+		CountDownLatch serverLatch = new CountDownLatch(1);
+
+		WebsocketServerSpec websocketServerSpec =
+				WebsocketServerSpec.builder()
+				                   .compress(true)
+				                   .maxDecompressionBufferSize(1024)
+				                   .build();
+		disposableServer = createDisposableServer(server,
+				(in, out) -> in.receiveFrames()
+				               .doOnError(t -> {
+				                   serverError.set(t);
+				                   serverLatch.countDown();
+				               })
+				               .then(),
+				websocketServerSpec);
+
+		WebsocketClientSpec websocketClientSpec = WebsocketClientSpec.builder().compress(true).build();
+		client.websocket(websocketClientSpec)
+		      .uri("/")
+		      .handle((in, out) -> out.sendString(Mono.just(payload)))
+		      .then()
+		      .subscribe();
+
+		assertThat(serverLatch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(serverError.get()).isNotNull().isInstanceOf(DecompressionException.class);
+	}
+
+	void doTestMaxDecompressionBufferSizeClient(HttpServer server, HttpClient client) {
+		String payload = StringUtils.repeat("a", 100_000);
+
+		WebsocketServerSpec websocketServerSpec = WebsocketServerSpec.builder().compress(true).build();
+		disposableServer = createDisposableServer(server, (in, out) -> out.sendString(Mono.just(payload)), websocketServerSpec);
+
+		WebsocketClientSpec websocketClientSpec =
+				WebsocketClientSpec.builder()
+				                   .compress(true)
+				                   .maxDecompressionBufferSize(1024)
+				                   .build();
+		client.websocket(websocketClientSpec)
+		      .uri("/")
+		      .handle((in, out) -> in.receive().asString())
+		      .then()
+		      .as(StepVerifier::create)
+		      .expectError(DecompressionException.class)
+		      .verify(Duration.ofSeconds(30));
 	}
 
 	void doTestIssue1485_CloseFrameSentByClient(HttpServer server, HttpClient client) throws Exception {

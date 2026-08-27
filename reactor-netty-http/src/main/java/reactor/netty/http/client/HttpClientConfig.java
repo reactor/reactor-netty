@@ -601,6 +601,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ConnectionObserver obs,
 			ChannelOperations.OnSetup opsFactory,
 			boolean acceptGzip,
+			int maxDecompressionBufferSize,
 			boolean copyState,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			@Nullable SocketAddress proxyAddress,
@@ -629,7 +630,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				.addLast(NettyPipeline.HttpTrafficHandler, Http2StreamBridgeClientHandler.INSTANCE);
 
 		if (acceptGzip) {
-			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
+			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, maxDecompressionBufferSize));
 		}
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, obs);
@@ -778,7 +779,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		Http2FrameCodec http2FrameCodec = http2FrameCodecBuilder.build();
 
 		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec,
-				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, uriTagValue));
+				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, decoder.maxDecompressionBufferSize(), metricsRecorder, proxyAddress, remoteAddress, uriTagValue));
 
 		HttpClientUpgradeHandler upgradeHandler =
 				new ReactorNettyHttpClientUpgradeHandler(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
@@ -788,7 +789,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 
 		if (acceptGzip) {
-			p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
+			p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, decoder.maxDecompressionBufferSize()));
 		}
 
 		if (metricsRecorder != null) {
@@ -830,7 +831,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				new HttpClientCodec(decoderConfig, decoder.failOnMissingResponse, decoder.parseHttpAfterConnectRequest));
 
 		if (acceptGzip) {
-			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
+			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, decoder.maxDecompressionBufferSize()));
 		}
 
 		if (metricsRecorder != null) {
@@ -887,6 +888,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static final class H2CleartextCodec implements ChannelHandler {
 
 		final boolean acceptGzip;
+		final int maxDecompressionBufferSize;
 		final Http2FrameCodec http2FrameCodec;
 		final @Nullable ChannelMetricsRecorder metricsRecorder;
 		final ChannelOperations.OnSetup opsFactory;
@@ -898,11 +900,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				Http2FrameCodec http2FrameCodec,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
+				int maxDecompressionBufferSize,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				@Nullable SocketAddress proxyAddress,
 				SocketAddress remoteAddress,
 				@Nullable Function<String, String> uriTagValue) {
 			this.acceptGzip = acceptGzip;
+			this.maxDecompressionBufferSize = maxDecompressionBufferSize;
 			this.http2FrameCodec = http2FrameCodec;
 			this.metricsRecorder = metricsRecorder;
 			this.opsFactory = opsFactory;
@@ -929,12 +933,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			if (responseTimeoutHandler != null) {
 				pipeline.remove(NettyPipeline.ResponseTimeoutHandler);
 				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
-						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder, proxyAddress,
+						new H2Codec(owner, obs, opsFactory, acceptGzip, maxDecompressionBufferSize, metricsRecorder, proxyAddress,
 								remoteAddress, responseTimeoutHandler.getReaderIdleTimeInMillis(), uriTagValue));
 			}
 			else {
 				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
-						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, uriTagValue));
+						new H2Codec(owner, obs, opsFactory, acceptGzip, maxDecompressionBufferSize, metricsRecorder, proxyAddress, remoteAddress, uriTagValue));
 			}
 			pipeline.addAfter(ctx.name(), NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
 			        .addAfter(NettyPipeline.H2Flush, NettyPipeline.HttpCodec, http2FrameCodec)
@@ -969,6 +973,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static final class H2Codec extends ChannelInitializer<Channel> {
 
 		final boolean acceptGzip;
+		final int maxDecompressionBufferSize;
 		final @Nullable ChannelMetricsRecorder metricsRecorder;
 		final @Nullable ConnectionObserver observer;
 		final ChannelOperations.OnSetup opsFactory;
@@ -983,12 +988,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				@Nullable ConnectionObserver observer,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
+				int maxDecompressionBufferSize,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				@Nullable SocketAddress proxyAddress,
 				SocketAddress remoteAddress,
 				@Nullable Function<String, String> uriTagValue) {
 			// Handle outbound and upgrade streams
-			this(owner, observer, opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
+			this(owner, observer, opsFactory, acceptGzip, maxDecompressionBufferSize, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 		}
 
 		H2Codec(
@@ -996,6 +1002,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				@Nullable ConnectionObserver observer,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
+				int maxDecompressionBufferSize,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				@Nullable SocketAddress proxyAddress,
 				SocketAddress remoteAddress,
@@ -1003,6 +1010,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				@Nullable Function<String, String> uriTagValue) {
 			// Handle outbound and upgrade streams
 			this.acceptGzip = acceptGzip;
+			this.maxDecompressionBufferSize = maxDecompressionBufferSize;
 			this.metricsRecorder = metricsRecorder;
 			this.observer = observer;
 			this.opsFactory = opsFactory;
@@ -1026,7 +1034,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					setChannelContext(ch, owner.currentContext());
 				}
 				addStreamHandlers(ch, observer.then(new StreamConnectionObserver(owner.currentContext())), opsFactory,
-						acceptGzip, true, metricsRecorder, proxyAddress, remoteAddress, responseTimeoutMillis, uriTagValue);
+						acceptGzip, maxDecompressionBufferSize, true, metricsRecorder, proxyAddress, remoteAddress, responseTimeoutMillis, uriTagValue);
 				if (log.isDebugEnabled()) {
 					logStreamsState(ch, http2PooledRef(owner.pooledRef).slot, "Stream opened");
 				}

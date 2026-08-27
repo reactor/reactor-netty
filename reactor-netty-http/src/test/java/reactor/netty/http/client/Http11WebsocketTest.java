@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -316,6 +316,16 @@ class Http11WebsocketTest extends WebsocketTest {
 	@Test
 	void testIssue2973() {
 		doTestWebsocketCompression(createServer(), createClient(() -> disposableServer.address()), true, true);
+	}
+
+	@Test
+	void testMaxDecompressionBufferSizeServer() throws Exception {
+		doTestMaxDecompressionBufferSizeServer(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@Test
+	void testMaxDecompressionBufferSizeClient() {
+		doTestMaxDecompressionBufferSizeClient(createServer(), createClient(() -> disposableServer.address()));
 	}
 
 	@Test

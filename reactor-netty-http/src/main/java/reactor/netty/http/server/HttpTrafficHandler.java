@@ -18,6 +18,7 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -44,7 +45,6 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import org.jspecify.annotations.Nullable;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -54,7 +54,6 @@ import reactor.netty.http.IdleTimeoutHandler;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
-import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
 import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
@@ -73,6 +72,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
 			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
+
+	static final int PIPELINED_QUEUE_LOW_LIMIT = 32;
 
 	final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
@@ -345,6 +346,14 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		ctx.fireChannelReadComplete();
 	}
 
+	@Override
+	public void read(ChannelHandlerContext ctx) {
+		if (pipelined != null && pipelined.size() >= PIPELINED_QUEUE_LOW_LIMIT) {
+			return;
+		}
+		ctx.read();
+	}
+
 	void endReadAndFlush() {
 		if (read) {
 			read = false;
@@ -391,11 +400,11 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
 		if (pipelined == null) {
-			pipelined = Queues.unbounded()
-			                  .get();
+			pipelined = new ArrayDeque<>();
 		}
-		if (!pipelined.offer(msg)) {
-			ctx.fireExceptionCaught(Exceptions.failWithOverflow());
+		pipelined.offer(msg);
+		if (pipelined.size() >= PIPELINED_QUEUE_LOW_LIMIT) {
+			ctx.channel().config().setAutoRead(false);
 		}
 	}
 
