@@ -58,7 +58,7 @@ public final class HttpCompressionOptionsSpec {
 	public HttpCompressionOptionsSpec(HttpCompressionOption... compressionOptions) {
 		this(HttpContentEncoder.DEFAULT_MAX_PIPELINE_DEPTH, compressionOptions);
 	}
-	
+
 	public HttpCompressionOptionsSpec(int maxPipelineDepth, HttpCompressionOption... compressionOptions) {
 		this();
 		if (maxPipelineDepth <= 0) {
@@ -88,7 +88,7 @@ public final class HttpCompressionOptionsSpec {
 
 	/**
 	 * The maximum allowed depth of the encoding pipeline queue, the default
-	 * value is set to {@link DEFAULT_MAX_PIPELINE_DEPTH}
+	 * value is set to {@link DEFAULT_MAX_PIPELINE_DEPTH}.
 	 */
 	public int maxPipelineDepth() {
 		return this.maxPipelineDepth;

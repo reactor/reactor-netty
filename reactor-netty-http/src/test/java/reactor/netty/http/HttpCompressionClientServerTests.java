@@ -56,6 +56,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
@@ -849,14 +850,15 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		//edit the header manually to attempt to trigger compression on server side
-		Flux.range(1, 32)
+		Flux.range(1, 16)
 		    .flatMap(i ->
 		            client.port(disposableServer.port())
 		                  .headers(h -> h.add("Accept-Encoding", "gzip"))
-		                  .get()
+		                  .post()
 		                  .uri("/test")
+		                  .send(ByteBufFlux.fromString(Mono.just("hello")))
 		                  .responseSingle((res, byteBufFlux) -> byteBufFlux.asString()
-		                                                                   .zipWith(Mono.just(res.responseHeaders()))))	
+		                                                                   .zipWith(Mono.just(res.responseHeaders()))))
 		    .collectList()
 		    .as(StepVerifier::create)
 		    .assertNext(list -> assertThat(list).allMatch(t ->

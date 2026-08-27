@@ -430,14 +430,10 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
      * }
      * </pre>
 	 * @return a new {@link HttpServer}
-	 * @since 1.3.7
+	 * @since 1.3.8
 	 */
 	public final HttpServer compressOptions(int maxPipelineDepth, HttpCompressionOption... compressionOptions) {
 		Objects.requireNonNull(compressionOptions, "compressionOptions");
-
-		if (maxPipelineDepth <= 0) {
-			throw new IllegalArgumentException("maxPipelineDepth : " + maxPipelineDepth + " (expected: > 0)");
-		}
 
 		HttpServer dup = duplicate();
 		dup.configuration().compressionOptions = new HttpCompressionOptionsSpec(maxPipelineDepth, compressionOptions);
