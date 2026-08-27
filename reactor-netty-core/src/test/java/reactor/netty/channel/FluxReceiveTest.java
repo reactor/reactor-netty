@@ -20,8 +20,8 @@ import java.time.Duration;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.IllegalReferenceCountException;
 import org.junit.jupiter.api.Test;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.test.subscriber.TestSubscriber;
@@ -47,50 +47,108 @@ public class FluxReceiveTest {
 	}
 
 	@Test
-	void cleanQueueReleasesEveryBufferWhenOneWasAlreadyReleased() {
+	void consumeImmediatelyReactorNettyReleases() {
 		EmbeddedChannel channel = new EmbeddedChannel();
-		ChannelOperations<NettyInbound, NettyOutbound> operations =
-				new ChannelOperations<>(() -> channel, (connection, newState) -> {
-				});
-		FluxReceive receive = new FluxReceive(operations);
+		try {
+			ChannelOperations<?, ?> ops = bindReceiveOperations(channel);
+			TestSubscriber<ByteBuf> subscriber = TestSubscriber.builder().initialRequest(0).build();
+			ops.receive().subscribe(subscriber);
 
-		receive.subscribe(TestSubscriber.builder().initialRequest(0).build());
+			ByteBuf first = Unpooled.buffer().writeByte(1);
+			ByteBuf second = Unpooled.buffer().writeByte(2);
+			channel.writeInbound(first, second);
+			channel.runPendingTasks();
 
-		ByteBuf releasedElsewhere = Unpooled.buffer().writeByte(1);
-		ByteBuf queuedBehindIt = Unpooled.buffer().writeByte(2);
-		receive.onInboundNext(releasedElsewhere);
-		receive.onInboundNext(queuedBehindIt);
-		assertThat(receive.getPending()).isEqualTo(2);
+			assertThat(first.refCnt()).as("queued until demand, Reactor Netty owns").isOne();
+			assertThat(second.refCnt()).isOne();
 
-		releasedElsewhere.release();
+			subscriber.request(Long.MAX_VALUE);
+			channel.runPendingTasks();
 
-		assertThatCode(receive::cancel).doesNotThrowAnyException();
-
-		assertThat(queuedBehindIt.refCnt()).as("buffer queued behind an already released one").isZero();
+			assertThat(first.refCnt()).as("consume immediately: Reactor Netty released").isZero();
+			assertThat(second.refCnt()).as("consume immediately: Reactor Netty released").isZero();
+		}
+		finally {
+			channel.finishAndReleaseAll();
+		}
 	}
 
 	@Test
-	void cleanQueueStillTerminatesTheReceiverWhenABufferWasAlreadyReleased() {
+	void retainThenApplicationReleases() {
 		EmbeddedChannel channel = new EmbeddedChannel();
-		ChannelOperations<NettyInbound, NettyOutbound> operations =
-				new ChannelOperations<>(() -> channel, (connection, newState) -> {
-				});
-		FluxReceive receive = new FluxReceive(operations);
+		try {
+			ChannelOperations<?, ?> ops = bindReceiveOperations(channel);
+			TestSubscriber<ByteBuf> subscriber = TestSubscriber.builder().initialRequest(0).build();
+			ops.receive()
+			   .retain()
+			   .subscribe(subscriber);
 
-		TestSubscriber<Object> subscriber = TestSubscriber.builder().initialRequest(0).build();
-		receive.subscribe(subscriber);
+			ByteBuf first = Unpooled.buffer().writeByte(1);
+			ByteBuf second = Unpooled.buffer().writeByte(2);
+			channel.writeInbound(first, second);
+			channel.runPendingTasks();
 
-		ByteBuf delivered = Unpooled.buffer().writeByte(1);
-		ByteBuf queuedBehindIt = Unpooled.buffer().writeByte(2);
-		receive.onInboundNext(delivered);
-		receive.onInboundNext(queuedBehindIt);
+			subscriber.request(1);
+			channel.runPendingTasks();
 
-		delivered.release();
-		queuedBehindIt.release();
+			assertThat(first.refCnt()).as("retain: Reactor Netty released, application still holds").isOne();
+			assertThat(second.refCnt()).as("not yet delivered").isOne();
 
-		assertThatCode(() -> receive.request(1)).doesNotThrowAnyException();
+			first.release();
+			assertThat(first.refCnt()).as("application released").isZero();
 
-		assertThat(subscriber.isTerminated()).as("receiver terminated").isTrue();
-		assertThat(subscriber.expectTerminalError()).isInstanceOf(IllegalReferenceCountException.class);
+			subscriber.request(1);
+			channel.runPendingTasks();
+			assertThat(second.refCnt()).isOne();
+			second.release();
+			assertThat(second.refCnt()).isZero();
+		}
+		finally {
+			channel.finishAndReleaseAll();
+		}
+	}
+
+	@Test
+	void cancelAfterConsumeImmediatelyReleasesRemainingQueue() {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		try {
+			ChannelOperations<?, ?> ops = bindReceiveOperations(channel);
+			TestSubscriber<ByteBuf> subscriber = TestSubscriber.builder().initialRequest(0).build();
+			ops.receive().subscribe(subscriber);
+
+			ByteBuf consumedImmediately = Unpooled.buffer().writeByte(1);
+			ByteBuf queuedBehindIt = Unpooled.buffer().writeByte(2);
+			ByteBuf alsoQueued = Unpooled.buffer().writeByte(3);
+			channel.writeInbound(consumedImmediately, queuedBehindIt, alsoQueued);
+			channel.runPendingTasks();
+
+			subscriber.request(1);
+			channel.runPendingTasks();
+
+			assertThat(consumedImmediately.refCnt())
+					.as("already released by Reactor Netty after consume immediately")
+					.isZero();
+			assertThat(queuedBehindIt.refCnt()).isOne();
+			assertThat(alsoQueued.refCnt()).isOne();
+
+			assertThatCode(subscriber::cancel).doesNotThrowAnyException();
+			channel.runPendingTasks();
+
+			assertThat(queuedBehindIt.refCnt()).as("cleanQueue released remaining").isZero();
+			assertThat(alsoQueued.refCnt()).as("cleanQueue released remaining").isZero();
+		}
+		finally {
+			channel.finishAndReleaseAll();
+		}
+	}
+
+	static ChannelOperations<?, ?> bindReceiveOperations(EmbeddedChannel channel) {
+		ChannelOperations.addReactiveBridge(channel,
+				(conn, observer, msg) -> new ChannelOperations<>(conn, observer),
+				ConnectionObserver.emptyListener());
+		channel.pipeline().fireChannelActive();
+		ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+		assertThat(ops).as("ChannelOperations bound after Netty channelActive").isNotNull();
+		return ops;
 	}
 }
