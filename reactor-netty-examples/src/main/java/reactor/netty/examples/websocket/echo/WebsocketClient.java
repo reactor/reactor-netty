@@ -46,7 +46,8 @@ public final class WebsocketClient {
 				Http2SslContextSpec http2SslContextSpec =
 						Http2SslContextSpec.forClient()
 						                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-				client = client.secure(spec -> spec.sslContext(http2SslContextSpec));
+				client = client.secure(spec -> spec.sslContext(http2SslContextSpec))
+				               .protocol(HttpProtocol.H2);
 			}
 			else {
 				Http11SslContextSpec http11SslContextSpec =
@@ -54,10 +55,6 @@ public final class WebsocketClient {
 						                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 				client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
 			}
-		}
-
-		if (HTTP2) {
-			client = client.protocol(HttpProtocol.H2);
 		}
 
 		client.websocket()
