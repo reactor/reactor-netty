@@ -28,7 +28,7 @@ plugins {
 	id 'biz.aQute.bnd.builder' version '7.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.11.5' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
-	id 'net.ltgt.errorprone' version '5.1.0' apply false
+	id 'net.ltgt.errorprone' version '5.1.1' apply false
 	id 'me.champeau.mrjar' version '0.1.1' apply false
 }
 
