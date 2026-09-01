@@ -32,6 +32,7 @@ import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.lang.CheckReturnValue;
 import reactor.netty.resources.LoopResources;
 
 /**
@@ -43,6 +44,7 @@ import reactor.netty.resources.LoopResources;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
+@CheckReturnValue
 public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		CONF extends ClientTransportConfig<CONF>>
 		extends Transport<T, CONF> {
@@ -146,6 +148,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnConnect a consumer observing connect events
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T doOnConnect(Consumer<? super CONF> doOnConnect) {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
 		T dup = duplicate();
@@ -161,6 +164,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnConnected a consumer observing connected events
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T doOnConnected(Consumer<? super Connection> doOnConnected) {
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
 		T dup = duplicate();
@@ -176,6 +180,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnDisconnected a consumer observing disconnected events
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
 		T dup = duplicate();
@@ -192,6 +197,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a new {@link ClientTransport} reference
 	 * @since 1.0.1
 	 */
+	@CheckReturnValue
 	public final T doOnResolve(Consumer<? super Connection> doOnResolve) {
 		Objects.requireNonNull(doOnResolve, "doOnResolve");
 		T dup = duplicate();
@@ -208,6 +214,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a new {@link ClientTransport} reference
 	 * @since 1.0.1
 	 */
+	@CheckReturnValue
 	public final T doAfterResolve(BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve) {
 		Objects.requireNonNull(doAfterResolve, "doAfterResolve");
 		T dup = duplicate();
@@ -225,6 +232,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a new {@link ClientTransport} reference
 	 * @since 1.0.1
 	 */
+	@CheckReturnValue
 	public final T doOnResolveError(BiConsumer<? super Connection, ? super Throwable> doOnResolveError) {
 		Objects.requireNonNull(doOnResolveError, "doOnResolveError");
 		T dup = duplicate();
@@ -241,6 +249,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param host the host to connect to
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T host(String host) {
 		Objects.requireNonNull(host, "host");
 		return remoteAddress(() -> AddressUtils.updateHost(configuration().remoteAddress(), host));
@@ -254,6 +263,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 *
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T noProxy() {
 		if (configuration().hasProxy()) {
 			T dup = duplicate();
@@ -275,6 +285,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param port the port to connect to
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T port(int port) {
 		return remoteAddress(() -> AddressUtils.updatePort(configuration().remoteAddress(), port));
 	}
@@ -294,6 +305,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @see #resolver(AddressResolverGroup)
 	 * @see #resolver(Consumer)
 	 */
+	@CheckReturnValue
 	public T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		Objects.requireNonNull(proxyOptions, "proxyOptions");
 		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
@@ -340,6 +352,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @see #resolver(AddressResolverGroup)
 	 * @see #resolver(Consumer)
 	 */
+	@CheckReturnValue
 	public final T proxyWithSystemProperties() {
 		return proxyWithSystemProperties(System.getProperties());
 	}
@@ -360,6 +373,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param remoteAddressSupplier A supplier of the address to connect to.
 	 * @return a new {@link ClientTransport}
 	 */
+	@CheckReturnValue
 	public T remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
 		Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		T dup = duplicate();
@@ -375,6 +389,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a new {@link ClientTransport}
 	 * @since 1.2.5
 	 */
+	@CheckReturnValue
 	public T resolvedAddressesSelector(ResolvedAddressSelector<? super CONF> resolvedAddressesSelector) {
 		Objects.requireNonNull(resolvedAddressesSelector, "resolvedAddressesSelector");
 		T dup = duplicate();
@@ -394,6 +409,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param resolver the new {@link AddressResolverGroup}
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T resolver(AddressResolverGroup<?> resolver) {
 		Objects.requireNonNull(resolver, "resolver");
 		T dup = duplicate();
@@ -414,6 +430,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param nameResolverSpec the name resolver callback
 	 * @return a new {@link ClientTransport} reference
 	 */
+	@CheckReturnValue
 	public T resolver(Consumer<NameResolverProvider.NameResolverSpec> nameResolverSpec) {
 		Objects.requireNonNull(nameResolverSpec, "nameResolverSpec");
 		NameResolverProvider.Build builder = new NameResolverProvider.Build();
@@ -432,6 +449,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	@Override
+	@CheckReturnValue
 	public T runOn(LoopResources loopResources, boolean preferNative) {
 		T dup = super.runOn(loopResources, preferNative);
 		CONF conf = dup.configuration();
@@ -460,6 +478,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a {@link Mono} representing the completion of the warmup
 	 * @since 1.0.3
 	 */
+	@CheckReturnValue
 	public Mono<Void> warmup() {
 		return Mono.fromRunnable(() -> {
 			configuration().eventLoopGroup();

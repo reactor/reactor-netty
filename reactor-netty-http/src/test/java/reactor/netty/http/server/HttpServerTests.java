@@ -2219,7 +2219,8 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
+	// intentional: configuration() is called only to trigger UnsupportedOperationException, its return value is unused by design
+	@SuppressWarnings({"deprecation", "CheckReturnValue"})
 	void testTcpConfigurationUnsupported_3() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpServer.create()

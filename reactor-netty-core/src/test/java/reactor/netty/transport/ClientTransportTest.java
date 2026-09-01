@@ -222,13 +222,13 @@ class ClientTransportTest {
 	@Test
 	void proxyOverriddenWithNullIfSystemPropertiesHaveNoProxySet() {
 		TestClientTransport transport = createTestTransportForProxy();
-		transport.proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host("proxy").port(8080));
+		transport = transport.proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host("proxy").port(8080));
 		TestClientTransportConfig configuration1 = transport.configuration();
 		assertThat(configuration1.proxyProvider).isNull();
 		assertThat(configuration1.proxyProviderSupplier).isNotNull();
 		assertThat(configuration1.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 
-		transport.proxyWithSystemProperties(new Properties());
+		transport = transport.proxyWithSystemProperties(new Properties());
 		TestClientTransportConfig configuration2 = transport.configuration();
 		assertThat(configuration2.proxyProvider).isNull();
 		assertThat(configuration2.proxyProviderSupplier).isNull();
@@ -243,7 +243,7 @@ class ClientTransportTest {
 		assertThat(configuration1.proxyProviderSupplier).isNull();
 		assertThat(configuration1.resolver()).isNull();
 
-		transport.proxyWithSystemProperties(new Properties());
+		transport = transport.proxyWithSystemProperties(new Properties());
 		TestClientTransportConfig configuration2 = transport.configuration();
 		assertThat(configuration2.proxyProvider).isNull();
 		assertThat(configuration2.proxyProviderSupplier).isNull();
@@ -364,7 +364,7 @@ class ClientTransportTest {
 
 		@Override
 		protected TestClientTransport duplicate() {
-			return new TestClientTransport(this.connect, this.config);
+			return new TestClientTransport(this.connect, this.config != null ? new TestClientTransportConfig(this.config) : this.config);
 		}
 	}
 
@@ -375,6 +375,10 @@ class ClientTransportTest {
 		TestClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 				Supplier<? extends SocketAddress> remoteAddress) {
 			super(connectionProvider, options, remoteAddress);
+		}
+
+		TestClientTransportConfig(TestClientTransportConfig parent) {
+			super(parent);
 		}
 
 		@Override
