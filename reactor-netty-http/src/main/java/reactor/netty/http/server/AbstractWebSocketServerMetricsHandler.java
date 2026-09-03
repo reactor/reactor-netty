@@ -1,0 +1,249 @@
+/*
+ * Copyright (c) 2026 VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package reactor.netty.http.server;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import reactor.util.context.ContextView;
+import reactor.util.Logger;
+import reactor.util.Loggers;
+
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import static reactor.netty.ReactorNetty.format;
+
+/**
+ * {@link ChannelDuplexHandler} for handling WebSocket {@link HttpServer} metrics.
+ *
+ * @author LivingLikeKrillin
+ * @since 1.3.7
+ */
+abstract class AbstractWebSocketServerMetricsHandler extends ChannelDuplexHandler {
+
+	private static final Logger log = Loggers.getLogger(AbstractWebSocketServerMetricsHandler.class);
+
+	final String method;
+	final SocketAddress remoteAddress;
+
+	final String path;
+
+	final ContextView contextView;
+
+	long dataReceived;
+
+	long dataSent;
+
+	long dataReceivedTime;
+
+	long dataSentTime;
+
+	long connectionStartTime;
+
+	long handshakeStartTime;
+
+	volatile int handshakeFinalized;
+
+	protected AbstractWebSocketServerMetricsHandler(SocketAddress remoteAddress, String path, ContextView contextView,
+			String method) {
+		this.method = method;
+		this.path = path;
+		this.contextView = contextView;
+		this.remoteAddress = remoteAddress;
+	}
+
+	@Override
+	public boolean isSharable() {
+		return false;
+	}
+
+	@Override
+	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+		super.handlerAdded(ctx);
+		connectionStartTime = System.nanoTime();
+	}
+
+	@Override
+	public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+		try {
+			if (connectionStartTime > 0) {
+				recordConnectionClosed();
+			}
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+			}
+		}
+		super.handlerRemoved(ctx);
+	}
+
+	void startHandshake(Channel channel) {
+		handshakeStartTime = System.nanoTime();
+	}
+
+	void recordHandshakeComplete(Channel channel, String status) {
+		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
+			return;
+		}
+		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
+		recorder().recordWebSocketHandshakeTime(remoteAddress, path, status, time);
+	}
+
+	void recordHandshakeFailure(Channel channel) {
+		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
+			return;
+		}
+		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
+		recorder().recordWebSocketHandshakeTime(remoteAddress, path, "ERROR", time);
+	}
+
+	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+		try {
+			if (msg instanceof WebSocketFrame) {
+				WebSocketFrame frame = (WebSocketFrame) msg;
+				if (isDataFrame(frame)) {
+					if (dataSentTime == 0) {
+						dataSentTime = System.nanoTime();
+					}
+					dataSent += extractProcessedDataFromBuffer(frame);
+
+					if (frame.isFinalFragment()) {
+						// Snapshot and reset the shared accumulators BEFORE registering the
+						// asynchronous write-completion listener. Otherwise, a subsequent message
+						// written before this listener fires mutates dataSent/dataSentTime and
+						// corrupts this message's byte/time attribution.
+						long sentBytes = dataSent;
+						long sentTimeNanos = dataSentTime;
+						dataSent = 0;
+						dataSentTime = 0;
+						// VoidChannelPromise does not support addListener, unvoid to ensure the listener fires
+						promise = promise.unvoid();
+						promise.addListener(f -> {
+							try {
+								recordWrite(remoteAddress, sentBytes, sentTimeNanos);
+							}
+							catch (RuntimeException e) {
+								if (log.isWarnEnabled()) {
+									log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+								}
+							}
+						});
+					}
+				}
+			}
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+			}
+		}
+
+		//"FutureReturnValueIgnored" this is deliberate
+		ctx.write(msg, promise);
+	}
+
+	@Override
+	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+		try {
+			if (msg instanceof WebSocketFrame) {
+				WebSocketFrame frame = (WebSocketFrame) msg;
+				if (isDataFrame(frame)) {
+					if (dataReceivedTime == 0) {
+						dataReceivedTime = System.nanoTime();
+					}
+					dataReceived += extractProcessedDataFromBuffer(frame);
+
+					if (frame.isFinalFragment()) {
+						// dataReceived is reset inside recordRead
+						recordRead(remoteAddress);
+						dataReceivedTime = 0;
+					}
+				}
+			}
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+			}
+		}
+
+		ctx.fireChannelRead(msg);
+	}
+
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+		try {
+			recordException();
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+			}
+		}
+
+		ctx.fireExceptionCaught(cause);
+	}
+
+	static boolean isDataFrame(WebSocketFrame msg) {
+		return !(msg instanceof CloseWebSocketFrame) &&
+				!(msg instanceof PingWebSocketFrame) &&
+				!(msg instanceof PongWebSocketFrame);
+	}
+
+	private static long extractProcessedDataFromBuffer(WebSocketFrame msg) {
+		return msg.content().readableBytes();
+	}
+
+	protected abstract WebSocketServerMetricsRecorder recorder();
+
+	protected void recordConnectionClosed() {
+		Duration duration = Duration.ofNanos(System.nanoTime() - connectionStartTime);
+		recorder().recordWebSocketConnectionDuration(remoteAddress, path, duration);
+	}
+
+	protected void recordException() {
+		recorder().incrementErrorsCount(remoteAddress, path);
+	}
+
+	protected void recordRead(SocketAddress address) {
+		Duration duration = Duration.ofNanos(System.nanoTime() - dataReceivedTime);
+		recorder().recordDataReceivedTime(path, method, duration);
+
+		recorder().recordDataReceived(address, path, dataReceived);
+		dataReceived = 0;
+	}
+
+	protected void recordWrite(SocketAddress address, long sentBytes, long sentTimeNanos) {
+		Duration duration = Duration.ofNanos(System.nanoTime() - sentTimeNanos);
+		recorder().recordDataSentTime(path, method, "n/a", duration);
+
+		recorder().recordDataSent(address, path, sentBytes);
+	}
+
+	static final AtomicIntegerFieldUpdater<AbstractWebSocketServerMetricsHandler> HANDSHAKE_FINALIZED =
+			AtomicIntegerFieldUpdater.newUpdater(AbstractWebSocketServerMetricsHandler.class, "handshakeFinalized");
+
+}
