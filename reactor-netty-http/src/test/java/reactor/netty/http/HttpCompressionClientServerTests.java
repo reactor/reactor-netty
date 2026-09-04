@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
@@ -837,5 +838,35 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		final byte[] decompressedData = com.github.luben.zstd.Zstd.decompress(compressedData, 1_000);
 		assertThat(decompressedData).isNotEmpty();
 		assertThat(new String(decompressedData, Charset.defaultCharset())).isEqualTo("reply");
+	}
+
+	@ParameterizedCompressionTest
+	void serverCompressionEnabledWithMaxPipeline(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.compress(true)
+				      .compressOptions(16)
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow(Duration.ofSeconds(10));
+
+		//don't activate compression on the client options to avoid auto-handling (which removes the header)
+		//edit the header manually to attempt to trigger compression on server side
+		Flux.range(1, 16)
+		    .flatMap(i ->
+		            client.port(disposableServer.port())
+		                  .headers(h -> h.add("Accept-Encoding", "gzip"))
+		                  .post()
+		                  .uri("/test")
+		                  .send(ByteBufFlux.fromString(Mono.just("hello")))
+		                  .responseSingle((res, byteBufFlux) -> byteBufFlux.asString()
+		                                                                   .zipWith(Mono.just(res.responseHeaders()))))
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .assertNext(list -> assertThat(list).allMatch(t ->
+		            //check the server didn't send the gzip header, only 'content-length'
+		            t.getT2().get("content-encoding").equals("gzip") &&
+		                //check the server does not sent plain text
+		                !"reply".equals(t.getT1())))
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(10));
 	}
 }
