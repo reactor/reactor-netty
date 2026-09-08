@@ -208,9 +208,11 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 		               .addListener(f -> {
 		                   markPersistent(false);
 		                   if (!f.isSuccess()) {
-		                       recordHandshakeFailure(channel);
+		                       onHandshakeFailure(channel, f.cause());
 		                   }
-		                   channel.read();
+		                   else {
+		                       channel.read();
+		                   }
 		               });
 	}
 
