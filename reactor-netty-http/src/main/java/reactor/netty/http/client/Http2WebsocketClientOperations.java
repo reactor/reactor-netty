@@ -57,8 +57,12 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncod
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil;
 import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2HeadersFrame;
+import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty.handler.codec.http2.HttpConversionUtil;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 import org.jspecify.annotations.Nullable;
@@ -497,7 +501,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 				return promise;
 			}
 
-			pipeline.addBefore(codec.name(), ProtocolHeaderHandler.NAME, ProtocolHeaderHandler.INSTANCE);
+			pipeline.addAfter(codec.name(), HandshakeRequestEncoder.NAME, HandshakeRequestEncoder.INSTANCE);
 
 			HttpRequest request = newHandshakeRequest();
 
@@ -622,9 +626,9 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			return schemePrefix + host;
 		}
 
-		static final class ProtocolHeaderHandler extends ChannelOutboundHandlerAdapter {
-			static final ProtocolHeaderHandler INSTANCE = new ProtocolHeaderHandler();
-			static final String NAME = LEFT + "protocolHeaderHandler";
+		static final class HandshakeRequestEncoder extends ChannelOutboundHandlerAdapter {
+			static final HandshakeRequestEncoder INSTANCE = new HandshakeRequestEncoder();
+			static final String NAME = LEFT + "wsHandshakeRequestEncoder";
 
 			@Override
 			public boolean isSharable() {
@@ -634,12 +638,34 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			@Override
 			@SuppressWarnings("FutureReturnValueIgnored")
 			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-				if (msg instanceof Http2HeadersFrame) {
-					((Http2HeadersFrame) msg).headers().set(Http2Headers.PseudoHeaderName.PROTOCOL.value(), HttpHeaderValues.WEBSOCKET);
+				if (msg instanceof HttpRequest) {
+					Http2Headers http2Headers = newHandshakeHeaders((HttpRequest) msg, ctx.channel());
 					ctx.pipeline().remove(this);
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(new DefaultHttp2HeadersFrame(http2Headers, false), promise);
 				}
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
+				else {
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(msg, promise);
+				}
+			}
+
+			static Http2Headers newHandshakeHeaders(HttpRequest request, Channel channel) {
+				HttpHeaders headers = request.headers();
+				Http2Headers result = new DefaultHttp2Headers(true, headers.size() + 5);
+				result.method(request.method().asciiName());
+				result.path(request.uri());
+				result.authority(headers.get(HttpHeaderNames.HOST));
+				headers.remove(HttpHeaderNames.HOST);
+				result.scheme(schemeValue(channel));
+				result.set(Http2Headers.PseudoHeaderName.PROTOCOL.value(), HttpHeaderValues.WEBSOCKET);
+				HttpConversionUtil.toHttp2Headers(headers, result);
+				return result;
+			}
+
+			static CharSequence schemeValue(Channel channel) {
+				Channel parent = channel instanceof Http2StreamChannel ? channel.parent() : channel;
+				return parent.pipeline().get(SslHandler.class) != null ? HttpScheme.HTTPS.name() : HttpScheme.HTTP.name();
 			}
 		}
 
