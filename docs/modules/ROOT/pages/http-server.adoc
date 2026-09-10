@@ -723,6 +723,57 @@ include::{examples-dir}/metrics/custom/Application.java[tags=snippet-application
 ----
 <1> Enables HTTP server metrics and provides {javadoc}/reactor/netty/http/server/HttpServerMetricsRecorder.html[`HttpServerMetricsRecorder`] implementation.
 
+[[websocket-metrics]]
+=== WebSocket Metrics
+When the connection is upgraded to a `WebSocket`, the HTTP server metrics handler stops recording the HTTP
+request/response metrics (it keeps recording the connection and stream metrics), and a dedicated
+`WebSocket` server metrics handler is installed alongside it. From that point on, the `WebSocket` traffic is
+exposed with a prefix of `reactor.netty.websocket.server`.
+
+The following table provides information for the `WebSocket` server metrics:
+
+[width="100%",options="header"]
+|=======
+| metric name | type | tags | description
+| reactor.netty.websocket.server.handshake.time | Timer | `uri`, `status` | Time spent for the `WebSocket` opening handshake.
+| reactor.netty.websocket.server.connection.duration | Timer | `uri` | Time spent for the lifetime of the `WebSocket` connection.
+| reactor.netty.websocket.server.data.received | DistributionSummary | `uri` | Amount of the data received, in bytes.
+| reactor.netty.websocket.server.data.sent | DistributionSummary | `uri` | Amount of the data sent, in bytes.
+| reactor.netty.websocket.server.data.received.time | Timer | `uri` | Time spent in consuming incoming data.
+| reactor.netty.websocket.server.data.sent.time | Timer | `uri` | Time spent in sending outgoing data.
+| reactor.netty.websocket.server.errors | Counter | `uri` | Number of errors that occurred, both pipeline exceptions (for example, protocol/codec errors reaching `exceptionCaught`) and application errors raised while sending the `WebSocket` outbound (for example, an error signal from the handler's outbound `Publisher`).
+|=======
+
+The four `data.*` meters are recorded once per message, when its final frame is processed. Control frames
+(Close, Ping, Pong) are excluded from all four.
+
+The `status` tag on `handshake.time` takes one of three values: `101` (a successful HTTP/1.1 upgrade),
+`200` (a successful HTTP/2 upgrade per RFC 8441 Extended CONNECT), or `ERROR` (the handshake failed
+after the `WebSocket` metrics handler was installed, see the note below). A handshake success-rate query
+must match both `101` and `200` to account for both protocols.
+
+The `connection.duration` meter is recorded from the installation of the `WebSocket` metrics handler, which
+happens before the handshake runs, until the handler is removed from the pipeline. A handshake that fails
+after that point is therefore also recorded, and as this meter has no `status` tag it is not distinguishable
+from an established session.
+
+NOTE: Pre-upgrade rejections, such as an unsupported `WebSocket` version on HTTP/1.1 or an invalid
+Extended CONNECT request on HTTP/2, are answered before the `WebSocket` metrics handler is installed.
+They are therefore not reflected in any `reactor.netty.websocket.server` meter.
+
+NOTE: As with the `HTTP` server metrics above, the `uri` tag value is produced by the configured `uriTagValue` mapper
+(see the `metrics(...)` example in the metrics section above). Convert real URIs to templated URIs whenever possible and
+apply an upper limit for the meters with `uri` tags, to avoid a memory and CPU overhead from unbounded tag cardinality.
+A `MeterFilter` that caps the `HTTP` server prefix does not cover these meters, so add one for
+`reactor.netty.websocket.server` as well.
+
+The same recorder customization applies: when an integration with a system other than `Micrometer` is needed,
+provide your own {javadoc}/reactor/netty/http/server/WebSocketServerMetricsRecorder.html[`WebSocketServerMetricsRecorder`] implementation.
+A recorder that implements only
+{javadoc}/reactor/netty/http/server/HttpServerMetricsRecorder.html[`HttpServerMetricsRecorder`] still receives the
+`WebSocket` data and error recordings through the methods it inherits from it, so that traffic is reported with the
+`WebSocket` `uri`, while the handshake and connection duration are not reported at all.
+
 [[tracing]]
 == Tracing
 The HTTP server supports built-in integration with https://micrometer.io/docs/tracing[`Micrometer Tracing`].

@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.server;
 
+import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
@@ -66,6 +67,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Stephane Maldini
  * @author Simon Baslé
+ * @author LivingLikeKrillin
  */
 class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound {
@@ -74,6 +76,8 @@ class WebsocketServerOperations extends HttpServerOperations
 	ChannelPromise                            handshakerResult;
 	final Sinks.One<WebSocketCloseStatus>     onCloseState;
 	final boolean                             proxyPing;
+
+	@Nullable AbstractWebSocketServerMetricsHandler micrometerWsHandler;
 
 	volatile int closeSent;
 
@@ -107,6 +111,7 @@ class WebsocketServerOperations extends HttpServerOperations
 			if (handler != null) {
 				replaceHandler(NettyPipeline.HttpMetricsHandler,
 						new WebsocketHttpServerMetricsHandler((AbstractHttpServerMetricsHandler) handler));
+				swapMetricsHandler((AbstractHttpServerMetricsHandler) handler, replaced);
 			}
 
 			handshakerResult = channel.newPromise();
@@ -150,6 +155,7 @@ class WebsocketServerOperations extends HttpServerOperations
 				}
 			}
 
+			recordHandshakeStart(channel);
 			handshakerHttp11.handshake(channel,
 			                     request,
 			                     replaced.responseHeaders
@@ -163,6 +169,12 @@ class WebsocketServerOperations extends HttpServerOperations
 			              }
 			              else if (log.isDebugEnabled()) {
 			                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
+			              }
+			              if (f.isSuccess()) {
+			                  recordHandshakeComplete(channel, "101");
+			              }
+			              else {
+			                  recordHandshakeFailure(channel);
 			              }
 			          });
 		}
@@ -218,6 +230,10 @@ class WebsocketServerOperations extends HttpServerOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
+			// An application error flowing through Reactor (WebsocketSubscriber.onError ->
+			// ChannelOperations.onError -> this method) never reaches exceptionCaught, so it would
+			// otherwise never be counted by the errors meter. Record it here, once, before closing.
+			recordOutboundError(channel());
 			sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.PROTOCOL_ERROR),
 					f -> terminate());
 		}
@@ -316,6 +332,116 @@ class WebsocketServerOperations extends HttpServerOperations
 
 	Subscriber<Void> websocketSubscriber(ContextView contextView) {
 		return new WebsocketSubscriber(this, Context.of(contextView));
+	}
+
+	void swapMetricsHandler(AbstractHttpServerMetricsHandler handler, HttpServerOperations replaced) {
+		Channel channel = channel();
+
+		String rawPath = resolvePath(this);
+		String resolvedPath = handler.uriTagValue != null ? handler.uriTagValue.apply(rawPath) : rawPath;
+		ContextView ctxView = currentContext();
+		SocketAddress remoteAddress = channel.remoteAddress();
+		String httpMethod = replaced.method().name();
+
+		AbstractWebSocketServerMetricsHandler wsHandler;
+		if (handler instanceof MicrometerHttpServerMetricsHandler) {
+			wsHandler = new MicrometerWebSocketServerMetricsHandler(
+					MicrometerWebSocketServerMetricsRecorder.INSTANCE, remoteAddress, resolvedPath, ctxView, httpMethod);
+		}
+		else if (handler instanceof ContextAwareHttpServerMetricsHandler) {
+			ContextAwareHttpServerMetricsHandler ctxHandler = (ContextAwareHttpServerMetricsHandler) handler;
+			ContextAwareWebSocketServerMetricsRecorder wsRecorder;
+			if (ctxHandler.recorder instanceof ContextAwareWebSocketServerMetricsRecorder) {
+				wsRecorder = (ContextAwareWebSocketServerMetricsRecorder) ctxHandler.recorder;
+			}
+			else {
+				wsRecorder = new DefaultContextAwareWebSocketServerMetricsRecorder(ctxHandler.recorder);
+			}
+			wsHandler = new ContextAwareWebSocketServerMetricsHandler(
+					wsRecorder, remoteAddress, resolvedPath, ctxView, httpMethod);
+		}
+		else if (handler instanceof HttpServerMetricsHandler) {
+			HttpServerMetricsHandler plainHandler = (HttpServerMetricsHandler) handler;
+			WebSocketServerMetricsRecorder wsRecorder;
+			if (plainHandler.recorder instanceof WebSocketServerMetricsRecorder) {
+				wsRecorder = (WebSocketServerMetricsRecorder) plainHandler.recorder;
+			}
+			else {
+				wsRecorder = new DefaultWebSocketServerMetricsRecorder(plainHandler.recorder);
+			}
+			wsHandler = new WebSocketServerMetricsHandler(
+					wsRecorder, remoteAddress, resolvedPath, ctxView, httpMethod);
+		}
+		else {
+			return;
+		}
+		this.micrometerWsHandler = wsHandler;
+		channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.WsMetricsHandler, wsHandler);
+	}
+
+	void recordHandshakeStart(Channel channel) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.startHandshake(channel);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	void recordHandshakeComplete(Channel channel, String status) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordHandshakeComplete(channel, status);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	void recordHandshakeFailure(Channel channel) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordHandshakeFailure(channel);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	void recordOutboundError(Channel channel) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordException();
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	static String resolvePath(HttpServerOperations ops) {
+		try {
+			return ops.fullPath();
+		}
+		catch (Exception e) {
+			return "/bad-request";
+		}
 	}
 
 	static final AtomicIntegerFieldUpdater<WebsocketServerOperations> CLOSE_SENT =

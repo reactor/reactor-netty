@@ -70,6 +70,14 @@ public class Metrics {
 	public static final String WEBSOCKET_CLIENT_PREFIX = "reactor.netty.websocket.client";
 
 	/**
+	 * Name prefix that will be used for the WebSocket server's metrics
+	 * registered in Micrometer's global registry.
+	 *
+	 * @since 1.3.7
+	 */
+	public static final String WEBSOCKET_SERVER_PREFIX = "reactor.netty.websocket.server";
+
+	/**
 	 * Name prefix that will be used for the TCP server's metrics
 	 * registered in Micrometer's global registry.
 	 */

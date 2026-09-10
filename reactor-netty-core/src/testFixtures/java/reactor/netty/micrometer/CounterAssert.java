@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,15 @@ public final class CounterAssert extends AbstractAssert<CounterAssert, Counter> 
 
 	public static CounterAssert assertCounter(MeterRegistry registry, String name, String... tags) {
 		return new CounterAssert(registry.find(name).tags(tags).counter(), CounterAssert.class);
+	}
+
+	public CounterAssert hasCountEqualTo(double expected) {
+		isNotNull();
+		double count = actual.count();
+		if (count != expected) {
+			failWithMessage("%nExpecting count:%n  %s%nto be equal to:%n  %s", count, expected);
+		}
+		return this;
 	}
 
 	public CounterAssert hasCountGreaterThanOrEqualTo(double expected) {
