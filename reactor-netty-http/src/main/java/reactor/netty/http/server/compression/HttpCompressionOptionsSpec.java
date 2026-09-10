@@ -87,8 +87,11 @@ public final class HttpCompressionOptionsSpec {
 	}
 
 	/**
-	 * The maximum allowed depth of the encoding pipeline queue, the default
-	 * value is set to {@link DEFAULT_MAX_PIPELINE_DEPTH}.
+	 * Returns the maximum allowed depth of the encoding pipeline queue, the default
+	 * value is set to {@link HttpContentEncoder#DEFAULT_MAX_PIPELINE_DEPTH}.
+	 *
+	 * @return the maximum allowed depth of the encoding pipeline queue
+	 * @since 1.3.8
 	 */
 	public int maxPipelineDepth() {
 		return this.maxPipelineDepth;
