@@ -467,6 +467,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		standardMethods.add("POST");
 		standardMethods.add("PUT");
 		standardMethods.add("PATCH");
+		standardMethods.add("QUERY");
 		standardMethods.add("DELETE");
 		standardMethods.add("OPTIONS");
 		standardMethods.add("TRACE");
