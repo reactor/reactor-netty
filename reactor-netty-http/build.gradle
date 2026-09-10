@@ -181,6 +181,7 @@ dependencies {
 	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	contextPropagationTestImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
+	contextPropagationTestImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	contextPropagationTestImplementation "io.netty:netty-pkitesting:$nettyVersion"
 	contextPropagationTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

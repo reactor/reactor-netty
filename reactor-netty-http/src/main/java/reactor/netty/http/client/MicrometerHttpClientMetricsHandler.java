@@ -36,9 +36,9 @@ import java.util.function.Supplier;
 import static java.util.Objects.requireNonNull;
 import static reactor.netty.Metrics.NA;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
-import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.UNKNOWN;
 import static reactor.netty.Metrics.formatSocketAddress;
+import static reactor.netty.Metrics.observationLifecycleRequired;
 import static reactor.netty.Metrics.updateChannelContext;
 import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.HTTP_STATUS_CODE;
@@ -108,14 +108,24 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		recorder.recordDataReceived(remoteAddressStr, proxyAddressStr, path, dataReceived);
 
-		// Cannot invoke the recorder anymore:
-		// 1. The recorder is one instance only, it is invoked for all requests that can happen
-		// 2. The recorder does not have knowledge about request lifecycle
-		//
-		// Move the implementation from the recorder here
-		responseTimeObservation.stop();
+		if (responseTimeObservation != null) {
+			// Cannot invoke the recorder anymore:
+			// 1. The recorder is one instance only, it is invoked for all requests that can happen
+			// 2. The recorder does not have knowledge about request lifecycle
+			//
+			// Move the implementation from the recorder here
+			responseTimeObservation.stop();
 
-		setChannelContext(channel, parentContextView);
+			setChannelContext(channel, parentContextView);
+		}
+		else {
+			// startWrite skipped the Observation (no tracing consumer configured); record the timer directly.
+			Timer responseTime = recorder.getResponseTimeTimer(recorder.responseTimeName,
+					remoteAddressStr, proxyAddressStr, path, method, status);
+			if (responseTime != null) {
+				responseTime.record(Duration.ofNanos(System.nanoTime() - dataSentTime));
+			}
+		}
 	}
 
 	@Override
@@ -127,11 +137,15 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	}
 
 	@Override
+	protected void reset() {
+		super.reset();
+		clearResponseTimeState();
+	}
+
 	@SuppressWarnings("NullAway")
 	// Deliberately suppress "NullAway"
 	// This is a lazy initialization
-	protected void reset() {
-		super.reset();
+	private void clearResponseTimeState() {
 		responseTimeHandlerContext = null;
 		responseTimeObservation = null;
 		parentContextView = null;
@@ -142,8 +156,10 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	protected void startRead(HttpResponse msg) {
 		super.startRead(msg);
 
-		responseTimeHandlerContext.setResponse(msg);
-		responseTimeHandlerContext.status = requireNonNull(status);
+		if (responseTimeHandlerContext != null) {
+			responseTimeHandlerContext.setResponse(msg);
+			responseTimeHandlerContext.status = requireNonNull(status);
+		}
 	}
 
 	// writing the request
@@ -151,10 +167,21 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	protected void startWrite(HttpRequest msg, Channel channel) {
 		super.startWrite(msg, channel);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, requireNonNull(path), remoteAddress, proxyAddress);
-		responseTimeObservation = Observation.createNotStarted(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
-		parentContextView = updateChannelContext(channel, responseTimeObservation);
-		responseTimeObservation.start();
+		// Run the full Observation lifecycle only when a tracing consumer is configured; otherwise recordRead
+		// records the response-time timer directly. Both paths tag the remote with remoteAddressStr, so the
+		// recorded meter is identical either way.
+		if (observationLifecycleRequired()) {
+			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, requireNonNull(path), remoteAddressStr, remoteAddress, proxyAddress);
+			responseTimeObservation = Observation.createNotStarted(recorder.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
+			parentContextView = updateChannelContext(channel, responseTimeObservation);
+			responseTimeObservation.start();
+		}
+		else {
+			// Clear any observation a prior request left set: recordRead uses a null observation as the
+			// "bypass" latch, and reset() is skipped when a recorder call throws, so stale state here would
+			// make this request stop the previous observation and drop its own timer.
+			clearResponseTimeState();
+		}
 	}
 
 	/*
@@ -170,6 +197,8 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		static final String TYPE = "client";
 
 		final String method;
+		// Remote-address tag for the response-time meter; shares formatting with every other client meter.
+		final String remoteAddressStr;
 		final String netPeerName;
 		final String netPeerPort;
 		final String path;
@@ -180,10 +209,11 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		String status = UNKNOWN;
 
 		ResponseTimeHandlerContext(MicrometerHttpClientMetricsRecorder recorder, HttpRequest request, String path,
-				SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress) {
+				String remoteAddressStr, SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress) {
 			super((carrier, key, value) -> Objects.requireNonNull(carrier).headers().set(key, value));
 			this.recorder = recorder;
 			this.method = request.method().name();
+			this.remoteAddressStr = remoteAddressStr;
 			if (remoteAddress instanceof InetSocketAddress) {
 				InetSocketAddress address = (InetSocketAddress) remoteAddress;
 				this.netPeerName = address.getHostString();
@@ -206,7 +236,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public @Nullable Timer getTimer() {
-			return recorder.getResponseTimeTimer(recorder.name() + RESPONSE_TIME, netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, path, method, status);
+			return recorder.getResponseTimeTimer(recorder.responseTimeName, remoteAddressStr, proxyAddress == null ? NA : proxyAddress, path, method, status);
 		}
 
 		@Override
@@ -218,7 +248,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), remoteAddressStr,
 					PROXY_ADDRESS.asString(), proxyAddress == null ? NA : proxyAddress,
 					STATUS.asString(), status, URI.asString(), path);
 		}
