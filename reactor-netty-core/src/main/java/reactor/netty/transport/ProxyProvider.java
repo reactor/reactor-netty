@@ -41,7 +41,9 @@ import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.util.internal.StringUtil;
 import org.jspecify.annotations.Nullable;
+import reactor.netty.ReactorNetty;
 import reactor.netty.NettyPipeline;
+import reactor.netty.tcp.SslProvider;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.PROXY_AUTHORIZATION;
@@ -69,6 +71,7 @@ public final class ProxyProvider {
 	final @Nullable HttpHeaders httpHeaders;
 	final @Nullable HttpHeaders httpHeadersNoProxyAuthorization;
 	final @Nullable Integer proxyAuthorizationHeaderUID;
+	final @Nullable SslProvider sslProvider;
 	final Proxy type;
 	final long connectTimeoutMillis;
 
@@ -112,6 +115,7 @@ public final class ProxyProvider {
 			throw new IllegalArgumentException("Proxy type is not specified");
 		}
 		this.connectTimeoutMillis = builder.connectTimeoutMillis;
+		this.sslProvider = builder.sslProvider;
 	}
 
 	/**
@@ -219,6 +223,9 @@ public final class ProxyProvider {
 		Objects.requireNonNull(channel, "channel");
 		ChannelPipeline pipeline = channel.pipeline();
 		pipeline.addFirst(NettyPipeline.ProxyHandler, newProxyHandler());
+		if (sslProvider != null) {
+			sslProvider.addProxySslHandler(channel, address, PROXY_SSL_DEBUG);
+		}
 		// For SOCKS proxy, the netty SOCKS handlers may register listeners in channel promises, so we need to register a
 		// special handler which ensures that any VoidPromise will be converted to "unvoided" promises (for support of listeners).
 		// Note: an example of a VoidPromise which does not support listeners is the MonoSendMany.SendManyInner promise.
@@ -303,6 +310,8 @@ public final class ProxyProvider {
 	static final LoggingHandler LOGGING_HANDLER =
 			AdvancedByteBufFormat.HEX_DUMP
 					.toLoggingHandler("reactor.netty.proxy", LogLevel.DEBUG, Charset.defaultCharset());
+	static final boolean PROXY_SSL_DEBUG =
+			Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_CLIENT_DEBUG, "false"));
 
 	static final String HTTP_PROXY_HOST = "http.proxyHost";
 	static final String HTTP_PROXY_PORT = "http.proxyPort";
@@ -440,6 +449,7 @@ public final class ProxyProvider {
 		@Nullable String password;
 		@Nullable Function<? super String, ? extends String> passwordFunction;
 		@Nullable String host;
+		@Nullable SslProvider sslProvider;
 		int port;
 		@Nullable Supplier<? extends SocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
@@ -553,6 +563,21 @@ public final class ProxyProvider {
 		@Override
 		public Builder connectTimeoutMillis(long connectTimeoutMillis) {
 			this.connectTimeoutMillis = connectTimeoutMillis;
+			return this;
+		}
+
+		@Override
+		public Builder secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+			Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
+			SslProvider.SslContextSpec builder = SslProvider.builder();
+			sslProviderBuilder.accept(builder);
+			this.sslProvider = ((SslProvider.Builder) builder).build();
+			return this;
+		}
+
+		@Override
+		public Builder secure(SslProvider sslProvider) {
+			this.sslProvider = Objects.requireNonNull(sslProvider, "sslProvider");
 			return this;
 		}
 
@@ -788,6 +813,22 @@ public final class ProxyProvider {
 		 * @return {@code this}
 		 */
 		Builder connectTimeoutMillis(long connectTimeoutMillis);
+
+		/**
+		 * Apply SSL configuration customization options for the proxy connection.
+		 *
+		 * @param sslProviderBuilder builder callback for further customization of SslContext
+		 * @return {@code this}
+		 */
+		Builder secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder);
+
+		/**
+		 * Apply an SSL configuration via the passed {@link SslProvider} for the proxy connection.
+		 *
+		 * @param sslProvider the SSL provider
+		 * @return {@code this}
+		 */
+		Builder secure(SslProvider sslProvider);
 
 		/**
 		 * Builds new ProxyProvider.
