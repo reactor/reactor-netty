@@ -1217,6 +1217,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Channel removed from pool"));
 				}
+				pool.poolConfig.metricsRecorder().recordLifetimeDuration(lifeTime());
 				pool.poolConfig.allocationStrategy().returnPermits(1);
 				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, -maxConcurrentStreams);
 				maxConcurrentStreams = 0;
