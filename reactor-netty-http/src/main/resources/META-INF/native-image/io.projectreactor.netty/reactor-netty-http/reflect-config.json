@@ -36,9 +36,9 @@
 	},
 	{
 		"condition": {
-			"typeReachable": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$ProtocolHeaderHandler"
+			"typeReachable": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$HandshakeRequestEncoder"
 		},
-		"name": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$ProtocolHeaderHandler",
+		"name": "reactor.netty.http.client.Http2WebsocketClientOperations$WebsocketClientHandshaker$HandshakeRequestEncoder",
 		"queryAllPublicMethods": true
 	},
 	{
