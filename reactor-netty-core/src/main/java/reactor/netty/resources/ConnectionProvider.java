@@ -940,5 +940,19 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		default void recordPendingAcquireFailure(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
 		}
+
+		/**
+		 * Invoked when a pooled connection is destroyed (e.g. idle-timeout eviction, {@code maxLifeTime}
+		 * expiry, or the remote peer closing it), reporting how long it existed since being allocated.
+		 * Default implementation is a no-op for backwards compatibility.
+		 *
+		 * @param poolName the pool name
+		 * @param id the pool id
+		 * @param remoteAddress the remote address
+		 * @param connectionLifetimeMillis the time, in milliseconds, the connection existed since allocation
+		 * @since 1.4.0
+		 */
+		default void recordConnectionLifetime(String poolName, String id, SocketAddress remoteAddress, long connectionLifetimeMillis) {
+		}
 	}
 }

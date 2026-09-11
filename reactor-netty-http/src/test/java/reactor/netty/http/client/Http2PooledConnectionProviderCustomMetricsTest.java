@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.ssl.SslContext;
@@ -34,11 +35,14 @@ import reactor.netty.resources.ConnectionProvider;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -213,6 +217,78 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	void measureConnectionLifetime() throws InterruptedException {
+		AtomicBoolean isRegistered = new AtomicBoolean();
+		AtomicBoolean isDeregistered = new AtomicBoolean();
+		AtomicReference<@Nullable HttpConnectionPoolMetrics> metrics = new AtomicReference<>();
+
+		disposableServer =
+				createServer()
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslServer))
+				        .handle((req, resp) -> resp.sendString(Mono.just("test")))
+				        .bindNow();
+
+		CustomHttp2MeterRegistrar registrar = new CustomHttp2MeterRegistrar(isRegistered, isDeregistered, metrics);
+		ConnectionProvider pool =
+				ConnectionProvider.builder("custom-pool")
+				                  .metrics(true, () -> registrar)
+				                  .maxConnections(1)
+				                  .maxIdleTime(Duration.ofMillis(200))
+				                  .evictInBackground(Duration.ofMillis(20))
+				                  .build();
+
+		Set<Channel> channels = ConcurrentHashMap.newKeySet();
+		HttpClient httpClient =
+				createClient(pool, disposableServer::address)
+				        .protocol(H2)
+				        .secure(spec -> spec.sslContext(sslClient))
+				        .observe((conn, state) -> {
+				            if (state == STREAM_CONFIGURED) {
+				                // conn.channel() is the per-stream Http2StreamChannel; its parent()
+				                // is the shared, multiplexed physical connection.
+				                Channel channel = conn.channel();
+				                Channel parent = channel.parent();
+				                channels.add(parent != null ? parent : channel);
+				            }
+				        });
+
+		try {
+			// Establish a pooled connection first so we aren't including its
+			// initial connection establishment time in our evaluation.
+			httpClient.get()
+			          .uri("/")
+			          .responseSingle((resp, bytes) -> bytes.asString())
+			          .block(Duration.ofSeconds(5));
+
+			// Track the longest individual stream's wall-clock duration so we can
+			// assert the connection's reported lifetime is not that of single
+			// stream/response.
+			long maxStreamDurationMillis = 0;
+			for (int i = 0; i < 4; i++) {
+				long start = System.currentTimeMillis();
+				httpClient.get()
+				          .uri("/")
+				          .responseSingle((resp, bytes) -> bytes.asString())
+				          .block(Duration.ofSeconds(5));
+				maxStreamDurationMillis = Math.max(maxStreamDurationMillis, System.currentTimeMillis() - start);
+			}
+
+			assertThat(channels).as("all streams reused the same pooled connection").hasSize(1);
+
+			assertThat(registrar.connectionLifetimeLatch.await(5, TimeUnit.SECONDS))
+					.as("connection lifetime latch")
+					.isTrue();
+			assertThat(registrar.connectionLifetimeMillis.get())
+					.as("connection lifetime should outlive any single stream's duration")
+					.isGreaterThan(maxStreamDurationMillis);
+		}
+		finally {
+			pool.disposeLater().block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
 	void testIssue3804() throws Exception {
 		disposableServer =
 				createServer()
@@ -268,6 +344,8 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		final AtomicInteger pendingAcquireFailureCount = new AtomicInteger();
 		final CountDownLatch pendingAcquireSuccessLatch = new CountDownLatch(1);
 		final CountDownLatch pendingAcquireFailureLatch = new CountDownLatch(1);
+		final AtomicLong connectionLifetimeMillis = new AtomicLong(-1);
+		final CountDownLatch connectionLifetimeLatch = new CountDownLatch(1);
 
 		CustomHttp2MeterRegistrar(
 				AtomicBoolean isRegistered,
@@ -300,6 +378,12 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		public void recordPendingAcquireFailure(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
 			pendingAcquireFailureCount.incrementAndGet();
 			pendingAcquireFailureLatch.countDown();
+		}
+
+		@Override
+		public void recordConnectionLifetime(String poolName, String id, SocketAddress remoteAddress, long connectionLifetimeMillis) {
+			this.connectionLifetimeMillis.set(connectionLifetimeMillis);
+			connectionLifetimeLatch.countDown();
 		}
 	}
 }
