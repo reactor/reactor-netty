@@ -1,0 +1,214 @@
+name: Reproducibility across JDK 17 patch releases
+
+on:
+  push:
+    branches:
+      - reproducibility-check
+
+permissions: {}
+
+jobs:
+  compare:
+    name: compare JDK 17.0.11 against JDK 17.0.14
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          # nothing here needs git after the checkout, so do not leave the token in .git/config,
+          # the workspace is copied twice below
+          persist-credentials: false
+
+      - name: copy the checkout for the other two builds
+        run: |
+          cp -a "$GITHUB_WORKSPACE" "$RUNNER_TEMP/second"
+          cp -a "$GITHUB_WORKSPACE" "$RUNNER_TEMP/control"
+
+      - name: set up JDK 8
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+      - run: echo "JDK8=$JAVA_HOME" >> "$GITHUB_ENV"
+
+      - name: set up JDK 11
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - run: echo "JDK11=$JAVA_HOME" >> "$GITHUB_ENV"
+
+      - name: set up JDK 17.0.11
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c
+        with:
+          distribution: 'zulu'
+          java-version: '17.0.11'
+      - run: echo "JDK17_A=$JAVA_HOME" >> "$GITHUB_ENV"
+
+      - name: set up JDK 17.0.14
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c
+        with:
+          distribution: 'zulu'
+          java-version: '17.0.14'
+      - run: echo "JDK17_B=$JAVA_HOME" >> "$GITHUB_ENV"
+
+      # needed by docsZip: the version is not a snapshot, so the antora pdf-extension is enabled
+      # and the build fails if asciidoctor-pdf is not on the PATH
+      - name: Set up Ruby for asciidoctor-pdf
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: 3.3.0
+      - name: Install asciidoctor-pdf / rouge
+        run: gem install asciidoctor-pdf rouge
+
+      - name: build in the workspace with JDK 17.0.11
+        working-directory: ${{ github.workspace }}
+        run: |
+          JAVA_HOME="$JDK17_A" ./gradlew --no-daemon --console=plain --info \
+            -Dorg.gradle.java.installations.auto-detect=false \
+            -Dorg.gradle.java.installations.auto-download=false \
+            -Dorg.gradle.java.installations.paths="$JDK8,$JDK11,$JDK17_A" \
+            assemble sourcesJar javadocJar :reactor-netty:docsZip > "$RUNNER_TEMP/a.log" 2>&1 \
+            || { tail -80 "$RUNNER_TEMP/a.log"; exit 1; }
+          grep -oE "Compiling with toolchain '[^']*'|command '[^']*/bin/javadoc'" \
+            "$RUNNER_TEMP/a.log" | sort -u
+
+      - name: check the docs zip was really produced
+        # otherwise the comparison below would silently skip it and look like a pass
+        run: |
+          found="$( cd "$GITHUB_WORKSPACE" && find . -path '*/build/*-docs.zip' )"
+          if [ -z "$found" ]; then
+            echo "::error ::no docs zip was produced, the comparison would silently skip it"
+            exit 1
+          fi
+          echo "$found"
+
+      - name: build the second copy with JDK 17.0.14
+        working-directory: ${{ runner.temp }}/second
+        run: |
+          JAVA_HOME="$JDK17_B" ./gradlew --no-daemon --console=plain --info \
+            -Dorg.gradle.java.installations.auto-detect=false \
+            -Dorg.gradle.java.installations.auto-download=false \
+            -Dorg.gradle.java.installations.paths="$JDK8,$JDK11,$JDK17_B" \
+            assemble sourcesJar javadocJar :reactor-netty:docsZip > "$RUNNER_TEMP/b.log" 2>&1 \
+            || { tail -80 "$RUNNER_TEMP/b.log"; exit 1; }
+          grep -oE "Compiling with toolchain '[^']*'|command '[^']*/bin/javadoc'" \
+            "$RUNNER_TEMP/b.log" | sort -u
+
+      - name: build the control copy with JDK 17.0.11 again
+        working-directory: ${{ runner.temp }}/control
+        run: |
+          JAVA_HOME="$JDK17_A" ./gradlew --no-daemon --console=plain --info \
+            -Dorg.gradle.java.installations.auto-detect=false \
+            -Dorg.gradle.java.installations.auto-download=false \
+            -Dorg.gradle.java.installations.paths="$JDK8,$JDK11,$JDK17_A" \
+            assemble sourcesJar javadocJar :reactor-netty:docsZip > "$RUNNER_TEMP/c.log" 2>&1 \
+            || { tail -80 "$RUNNER_TEMP/c.log"; exit 1; }
+          grep -oE "Compiling with toolchain '[^']*'|command '[^']*/bin/javadoc'" \
+            "$RUNNER_TEMP/c.log" | sort -u
+
+      - name: compare the artifacts
+        run: |
+          WORK="$RUNNER_TEMP/x"
+
+          compare() {
+            a="$1"; b="$2"; alabel="$3"; blabel="$4"; title="$5"; listfile="$6"
+            n=0
+            d=0
+            : > "$listfile"
+
+            echo "=========================================================================="
+            echo "$title"
+            echo "  A = $alabel"
+            echo "      $a"
+            echo "  B = $blabel"
+            echo "      $b"
+            echo "=========================================================================="
+
+            {
+              echo "## $title"
+              echo
+              echo "| side | build | directory |"
+              echo "| --- | --- | --- |"
+              echo "| A | $alabel | \`$a\` |"
+              echo "| B | $blabel | \`$b\` |"
+              echo
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            while IFS= read -r f; do
+              n=$((n + 1))
+              if cmp -s "$a/$f" "$b/$f"; then
+                echo "same       ${f#./}" | tee -a "$GITHUB_STEP_SUMMARY"
+              else
+                d=$((d + 1))
+                echo "${f#./}" >> "$listfile"
+                echo "DIFFERENT  ${f#./}" | tee -a "$GITHUB_STEP_SUMMARY"
+                rm -rf "$WORK"
+                mkdir -p "$WORK/a" "$WORK/b"
+                ( cd "$WORK/a" && unzip -qo "$a/$f" )
+                ( cd "$WORK/b" && unzip -qo "$b/$f" )
+                # keep track of which side an entry came from, the jquery version for instance
+                # only tells the story if you can see which JDK shipped which
+                diff -rq "$WORK/a" "$WORK/b" 2>&1 \
+                  | sed -e "s#^Files $WORK/a/\(.*\) and .* differ\$#               \1#" \
+                        -e "s#^Only in $WORK/a/\(.*\): \(.*\)\$#               only in A ($alabel): \1/\2#" \
+                        -e "s#^Only in $WORK/a: \(.*\)\$#               only in A ($alabel): \1#" \
+                        -e "s#^Only in $WORK/b/\(.*\): \(.*\)\$#               only in B ($blabel): \1/\2#" \
+                        -e "s#^Only in $WORK/b: \(.*\)\$#               only in B ($blabel): \1#" \
+                  | tee -a "$GITHUB_STEP_SUMMARY" || true
+              fi
+            done < <( cd "$a" && find . \( -path '*/build/libs/*.jar' \
+                                        -o -path '*/build/*-docs.zip' \) | LC_ALL=C sort )
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$d of $n artifacts differ" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          compare "$GITHUB_WORKSPACE" "$RUNNER_TEMP/control" \
+            "workspace, JDK 17.0.11" "control copy, JDK 17.0.11" \
+            "Same JDK twice, from two different directories" "$RUNNER_TEMP/control.list"
+
+          compare "$GITHUB_WORKSPACE" "$RUNNER_TEMP/second" \
+            "workspace, JDK 17.0.11" "second copy, JDK 17.0.14" \
+            "JDK 17.0.11 versus JDK 17.0.14" "$RUNNER_TEMP/jdk.list"
+
+          # artifacts that differ only when the JDK changes, so not the ones that are unstable anyway
+          jdk_only="$( comm -13 <( LC_ALL=C sort "$RUNNER_TEMP/control.list" ) \
+                                <( LC_ALL=C sort "$RUNNER_TEMP/jdk.list" ) )"
+
+          {
+            echo "## Verdict"
+            echo
+            echo "Not reproducible even when both builds use JDK 17.0.11, so for reasons that have"
+            echo "nothing to do with the JDK:"
+            echo '```'
+            sed 's/^/  /' "$RUNNER_TEMP/control.list"
+            echo '```'
+            echo
+            echo "Differ only once the JDK 17 patch release changes, 17.0.11 versus 17.0.14:"
+            echo '```'
+            printf '%s\n' "$jdk_only" | sed 's/^/  /'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "=========================================================================="
+          echo "VERDICT"
+          echo "=========================================================================="
+          echo "not reproducible even when both builds use JDK 17.0.11:"
+          sed 's/^/  /' "$RUNNER_TEMP/control.list"
+          echo
+          echo "differ only once the JDK changes from 17.0.11 to 17.0.14:"
+          printf '%s\n' "$jdk_only" | sed 's/^/  /'
+          echo
+
+          if [ -s "$RUNNER_TEMP/control.list" ]; then
+            echo "::warning ::some artifacts are not reproducible even with the same JDK, so for reasons unrelated to it. The docs zip is expected here, its PDF embeds the creation time."
+          fi
+          if [ -n "$jdk_only" ]; then
+            echo "::error ::artifacts differ between JDK 17.0.11 and JDK 17.0.14, the build is not reproducible across JDK 17 patch releases"
+            exit 1
+          fi
+          if [ -s "$RUNNER_TEMP/control.list" ]; then
+            exit 1
+          fi
+          echo "everything is reproducible"
