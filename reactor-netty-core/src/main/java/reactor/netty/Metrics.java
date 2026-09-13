@@ -17,8 +17,11 @@ package reactor.netty;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.observation.DefaultMeterObservationHandler;
+import io.micrometer.observation.GlobalObservationConvention;
 import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationFilter;
 import io.micrometer.observation.ObservationHandler;
+import io.micrometer.observation.ObservationPredicate;
 import io.micrometer.observation.ObservationRegistry;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
@@ -39,12 +42,16 @@ import java.net.SocketAddress;
 public class Metrics {
 	public static final MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
 	public static final String OBSERVATION_KEY = "micrometer.observation";
-	public static ObservationRegistry OBSERVATION_REGISTRY = ObservationRegistry.create();
+	static final DefaultObservationRegistry DEFAULT_OBSERVATION_REGISTRY = new DefaultObservationRegistry();
+	public static ObservationRegistry OBSERVATION_REGISTRY = DEFAULT_OBSERVATION_REGISTRY;
 	static {
 		OBSERVATION_REGISTRY.observationConfig().observationHandler(
 				new ObservationHandler.FirstMatchingCompositeObservationHandler(
 						new ReactorNettyTimerObservationHandler(REGISTRY),
 						new DefaultMeterObservationHandler(REGISTRY)));
+		// Arm tracking only after the built-in handler is installed, so the baseline registration above
+		// does not count as user customization.
+		DEFAULT_OBSERVATION_REGISTRY.arm();
 	}
 
 
@@ -346,6 +353,23 @@ public class Metrics {
 		return previous;
 	}
 
+	/**
+	 * Whether the built-in metrics recorders must drive their response-time timer through a full
+	 * {@link Observation}. Consumed by Reactor Netty's own recorders; not intended as user API.
+	 * Returns {@code false} only when the {@link ObservationRegistry} is the untouched built-in default
+	 * (no tracing/observation handler, predicate, filter or convention has been registered and the registry
+	 * has not been swapped), in which case the recorder may record the timer directly and skip the per-request
+	 * Observation lifecycle. Any user customization re-engages the lifecycle.
+	 *
+	 * @return {@code true} if the full {@link Observation} lifecycle must run, {@code false} if the timer may
+	 * be recorded directly
+	 * @since 1.4.0
+	 */
+	public static boolean observationLifecycleRequired() {
+		return OBSERVATION_REGISTRY != DEFAULT_OBSERVATION_REGISTRY
+				|| DEFAULT_OBSERVATION_REGISTRY.customized();
+	}
+
 	public static Context updateContext(Context context, Object observation) {
 		return context.hasKey(OBSERVATION_KEY) ? context : context.put(OBSERVATION_KEY, observation);
 	}
@@ -375,5 +399,87 @@ public class Metrics {
 			channel.attr(CONTEXT_VIEW).set(Context.of(OBSERVATION_KEY, observation));
 		}
 		return parentContextView;
+	}
+
+	/**
+	 * The built-in default {@link ObservationRegistry}. Reactor Netty owns the instance so it can tell whether
+	 * anything beyond the built-in meter handler has been registered — {@code SimpleObservationRegistry} only
+	 * exposes that through package-private accessors. The current-observation scope is delegated to a real
+	 * {@code SimpleObservationRegistry} (whose scope {@link ThreadLocal} is static, hence shared across every
+	 * registry instance), so cross-registry current-observation visibility is unchanged.
+	 * <p>Unlike {@code SimpleObservationRegistry} this does not report {@code isNoop()} when its handler list is
+	 * empty; it relies on the static initializer always installing the built-in handler, so it is never no-op.
+	 */
+	static final class DefaultObservationRegistry implements ObservationRegistry {
+		final ObservationRegistry scopeDelegate = ObservationRegistry.create();
+		final TrackedObservationConfig observationConfig = new TrackedObservationConfig();
+
+		void arm() {
+			observationConfig.armed = true;
+		}
+
+		boolean customized() {
+			return observationConfig.customized;
+		}
+
+		@Override
+		public ObservationConfig observationConfig() {
+			return observationConfig;
+		}
+
+		@Override
+		public @Nullable Observation getCurrentObservation() {
+			return scopeDelegate.getCurrentObservation();
+		}
+
+		@Override
+		public Observation.@Nullable Scope getCurrentObservationScope() {
+			return scopeDelegate.getCurrentObservationScope();
+		}
+
+		@Override
+		public void setCurrentObservationScope(Observation.@Nullable Scope current) {
+			scopeDelegate.setCurrentObservationScope(current);
+		}
+	}
+
+	/**
+	 * {@link ObservationRegistry.ObservationConfig} that flags {@code customized} the first time any public
+	 * mutator runs after the registry has been {@code armed} (i.e. after Reactor Netty installed its own
+	 * built-in handler).
+	 */
+	static final class TrackedObservationConfig extends ObservationRegistry.ObservationConfig {
+		volatile boolean armed;
+		volatile boolean customized;
+
+		@Override
+		public ObservationRegistry.ObservationConfig observationHandler(ObservationHandler<?> handler) {
+			markCustomized();
+			return super.observationHandler(handler);
+		}
+
+		@Override
+		public ObservationRegistry.ObservationConfig observationPredicate(ObservationPredicate observationPredicate) {
+			markCustomized();
+			return super.observationPredicate(observationPredicate);
+		}
+
+		@Override
+		public ObservationRegistry.ObservationConfig observationFilter(ObservationFilter observationFilter) {
+			markCustomized();
+			return super.observationFilter(observationFilter);
+		}
+
+		@Override
+		public ObservationRegistry.ObservationConfig observationConvention(GlobalObservationConvention<?> observationConvention) {
+			markCustomized();
+			return super.observationConvention(observationConvention);
+		}
+
+		private void markCustomized() {
+			if (armed) {
+				customized = true;
+			}
+		}
 	}
 }
