@@ -4149,4 +4149,38 @@ class HttpServerTests extends BaseHttpTest {
 				.as("parent connection should not be a terminable ChannelOperations")
 				.isNotInstanceOf(ChannelOperations.class);
 	}
+
+	@Test
+	void testMaxPipelineDepth() {
+		HttpServer server = createServer().handle((req, res) -> {
+			return res.sendString(Mono.just("testMaxPipelineDepth"));
+		});
+		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(128);
+
+		server = server.maxPipelineDepth(5);
+		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(5);
+
+		disposableServer = server.bindNow();
+
+		HttpClient client = createClient(disposableServer.port());
+		Flux.range(0, 5)
+			.parallel(5)
+			.flatMap(i ->
+				client.get()
+					  .uri("/")
+					  .responseSingle((res, bytes) ->
+						  bytes.asString()))
+			.sequential()
+			.collectList()
+			.as(StepVerifier::create)
+			.expectNextMatches(l ->
+				l.size() == 5 &&
+						"testMaxPipelineDepth".equals(l.get(0)) &&
+						"testMaxPipelineDepth".equals(l.get(1)) &&
+						"testMaxPipelineDepth".equals(l.get(2)) &&
+						"testMaxPipelineDepth".equals(l.get(3)) &&
+						"testMaxPipelineDepth".equals(l.get(4)))
+			.expectComplete()
+			.verify(Duration.ofSeconds(5));
+	}
 }

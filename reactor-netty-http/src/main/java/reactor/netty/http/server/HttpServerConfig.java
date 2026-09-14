@@ -27,6 +27,8 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
+import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.HttpContentEncoder;
 import io.netty.handler.codec.http.HttpDecoderConfig;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObject;
@@ -309,6 +311,18 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		return uriTagValue;
 	}
 
+	/**
+	 * Returns the maximum allowed depth of the encoding pipeline queue, the default
+	 * value is set to {@link HttpContentEncoder#DEFAULT_MAX_PIPELINE_DEPTH}.
+	 *
+	 * @return the maximum allowed depth of the encoding pipeline queue
+	 * @since 1.3.8
+	 *
+	 * @see HttpServer#maxPipelineDepth(int)
+	 */
+	public int maxPipelineDepth() {
+		return maxPipelineDepth;
+	}
 
 	// Protected/Package private write API
 
@@ -340,6 +354,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	@Nullable Duration                                                requestTimeout;
 	@Nullable SslProvider                                             sslProvider;
 	@Nullable Function<String, String>                                uriTagValue;
+	int                                                               maxPipelineDepth;
 
 	HttpServerConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions, Supplier<? extends SocketAddress> localAddress) {
 		super(options, childOptions, localAddress);
@@ -354,6 +369,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this._protocols = h11;
 		this.proxyProtocolSupportType = ProxyProtocolSupportType.OFF;
 		this.accessLogEnabled = ACCESS_LOG;
+		this.maxPipelineDepth = HttpContentCompressor.DEFAULT_MAX_PIPELINE_DEPTH;
 	}
 
 	HttpServerConfig(HttpServerConfig parent) {
@@ -385,6 +401,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.requestTimeout = parent.requestTimeout;
 		this.sslProvider = parent.sslProvider;
 		this.uriTagValue = parent.uriTagValue;
+		this.maxPipelineDepth = parent.maxPipelineDepth;
 	}
 
 	@Override
@@ -763,7 +780,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
-			@Nullable Function<String, String> uriTagValue) {
+			@Nullable Function<String, String> uriTagValue,
+			int maxPipelineDepth) {
 		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
 		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
 		             .setMaxHeaderSize(decoder.maxHeaderSize())
@@ -773,7 +791,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths())
 		             .setAllowPartialChunks(decoder.allowPartialChunks());
 		HttpServerCodec httpServerCodec =
-				new HttpServerCodec(decoderConfig);
+				new HttpServerCodec(decoderConfig, maxPipelineDepth);
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressionOptions,
 				compressPredicate, cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, enableGracefulShutdown,
@@ -857,7 +875,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			int minCompressionSize,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
-			@Nullable Function<String, String> uriTagValue) {
+			@Nullable Function<String, String> uriTagValue,
+		    int maxPipelineDepth) {
 		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
 		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
 		             .setMaxHeaderSize(decoder.maxHeaderSize())
@@ -868,7 +887,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		             .setAllowPartialChunks(decoder.allowPartialChunks());
 		p.addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpCodec,
-		            new HttpServerCodec(decoderConfig))
+		            new HttpServerCodec(decoderConfig, maxPipelineDepth))
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
 		            new HttpTrafficHandler(compressPredicate, compressionOptions, cookieDecoder, cookieEncoder, formDecoderProvider,
@@ -1360,6 +1379,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final @Nullable Duration                                                requestTimeout;
 		final boolean                                                           supportOnlyHttp2;
 		final @Nullable Function<String, String>                                uriTagValue;
+		final int                                                               maxPipelineDepth;
 
 		H2OrHttp11Codec(HttpServerChannelInitializer initializer, ConnectionObserver listener) {
 			this(initializer, listener, false);
@@ -1393,6 +1413,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.requestTimeout = initializer.requestTimeout;
 			this.supportOnlyHttp2 = supportOnlyHttp2;
 			this.uriTagValue = initializer.uriTagValue;
+			this.maxPipelineDepth = initializer.maxPipelineDepth;
 		}
 
 		@Override
@@ -1415,7 +1436,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressionOptions, compressPredicate, cookieDecoder, cookieEncoder,
 						true, decoder, errorLogEnabled, errorLog, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory,
 						idleTimeout, listener, mapHandle, maxKeepAliveRequests, methodTagValue, metricsRecorder, minCompressionSize, readTimeout,
-						requestTimeout, uriTagValue);
+						requestTimeout, uriTagValue, maxPipelineDepth);
 
 				// When the server is configured with HTTP/1.1 and H2 and HTTP/1.1 is negotiated,
 				// when channelActive event happens, this HttpTrafficHandler is still not in the pipeline,
@@ -1465,6 +1486,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final @Nullable Duration                                                readTimeout;
 		final @Nullable Duration                                                requestTimeout;
 		final @Nullable Function<String, String>                                uriTagValue;
+		final int                                                               maxPipelineDepth;
 
 		HttpServerChannelInitializer(HttpServerConfig config) {
 			this.accessLogEnabled = config.accessLogEnabled;
@@ -1496,6 +1518,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.requestTimeout = config.requestTimeout;
 			this.sslProvider = config.sslProvider;
 			this.uriTagValue = config.uriTagValue;
+			this.maxPipelineDepth = config.maxPipelineDepth;
 		}
 
 		@Override
@@ -1547,7 +1570,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							minCompressionSize,
 							readTimeout,
 							requestTimeout,
-							uriTagValue);
+							uriTagValue,
+						    maxPipelineDepth);
 				}
 				else if ((protocols & h2) == h2) {
 					ChannelHandler sslHandler = channel.pipeline().get(NettyPipeline.SslHandler);
@@ -1641,7 +1665,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							opsFactory,
 							readTimeout,
 							requestTimeout,
-							uriTagValue);
+							uriTagValue,
+						    maxPipelineDepth);
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(
@@ -1668,7 +1693,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							minCompressionSize,
 							readTimeout,
 							requestTimeout,
-							uriTagValue);
+							uriTagValue,
+						    maxPipelineDepth);
 				}
 				else if ((protocols & h2c) == h2c) {
 					configureH2Pipeline(
