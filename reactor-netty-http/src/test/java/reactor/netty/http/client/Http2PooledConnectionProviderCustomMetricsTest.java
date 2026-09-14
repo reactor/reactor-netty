@@ -35,8 +35,10 @@ import reactor.netty.resources.ConnectionProvider;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -286,6 +288,18 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		finally {
 			pool.disposeLater().block(Duration.ofSeconds(5));
 		}
+
+		// Only the HTTP/2 pool exposes HttpConnectionPoolMetrics, so it is the only one registered here,
+		// and its name carries the "http2." prefix.
+		assertThat(registrar.registeredPoolNames)
+				.as("HTTP/2 pool registered under the prefixed name")
+				.containsExactly("http2.custom-pool");
+
+		// The HTTP/2 pool acquires its connections from the underlying connection pool, which is the one
+		// destroying them, so the lifetime must be reported exactly once, under the underlying pool's name.
+		assertThat(registrar.connectionLifetimePoolNames)
+				.as("connection lifetime recorded once, by the underlying connection pool")
+				.containsExactly("custom-pool");
 	}
 
 	@Test
@@ -346,6 +360,8 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		final CountDownLatch pendingAcquireFailureLatch = new CountDownLatch(1);
 		final AtomicLong connectionLifetimeMillis = new AtomicLong(-1);
 		final CountDownLatch connectionLifetimeLatch = new CountDownLatch(1);
+		final Queue<String> connectionLifetimePoolNames = new ConcurrentLinkedQueue<>();
+		final Queue<String> registeredPoolNames = new ConcurrentLinkedQueue<>();
 
 		CustomHttp2MeterRegistrar(
 				AtomicBoolean isRegistered,
@@ -359,6 +375,7 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 		@Override
 		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, HttpConnectionPoolMetrics metrics) {
 			isRegistered.set(true);
+			registeredPoolNames.add(poolName);
 
 			this.metrics.compareAndSet(null, metrics);
 		}
@@ -382,6 +399,7 @@ class Http2PooledConnectionProviderCustomMetricsTest extends BaseHttpTest {
 
 		@Override
 		public void recordConnectionLifetime(String poolName, String id, SocketAddress remoteAddress, long connectionLifetimeMillis) {
+			connectionLifetimePoolNames.add(poolName);
 			this.connectionLifetimeMillis.set(connectionLifetimeMillis);
 			connectionLifetimeLatch.countDown();
 		}
