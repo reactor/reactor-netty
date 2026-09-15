@@ -23,8 +23,8 @@ import java.net.SocketAddress;
 /**
  * A {@link PoolMetricsRecorder} that bridges pending acquisition latencies and connection lifetime
  * durations to a user-provided {@link MeterRegistrar}. This allows custom registrars to receive the
- * {@code pending.connections.time} data that is otherwise only available to the built-in Micrometer
- * integration, as well as connection lifetime data that is not available even via Micrometer.
+ * {@code pending.connections.time} and {@code connections.lifetime} data that is otherwise only
+ * available to the built-in Micrometer integration.
  *
  * @author ejhnsn
  * @since 1.3.7

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,26 @@ enum ConnectionProviderMeters implements MeterDocumentation {
 		@Override
 		public Meter.Type getType() {
 			return Meter.Type.GAUGE;
+		}
+	},
+
+	/**
+	 * Time that the connection existed in the connection pool, from its allocation until its destruction.
+	 */
+	CONNECTIONS_LIFETIME {
+		@Override
+		public String getName() {
+			return "reactor.netty.connection.provider.connections.lifetime";
+		}
+
+		@Override
+		public KeyName[] getKeyNames() {
+			return ConnectionProviderMetersTags.values();
+		}
+
+		@Override
+		public Meter.Type getType() {
+			return Meter.Type.TIMER;
 		}
 	},
 
