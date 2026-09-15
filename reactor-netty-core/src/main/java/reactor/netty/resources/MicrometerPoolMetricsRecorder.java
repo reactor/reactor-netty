@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.formatSocketAddress;
+import static reactor.netty.resources.ConnectionProviderMeters.CONNECTIONS_LIFETIME;
 import static reactor.netty.resources.ConnectionProviderMeters.PENDING_CONNECTIONS_TIME;
 import static reactor.netty.resources.ConnectionProviderMeters.PendingConnectionsTimeTags.ID;
 import static reactor.netty.resources.ConnectionProviderMeters.PendingConnectionsTimeTags.NAME;
@@ -35,10 +36,12 @@ import static reactor.netty.resources.ConnectionProviderMeters.PendingConnection
 
 final class MicrometerPoolMetricsRecorder implements Disposable, PoolMetricsRecorder {
 
+	final Timer connectionsLifetime;
 	final Timer pendingSuccessTimer;
 	final Timer pendingErrorTimer;
 
 	MicrometerPoolMetricsRecorder(String id, String poolName, SocketAddress remoteAddress) {
+		connectionsLifetime = buildTimer(id, poolName, remoteAddress);
 		pendingSuccessTimer = buildTimer(id, poolName, remoteAddress, SUCCESS);
 		pendingErrorTimer = buildTimer(id, poolName, remoteAddress, ERROR);
 	}
@@ -70,7 +73,7 @@ final class MicrometerPoolMetricsRecorder implements Disposable, PoolMetricsReco
 
 	@Override
 	public void recordLifetimeDuration(long millisecondsSinceAllocation) {
-		//noop
+		connectionsLifetime.record(millisecondsSinceAllocation, TimeUnit.MILLISECONDS);
 	}
 
 	@Override
@@ -100,8 +103,17 @@ final class MicrometerPoolMetricsRecorder implements Disposable, PoolMetricsReco
 
 	@Override
 	public void dispose() {
+		REGISTRY.remove(connectionsLifetime);
 		REGISTRY.remove(pendingSuccessTimer);
 		REGISTRY.remove(pendingErrorTimer);
+	}
+
+	static Timer buildTimer(String id, String poolName, SocketAddress remoteAddress) {
+		return Timer.builder(CONNECTIONS_LIFETIME.getName())
+		            .tags(Tags.of(ConnectionProviderMeters.ConnectionProviderMetersTags.ID.asString(), id,
+		                    ConnectionProviderMeters.ConnectionProviderMetersTags.REMOTE_ADDRESS.asString(), formatSocketAddress(remoteAddress),
+		                    ConnectionProviderMeters.ConnectionProviderMetersTags.NAME.asString(), poolName))
+		            .register(REGISTRY);
 	}
 
 	static Timer buildTimer(String id, String poolName, SocketAddress remoteAddress, String status) {
