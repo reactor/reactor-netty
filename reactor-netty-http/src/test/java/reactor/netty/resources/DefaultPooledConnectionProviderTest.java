@@ -78,6 +78,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -1122,6 +1123,42 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		);
 	}
 
+	@Test
+	void testCustomRegistrarReceivesConnectionLifetime() throws InterruptedException {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testConnectionLifetime")))
+				        .bindNow();
+
+		MeterRegistrarImpl meterRegistrar = new MeterRegistrarImpl();
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testConnectionLifetime")
+				                  .maxConnections(1)
+				                  .maxIdleTime(Duration.ofMillis(50))
+				                  .evictInBackground(Duration.ofMillis(20))
+				                  .metrics(true, () -> meterRegistrar)
+				                  .build();
+
+		HttpClient client = createClient(provider, disposableServer.port());
+		try {
+			client.get()
+			      .uri("/")
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .block(Duration.ofSeconds(5));
+
+			assertThat(meterRegistrar.connectionLifetimeLatch.await(5, TimeUnit.SECONDS))
+					.as("connection lifetime latch")
+					.isTrue();
+			assertThat(meterRegistrar.connectionLifetimeMillis.get()).isGreaterThan(0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
 		AtomicBoolean registered = new AtomicBoolean();
 		AtomicBoolean deRegistered = new AtomicBoolean();
@@ -1130,6 +1167,8 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		final AtomicInteger pendingAcquireFailureCount = new AtomicInteger();
 		final CountDownLatch pendingAcquireSuccessLatch = new CountDownLatch(1);
 		final CountDownLatch pendingAcquireFailureLatch = new CountDownLatch(1);
+		final AtomicLong connectionLifetimeMillis = new AtomicLong(-1);
+		final CountDownLatch connectionLifetimeLatch = new CountDownLatch(1);
 
 		MeterRegistrarImpl() {
 		}
@@ -1155,6 +1194,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		public void recordPendingAcquireFailure(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
 			pendingAcquireFailureCount.incrementAndGet();
 			pendingAcquireFailureLatch.countDown();
+		}
+
+		@Override
+		public void recordConnectionLifetime(String poolName, String id, SocketAddress remoteAddress, long connectionLifetimeMillis) {
+			this.connectionLifetimeMillis.set(connectionLifetimeMillis);
+			connectionLifetimeLatch.countDown();
 		}
 	}
 }
