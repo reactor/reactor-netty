@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	HttpDataFactory newFactory;
 	boolean         cleanOnTerminate;
 	Charset         newCharset;
+	@Nullable HttpClientFormEncoder nextEncoder;
 	boolean         newMultipart;
 	EncoderMode     newMode;
 
@@ -101,6 +102,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm attr(String name, String value) {
+		HttpClientFormEncoder encoder = applyChanges(request);
+		if (encoder != this) {
+			return encoder.attr(name, value);
+		}
 		try {
 			addBodyAttribute(name, value);
 		}
@@ -112,6 +117,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm charset(Charset charset) {
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.charset(charset);
+		}
 		this.newCharset = Objects.requireNonNull(charset, "charset");
 		this.needNewEncoder = true;
 		return this;
@@ -119,12 +128,20 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm cleanOnTerminate(boolean clean) {
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.cleanOnTerminate(clean);
+		}
 		this.cleanOnTerminate = clean;
 		return this;
 	}
 
 	@Override
 	public HttpClientForm factory(HttpDataFactory factory) {
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.factory(factory);
+		}
 		if (!getBodyListAttributes().isEmpty()) {
 			throw new IllegalStateException("Cannot set a new HttpDataFactory after " +
 					"starting appending Parts, call factory(f) at the earliest occasion" +
@@ -152,6 +169,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			String filename,
 			File file,
 			@Nullable String contentType) {
+		HttpClientFormEncoder encoder = applyChanges(request);
+		if (encoder != this) {
+			return encoder.file(name, filename, file, contentType);
+		}
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(file, "file");
 		Objects.requireNonNull(filename, "filename");
@@ -184,6 +205,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			String filename,
 			InputStream stream,
 			@Nullable String contentType) {
+		HttpClientFormEncoder encoder = applyChanges(request);
+		if (encoder != this) {
+			return encoder.file(name, filename, stream, contentType);
+		}
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
 		try {
@@ -226,6 +251,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			File[] files,
 			String[] contentTypes,
 			boolean[] textFiles) {
+		HttpClientFormEncoder encoder = applyChanges(request);
+		if (encoder != this) {
+			return encoder.files(name, files, contentTypes, textFiles);
+		}
 		try {
 			addBodyFileUploads(name, files, contentTypes, textFiles);
 		}
@@ -237,6 +266,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm encoding(EncoderMode mode) {
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.encoding(mode);
+		}
 		this.newMode = Objects.requireNonNull(mode, "mode");
 		this.needNewEncoder = true;
 		return this;
@@ -244,7 +277,11 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm multipart(boolean isMultipart) {
-		this.needNewEncoder = isChunked() != isMultipart;
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.multipart(isMultipart);
+		}
+		this.needNewEncoder |= isMultipart() != isMultipart;
 		this.newMultipart = isMultipart;
 		return this;
 	}
@@ -257,6 +294,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm textFile(String name, File file, @Nullable String contentType) {
+		HttpClientFormEncoder encoder = applyChanges(request);
+		if (encoder != this) {
+			return encoder.textFile(name, file, contentType);
+		}
 		try {
 			addBodyFileUpload(name, file, contentType, true);
 		}
@@ -276,6 +317,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	public HttpClientForm textFile(String name,
 			InputStream stream,
 			@Nullable String contentType) {
+		HttpClientFormEncoder encoder = applyChanges(request);
+		if (encoder != this) {
+			return encoder.textFile(name, stream, contentType);
+		}
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
 		try {
@@ -310,7 +355,21 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		cleanFiles();
 	}
 
+	@Override
+	public void cleanFiles() {
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			encoder.cleanFiles();
+		}
+		else {
+			super.cleanFiles();
+		}
+	}
+
 	final HttpClientFormEncoder applyChanges(HttpRequest request) {
+		if (nextEncoder != null) {
+			return nextEncoder.applyChanges(request);
+		}
 		if (!needNewEncoder) {
 			return this;
 		}
@@ -322,6 +381,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 					newCharset,
 					newMode);
 
+			encoder.cleanOnTerminate = cleanOnTerminate;
+			nextEncoder = encoder;
 			encoder.setBodyHttpDatas(getBodyListAttributes());
 
 			needNewEncoder = false;
@@ -331,6 +392,14 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		catch (ErrorDataEncoderException ee) {
 			throw Exceptions.propagate(ee);
 		}
+	}
+
+	private HttpClientFormEncoder currentEncoder() {
+		HttpClientFormEncoder encoder = this;
+		while (encoder.nextEncoder != null) {
+			encoder = encoder.nextEncoder;
+		}
+		return encoder;
 	}
 
 	static final Map<Pattern, String> percentEncodings            = new HashMap<>();
