@@ -4150,37 +4150,69 @@ class HttpServerTests extends BaseHttpTest {
 				.isNotInstanceOf(ChannelOperations.class);
 	}
 
-	@Test
-	void testMaxPipelineDepth() {
-		HttpServer server = createServer().handle((req, res) -> {
-			return res.sendString(Mono.just("testMaxPipelineDepth"));
-		});
+	@ParameterizedTest
+	@ValueSource(ints = {2, 4})
+	void testMaxPipelineDepth(int maxPipelineDepth) throws InterruptedException {
+		AtomicInteger i = new AtomicInteger();
+
+		HttpServer server = createServer()
+			    .route(r -> r.get("/", (req, resp) ->
+			        resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
+			            .sendString(Mono.just(i.incrementAndGet())
+			                    .flatMap(d ->
+			                        Mono.delay(Duration.ofSeconds(4 - d))
+			                            .map(x -> d + "\n")))));
 		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(128);
 
-		server = server.maxPipelineDepth(5);
-		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(5);
+		server = server.maxPipelineDepth(maxPipelineDepth);
+		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(maxPipelineDepth);
 
 		disposableServer = server.bindNow();
 
-		HttpClient client = createClient(disposableServer.port());
-		Flux.range(0, 5)
-			.parallel(5)
-			.flatMap(i ->
-				client.get()
-					  .uri("/")
-					  .responseSingle((res, bytes) ->
-						  bytes.asString()))
-			.sequential()
-			.collectList()
-			.as(StepVerifier::create)
-			.expectNextMatches(l ->
-				l.size() == 5 &&
-						"testMaxPipelineDepth".equals(l.get(0)) &&
-						"testMaxPipelineDepth".equals(l.get(1)) &&
-						"testMaxPipelineDepth".equals(l.get(2)) &&
-						"testMaxPipelineDepth".equals(l.get(3)) &&
-						"testMaxPipelineDepth".equals(l.get(4)))
-			.expectComplete()
-			.verify(Duration.ofSeconds(5));
+		DefaultFullHttpRequest request =
+				new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+
+		CountDownLatch latch = new CountDownLatch(10);
+		Connection client =
+			TcpClient.create()
+			         .port(disposableServer.port())
+			         .handle((in, out) -> {
+			                 in.withConnection(x ->
+			                         x.addHandlerFirst(new HttpClientCodec()))
+			                   .receiveObject()
+			                   .map(o -> {
+			                       if (o == LastHttpContent.EMPTY_LAST_CONTENT) {
+			                           return new DefaultHttpContent(
+			                               Unpooled.wrappedBuffer((i.incrementAndGet() + "").getBytes(Charset.defaultCharset())));
+			                       }
+			                       return o;
+			                   })
+			                   .ofType(DefaultHttpContent.class)
+			                   .as(ByteBufFlux::fromInbound)
+			                   .asString()
+			                   .log()
+			                   .map(Integer::parseInt)
+			                   .subscribe(d -> {
+			                       for (int x = 0; x < d; x++) {
+			                           latch.countDown();
+			                       }
+			                   });
+
+			                 return out.sendObject(Flux.just(request.retain(),
+			                                                 request.retain(),
+			                                                 request.retain(),
+			                                                 request.retain()))
+			                		 .neverComplete();
+			         })
+			         .wiretap(true)
+			         .connectNow();
+		if (maxPipelineDepth == 2) {
+			// Should never complete due to "java.lang.IllegalStateException: maxPipelineDepth exceeded: 2"
+			assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isFalse();
+		}
+		else {
+			assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isTrue();
+		}
+		client.disposeNow();
 	}
 }

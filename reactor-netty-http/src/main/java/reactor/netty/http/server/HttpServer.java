@@ -1468,7 +1468,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * The maximum allowed depth of the server decoding queue.
+	 * The maximum allowed depth of the server decoding queue when HTTP/1.1 pipelining is used.
 	 * @param maxPipelineDepth the maximum number of requests that may be decoded while awaiting the
 	 * corresponding responses to be written, before decoding of further requests is rejected with
 	 * an {@link IllegalStateException}.
@@ -1476,8 +1476,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @since 1.3.8
 	 */
 	public final HttpServer maxPipelineDepth(int maxPipelineDepth) {
-		if (maxPipelineDepth < 0) {
-			throw new IllegalArgumentException("maxPipelineDepth must be positive");
+		if (maxPipelineDepth <= 0) {
+			throw new IllegalArgumentException("maxPipelineDepth : " + maxPipelineDepth + " (expected: > 0)");
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().maxPipelineDepth = maxPipelineDepth;
