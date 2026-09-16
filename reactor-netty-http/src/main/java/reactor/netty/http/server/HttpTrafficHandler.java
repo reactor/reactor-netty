@@ -686,7 +686,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 		// The queue drained without dispatching a request, so no HttpServerOperations will terminate
 		// and resume the read; without this the next request stays unread until the peer gives up.
-		if (nextRequest == null && persistentConnection) {
+		if (nextRequest == null && persistentConnection && !ctx.isRemoved() && ctx.channel().isActive() &&
+				!(ChannelOperations.get(ctx.channel()) instanceof HttpServerOperations)) {
 			requestRead();
 		}
 	}
