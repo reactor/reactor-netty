@@ -1571,7 +1571,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							readTimeout,
 							requestTimeout,
 							uriTagValue,
-						    maxPipelineDepth);
+							maxPipelineDepth);
 				}
 				else if ((protocols & h2) == h2) {
 					ChannelHandler sslHandler = channel.pipeline().get(NettyPipeline.SslHandler);
@@ -1666,7 +1666,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							readTimeout,
 							requestTimeout,
 							uriTagValue,
-						    maxPipelineDepth);
+							maxPipelineDepth);
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(
@@ -1694,7 +1694,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							readTimeout,
 							requestTimeout,
 							uriTagValue,
-						    maxPipelineDepth);
+							maxPipelineDepth);
 				}
 				else if ((protocols & h2c) == h2c) {
 					configureH2Pipeline(

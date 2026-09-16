@@ -4157,11 +4157,10 @@ class HttpServerTests extends BaseHttpTest {
 
 		HttpServer server = createServer()
 			    .route(r -> r.get("/", (req, resp) ->
-			        resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
-			            .sendString(Mono.just(i.incrementAndGet())
+			        resp.sendString(Mono.just(i.incrementAndGet())
 			                    .flatMap(d ->
 			                        Mono.delay(Duration.ofSeconds(4 - d))
-			                            .map(x -> d + "\n")))));
+			                            .map(x -> d + "")))));
 		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(128);
 
 		server = server.maxPipelineDepth(maxPipelineDepth);
@@ -4202,13 +4201,14 @@ class HttpServerTests extends BaseHttpTest {
 			                                                 request.retain(),
 			                                                 request.retain(),
 			                                                 request.retain()))
-			                		 .neverComplete();
+			                           .neverComplete();
 			         })
 			         .wiretap(true)
 			         .connectNow();
-		if (maxPipelineDepth == 2) {
+		if (maxPipelineDepth < 4) {
 			// Should never complete due to "java.lang.IllegalStateException: maxPipelineDepth exceeded: 2"
-			assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isFalse();
+			client.onDispose().block(Duration.ofSeconds(5));
+			assertThat(latch.getCount()).as("pending responses").isGreaterThan(0);
 		}
 		else {
 			assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isTrue();
