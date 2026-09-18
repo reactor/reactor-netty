@@ -221,7 +221,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if (log.isDebugEnabled()) {
 					log.debug(format(parent.channel(), "{}: dropping frame {}"), this, parent.asDebugLogMessage(o));
 				}
-				ReferenceCountUtil.release(o);
+				// safeRelease so that one already released item cannot abort the drain and leak the rest of the queue
+				ReferenceCountUtil.safeRelease(o);
 			}
 		}
 	}
