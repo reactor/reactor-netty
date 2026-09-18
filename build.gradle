@@ -340,9 +340,14 @@ subprojects {
 		enabled = false
 	}
 
+	tasks.withType(AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+
 	jar {
 		manifest {
-			attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
+			attributes("Build-Jdk-Spec": "${System.getProperty("java.specification.version")}",
 					"Implementation-Title": project.name,
 					"Implementation-Version": project.version)
 		}
