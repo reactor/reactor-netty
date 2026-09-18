@@ -18,7 +18,6 @@ package reactor.netty.http.server;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import java.util.function.BiFunction;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.netty.handler.codec.http.HttpRequest;
@@ -58,9 +57,6 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final String  X_FORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
 	static final String  X_FORWARDED_PREFIX_HEADER = "X-Forwarded-Prefix";
 
-	static final Pattern FORWARDED_HOST_PATTERN   = Pattern.compile("host=\"?([^;,\"]+)\"?");
-	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([a-zA-Z][a-zA-Z0-9+.-]*)\"?");
-	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
 	static final Pattern X_FORWARDED_PROTO_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9+.-]*$");
 
 	private static final String[] EMPTY_STRING_ARRAY = {};
@@ -108,14 +104,14 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		if (legacy) {
 			String forwardedHeader = request.headers().get(FORWARDED_HEADER);
 			if (forwardedHeader != null) {
-				return parseForwardedInfo(connectionInfo, forwardedHeader);
+				return ForwardedHeaderParser.parse(connectionInfo, forwardedHeader);
 			}
 			return parseForwardedPrefixInfo(parseXForwardedInfo(connectionInfo, request), request);
 		}
 		if (useStandardHeader) {
 			String forwardedHeader = request.headers().get(FORWARDED_HEADER);
 			if (forwardedHeader != null) {
-				connectionInfo = parseForwardedInfo(connectionInfo, forwardedHeader);
+				connectionInfo = ForwardedHeaderParser.parse(connectionInfo, forwardedHeader);
 			}
 		}
 		else {
@@ -123,30 +119,6 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		}
 		if (useForwardedPrefix) {
 			connectionInfo = parseForwardedPrefixInfo(connectionInfo, request);
-		}
-		return connectionInfo;
-	}
-
-	@SuppressWarnings("NullAway")
-	private static ConnectionInfo parseForwardedInfo(ConnectionInfo connectionInfo, String forwardedHeader) {
-		String forwarded = forwardedHeader.split(",", 2)[0];
-		Matcher protoMatcher = FORWARDED_PROTO_PATTERN.matcher(forwarded);
-		if (protoMatcher.find()) {
-			connectionInfo = connectionInfo.withScheme(protoMatcher.group(1).trim());
-		}
-		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
-		if (hostMatcher.find()) {
-			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.parseAddress(hostMatcher.group(1),
-							getDefaultHostPort(connectionInfo.getScheme()), DEFAULT_FORWARDED_HEADER_VALIDATION));
-		}
-		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
-		if (forMatcher.find()) {
-			connectionInfo = connectionInfo.withRemoteAddress(
-					// Deliberately suppress "NullAway"
-					// This implementation is invoked always with InetSocketAddress and remote address != null
-					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort(),
-							DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
 		return connectionInfo;
 	}
