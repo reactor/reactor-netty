@@ -21,7 +21,8 @@ ext {
 			"Import-Package" : "!javax.annotation,*",
 			"Bundle-Name" : "reactor-netty-http-brave",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-http-brave",
-			"Bundle-Version" : "$osgiVersion"
+			"Bundle-Version" : "$osgiVersion",
+			"-noextraheaders": "true"
 	]
 }
 
