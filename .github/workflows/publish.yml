@@ -26,6 +26,10 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: interpret version
         id: version
         #we only run the qualifyVersionGha task so that no other console printing can hijack this step's output
@@ -50,6 +54,10 @@ jobs:
           java-version: |
             8
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: run reactor-netty-http checks
         id: reactor-netty-http-checks
         env:
@@ -68,6 +76,10 @@ jobs:
           java-version: |
             8
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: run reactor-netty-http-brave checks
         id: reactor-netty-http-brave-checks
         env:
@@ -86,6 +98,10 @@ jobs:
           java-version: |
             8
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: run reactor-netty-quic checks
         id: reactor-netty-quic-checks
         env:
@@ -109,6 +125,10 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: deploy
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -140,6 +160,10 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: deploy
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -190,6 +214,10 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: deploy
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
