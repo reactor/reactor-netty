@@ -10,7 +10,7 @@ jobs:
   # General job notes: we DON'T want to cancel any previous runs, especially in the case of a "back to snapshots" build right after a release push
   # We specify the ubuntu version to minimize the chances we have to deal with a migration during a release
   reactor-netty-core:
-    # Notes on reactor-netty-core: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    # Notes on reactor-netty-core: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-core
     runs-on: ubuntu-22.04
     outputs:
@@ -26,6 +26,10 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: interpret version
         id: version
         #we only run the qualifyVersionGha task so that no other console printing can hijack this step's output
@@ -34,9 +38,11 @@ jobs:
         run: ./gradlew qualifyVersionGha
       - name: run reactor-netty-core checks
         id: reactor-netty-core-checks
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
         run: ./gradlew reactor-netty-core:check -x :reactor-netty-core:java17Test -x :reactor-netty-core:java11Test
   reactor-netty-http:
-    # Notes on reactor-netty-http: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    # Notes on reactor-netty-http: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-http
     runs-on: ubuntu-22.04
     steps:
@@ -48,11 +54,17 @@ jobs:
           java-version: |
             8
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: run reactor-netty-http checks
         id: reactor-netty-http-checks
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
         run: ./gradlew reactor-netty-http:check
   reactor-netty-http-brave:
-    # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-http-brave
     runs-on: ubuntu-22.04
     steps:
@@ -64,11 +76,17 @@ jobs:
           java-version: |
             8
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: run reactor-netty-http-brave checks
         id: reactor-netty-http-brave-checks
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
         run: ./gradlew reactor-netty-http-brave:check
   reactor-netty-quic:
-    # Notes on reactor-netty-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    # Notes on reactor-netty-quic: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-quic
     runs-on: ubuntu-22.04
     steps:
@@ -80,8 +98,14 @@ jobs:
           java-version: |
             8
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: run reactor-netty-quic checks
         id: reactor-netty-quic-checks
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
         run: ./gradlew reactor-netty-quic:check
 
   #deploy the snapshot artifacts to Artifactory
@@ -101,8 +125,13 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: deploy
         env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_SNAPSHOT_USERNAME}}
           ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
         run: |
@@ -131,8 +160,13 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: deploy
         env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
           ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
           ORG_GRADLE_PROJECT_signingKey: ${{secrets.SIGNING_KEY}}
@@ -180,8 +214,13 @@ jobs:
             8
             11
             17
+      - name: configure gradle properties
+        run: |
+          mkdir -p ${GRADLE_USER_HOME:-$HOME/.gradle}
+          echo 'systemProp.user.name=spring-builds+github' >> ${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties
       - name: deploy
         env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
           ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
           ORG_GRADLE_PROJECT_signingKey: ${{secrets.SIGNING_KEY}}

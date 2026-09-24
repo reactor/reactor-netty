@@ -13,6 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+pluginManagement {
+	repositories {
+		gradlePluginPortal()
+		mavenCentral()
+	}
+}
+
+plugins {
+	id "io.spring.develocity.conventions" version "0.0.26"
+}
+
 rootProject.name = 'reactor-netty'
 include 'reactor-netty-core'
 include 'reactor-netty-http'
