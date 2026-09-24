@@ -37,7 +37,7 @@ import java.net.SocketAddress;
  * @since 0.9
  */
 public class Metrics {
-	public static final MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
+	public static MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
 	public static final String OBSERVATION_KEY = "micrometer.observation";
 	public static ObservationRegistry OBSERVATION_REGISTRY = ObservationRegistry.create();
 	static {
@@ -343,6 +343,18 @@ public class Metrics {
 	public static ObservationRegistry observationRegistry(ObservationRegistry observationRegistry) {
 		ObservationRegistry previous = OBSERVATION_REGISTRY;
 		OBSERVATION_REGISTRY = observationRegistry;
+		return previous;
+	}
+
+	/**
+	 * Set the {@link MeterRegistry} to use in Reactor Netty.
+	 *
+	 * @return the previously configured registry.
+	 * @since 1.4.0
+	 */
+	public static MeterRegistry meterRegistry(MeterRegistry meterRegistry) {
+		MeterRegistry previous = REGISTRY;
+		REGISTRY = meterRegistry;
 		return previous;
 	}
 
