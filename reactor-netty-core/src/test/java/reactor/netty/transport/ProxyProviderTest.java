@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package reactor.netty.transport;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -24,9 +25,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
+import reactor.netty.NettyPipeline;
+import reactor.netty.tcp.TcpSslContextSpec;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import org.junit.jupiter.api.Test;
 
@@ -688,6 +692,39 @@ class ProxyProviderTest {
 		assertThatIllegalArgumentException()
 				.isThrownBy(() -> ProxyProvider.createFrom(properties))
 				.withMessage("only socks versions 4 and 5 supported but got 42");
+	}
+
+	@Test
+	void addProxyHandlerAddsProxySslHandlerBeforeProxyHandler() {
+		ProxyProvider proxyProvider =
+				ProxyProvider.builder()
+				             .type(ProxyProvider.Proxy.HTTP)
+				             .host("localhost")
+				             .port(8080)
+				             .secure(spec -> spec.sslContext(TcpSslContextSpec.forClient()))
+				             .build();
+
+		EmbeddedChannel channel = new EmbeddedChannel();
+
+		proxyProvider.addProxyHandler(channel);
+
+		List<String> names = channel.pipeline().names();
+
+		assertThat(channel.pipeline().get(NettyPipeline.ProxySslHandler))
+				.as("Pipeline names: %s", names)
+				.isNotNull();
+
+		assertThat(channel.pipeline().get(NettyPipeline.ProxySslReader))
+				.as("Pipeline names: %s", names)
+				.isNotNull();
+
+		assertThat(names)
+				.as("Pipeline names: %s", names)
+				.anyMatch(name -> name.contains("HttpProxyHandler"));
+
+		assertThat(names.indexOf(NettyPipeline.ProxySslHandler))
+				.as("Pipeline names: %s", names)
+				.isLessThan(names.indexOf(NettyPipeline.ProxySslReader));
 	}
 
 	private static ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
