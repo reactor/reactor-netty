@@ -19,7 +19,6 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.noop.NoopMeter;
 import org.jspecify.annotations.Nullable;
@@ -74,21 +73,15 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final String name;
 	final String protocol;
 	final boolean onServer;
-	final MeterRegistry meterRegistry;
 
 	public MicrometerChannelMetricsRecorder(String name, String protocol) {
 		this(name, protocol, true);
 	}
 
 	public MicrometerChannelMetricsRecorder(String name, String protocol, boolean onServer) {
-		this(name, protocol, onServer, REGISTRY);
-	}
-
-	public MicrometerChannelMetricsRecorder(String name, String protocol, boolean onServer, MeterRegistry meterRegistry) {
 		this.name = name;
 		this.protocol = protocol;
 		this.onServer = onServer;
-		this.meterRegistry = meterRegistry;
 	}
 
 	@Override
@@ -122,7 +115,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 			if (!onServer) {
 				builder.tag(ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress);
 			}
-			return filter(builder.register(meterRegistry));
+			return filter(builder.register(REGISTRY));
 		});
 	}
 
@@ -155,7 +148,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 			if (!onServer) {
 				builder.tag(ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress);
 			}
-			return filter(builder.register(meterRegistry));
+			return filter(builder.register(REGISTRY));
 		});
 	}
 
@@ -179,7 +172,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 			if (!onServer) {
 				builder.tag(ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress);
 			}
-			return filter(builder.register(meterRegistry));
+			return filter(builder.register(REGISTRY));
 		});
 		if (c != null) {
 			c.increment();
@@ -210,7 +203,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
-				                   .register(meterRegistry)));
+				                   .register(REGISTRY)));
 	}
 
 	@Override
@@ -237,7 +230,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 			if (!onServer) {
 				builder.tag(PROXY_ADDRESS, proxyAddress);
 			}
-			return filter(builder.register(meterRegistry));
+			return filter(builder.register(REGISTRY));
 		});
 	}
 
@@ -262,7 +255,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
 				                   .tags(REMOTE_ADDRESS, remoteAddress, PROXY_ADDRESS, proxyAddress, STATUS, status)
-				                   .register(meterRegistry)));
+				                   .register(REGISTRY)));
 	}
 
 	@Override
@@ -279,7 +272,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
-				                   .register(meterRegistry)));
+				                   .register(REGISTRY)));
 	}
 
 	@Override
