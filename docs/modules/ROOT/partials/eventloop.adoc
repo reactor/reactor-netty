@@ -30,7 +30,23 @@ The fallback is reported only when the logger `reactor.netty.resources` level is
 
 To use a native transport on another platform, add the native library for that platform,
 using the same `Netty` version as the one Reactor Netty depends on.
-For example, for `Linux` on `aarch64`, add the following Gradle dependency:
+For example, for `Linux` on `aarch64`, add the following Maven dependency:
+
+[source,xml]
+----
+<dependencies>
+    <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-epoll</artifactId>
+        <version>${netty.version}</version> <1>
+        <classifier>linux-aarch_64</classifier>
+        <scope>runtime</scope>
+    </dependency>
+</dependencies>
+----
+<1> The version is required. Use the `Netty` version that Reactor Netty depends on.
+
+Or the following Gradle dependency:
 
 [source,groovy]
 ----
@@ -38,9 +54,15 @@ dependencies {
     runtimeOnly 'io.netty:netty-transport-native-epoll::linux-aarch_64' <1>
 }
 ----
-<1> The version is resolved to the `Netty` version that Reactor Netty brings transitively.
+<1> The version can be omitted. It is resolved to the `Netty` version that Reactor Netty brings transitively.
 
 For `macOS`, add `io.netty:netty-transport-native-kqueue` with the `osx-x86_64` or `osx-aarch_64` classifier.
+
+For `Linux`, you can also use the `io_uring` transport. It requires Java 11 or later.
+Add `io.netty:netty-transport-native-io_uring` with the `linux-x86_64` or `linux-aarch_64` classifier.
+When `io_uring` is available, Reactor Netty uses it instead of `Epoll`.
+
+For `KQueue` and `io_uring`, the version is required for both Maven and Gradle, because `reactor-netty-core` does not bring them transitively.
 
 ==== Disposing Event Loop Group
 
