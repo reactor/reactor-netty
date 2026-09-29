@@ -149,28 +149,6 @@ dependencies {
 Check for updates at https://github.com/reactor/reactor/releases.
 <2> There is no third `:` separated section for the version. It is taken from the `BOM`.
 
-[[native-transports]]
-=== Native Transports
-
-`reactor-netty-core` brings the native `Epoll` transport only for `linux-x86_64`
-(`io.netty:netty-transport-native-epoll` with the `linux-x86_64` classifier).
-On other platforms, `Reactor Netty` falls back to the `NIO` transport. The fallback is
-reported only at `DEBUG` level (`Default Epoll support : false`).
-
-To use a native transport on another platform, add the native library for that platform
-yourself, using the same `Netty` version as the one `Reactor Netty` depends on.
-For example, for `Linux` on `aarch64` (such as `ARM64` cloud instances), use the following Gradle dependency:
-
-[source,groovy]
-----
-dependencies {
-    runtimeOnly 'io.netty:netty-transport-native-epoll::linux-aarch_64' <1>
-}
-----
-<1> The version is resolved to the `Netty` version that `Reactor Netty` brings transitively.
-
-For `macOS`, add `io.netty:netty-transport-native-kqueue` with the `osx-x86_64` or `osx-aarch_64` classifier.
-
 [[milestones-and-snapshots]]
 === Milestones and Snapshots
 
