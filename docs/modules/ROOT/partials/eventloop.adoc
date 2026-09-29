@@ -22,6 +22,26 @@ If you need changes to these settings, you can apply the following configuration
 include::{examples-dir}/eventloop/Application.java[tags=snippet-application]
 ----
 
+==== Native Transports
+
+`reactor-netty-core` brings the native `Epoll` transport only for `linux-x86_64`.
+On other platforms, Reactor Netty falls back to the `NIO` transport.
+The fallback is reported only when the logger `reactor.netty.resources` level is set to `DEBUG` (`Default Epoll support : false`).
+
+To use a native transport on another platform, add the native library for that platform,
+using the same `Netty` version as the one Reactor Netty depends on.
+For example, for `Linux` on `aarch64`, add the following Gradle dependency:
+
+[source,groovy]
+----
+dependencies {
+    runtimeOnly 'io.netty:netty-transport-native-epoll::linux-aarch_64' <1>
+}
+----
+<1> The version is resolved to the `Netty` version that Reactor Netty brings transitively.
+
+For `macOS`, add `io.netty:netty-transport-native-kqueue` with the `osx-x86_64` or `osx-aarch_64` classifier.
+
 ==== Disposing Event Loop Group
 
 - If you use the default `Event Loop Group` provided by Reactor Netty, invoke
