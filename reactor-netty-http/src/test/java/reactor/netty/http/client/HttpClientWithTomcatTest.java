@@ -27,6 +27,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpData;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,7 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -124,15 +127,55 @@ class HttpClientWithTomcatTest {
 
 	@Test
 	void postUploadNoMultipartWithCustomFactory() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 		doTestPostUpload((req, form) -> {
-			DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 			form.factory(customFactory)
 			    .multipart(false)
 			    .attr("attr1", "attr2");
 		}, "attr1=attr2");
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
 	}
 
-	@SuppressWarnings("unchecked")
+	@Test
+	void customFactoryIsCleanedWhenFormCallbackFails() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		HttpClient client = HttpClient.create()
+		                              .host("localhost")
+		                              .port(getPort());
+
+		StepVerifier.create(
+				client.post()
+			      .uri("/multipart")
+			      .sendForm((req, form) -> {
+			          form.factory(customFactory)
+			              .multipart(false)
+			              .attr("attr1", "attr2");
+			          throw new IllegalStateException("test");
+			      })
+			      .response())
+		            .expectErrorMessage("test")
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(getRequestFileDeleteMap(DEFAULT_FACTORY)).isEmpty();
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
+	}
+
+	@Test
+	void postUploadNoMultipartWithCustomCharset() throws Exception {
+		doTestPostUpload((req, form) -> form.charset(StandardCharsets.ISO_8859_1)
+		                                      .multipart(false)
+		                                      .attr("attr1", "é"),
+				"attr1=%E9");
+	}
+
+	@Test
+	void postUploadNoMultipartWithRfc3986Encoding() throws Exception {
+		doTestPostUpload((req, form) -> form.encoding(HttpPostRequestEncoder.EncoderMode.RFC3986)
+		                                      .multipart(false)
+		                                      .attr("attr1", "*"),
+				"attr1=%2A");
+	}
+
 	private static void doTestPostUpload(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
 			String expectedResponse) throws Exception {
 		HttpClient client =
@@ -152,9 +195,15 @@ class HttpClientWithTomcatTest {
 		assertThat(res.getT1()).as("status code").isEqualTo(200);
 		assertThat(res.getT2()).as("response body reflecting request").contains(expectedResponse);
 
-		Field field = DEFAULT_FACTORY.getClass().getDeclaredField("requestFileDeleteMap");
+		assertThat(getRequestFileDeleteMap(DEFAULT_FACTORY)).isEmpty();
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<HttpRequest, List<HttpData>> getRequestFileDeleteMap(HttpDataFactory factory)
+			throws Exception {
+		Field field = DefaultHttpDataFactory.class.getDeclaredField("requestFileDeleteMap");
 		field.setAccessible(true);
-		assertThat((Map<HttpRequest, List<HttpData>>) field.get(DEFAULT_FACTORY)).isEmpty();
+		return (Map<HttpRequest, List<HttpData>>) field.get(factory);
 	}
 
 	@Test

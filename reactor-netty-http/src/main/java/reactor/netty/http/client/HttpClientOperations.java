@@ -1154,9 +1154,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		@SuppressWarnings("FutureReturnValueIgnored")
 		void _subscribe(CoreSubscriber<? super Void> s) {
 			HttpDataFactory df = DEFAULT_FACTORY;
+			HttpClientFormEncoder encoder = null;
 
 			try {
-				HttpClientFormEncoder encoder = new HttpClientFormEncoder(df,
+				encoder = new HttpClientFormEncoder(df,
 						parent.nettyRequest,
 						false,
 						HttpConstants.DEFAULT_CHARSET,
@@ -1227,7 +1228,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 			catch (Throwable e) {
 				Exceptions.throwIfJvmFatal(e);
-				df.cleanRequestHttpData(parent.nettyRequest);
+				if (encoder != null) {
+					encoder.cleanFiles();
+				}
+				else {
+					df.cleanRequestHttpData(parent.nettyRequest);
+				}
 				s.onError(Exceptions.unwrap(e));
 			}
 		}
