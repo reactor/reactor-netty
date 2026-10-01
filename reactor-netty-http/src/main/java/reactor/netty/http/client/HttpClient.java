@@ -1442,6 +1442,16 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return request(HttpMethod.PUT);
 	}
 
+	/**
+	 * HTTP QUERY to connect the {@link HttpClient}.
+	 *
+	 * @return a {@link RequestSender} ready to finalize request and consume for response
+	 * @since 1.3.7
+	 */
+	public final RequestSender query() {
+		return request(HttpMethod.QUERY);
+	}
+
 	@Override
 	public final HttpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
 		return super.remoteAddress(remoteAddressSupplier);
