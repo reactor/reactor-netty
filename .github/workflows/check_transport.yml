@@ -57,7 +57,7 @@ jobs:
             transport: io_uring
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: gradle/actions/wrapper-validation@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       - name: setup java
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
