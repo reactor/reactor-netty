@@ -89,6 +89,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -1298,6 +1299,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketServerSpec, "websocketServerSpec");
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
+		if (!channel().eventLoop().inEventLoop()) {
+			return Mono.defer(() -> withWebsocketSupport(url, websocketServerSpec, websocketHandler))
+			           .subscribeOn(Schedulers.fromExecutor(channel().eventLoop()));
+		}
 		if (markSentHeaders()) {
 			isWebsocket = true;
 			WebsocketServerOperations ops;
