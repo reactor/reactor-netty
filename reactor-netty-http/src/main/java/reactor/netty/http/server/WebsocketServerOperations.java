@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -35,6 +36,7 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler;
@@ -71,7 +73,7 @@ class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
 	WebSocketServerHandshaker                 handshakerHttp11;
-	ChannelPromise                            handshakerResult;
+	final ChannelPromise                      handshakerResult;
 	final Sinks.One<WebSocketCloseStatus>     onCloseState;
 	final boolean                             proxyPing;
 
@@ -84,10 +86,29 @@ class WebsocketServerOperations extends HttpServerOperations
 		this.proxyPing = websocketServerSpec.handlePing();
 
 		onCloseState = Sinks.unsafe().one();
-		initHandshaker(wsUrl, websocketServerSpec, replaced);
+		Channel channel = replaced.channel();
+		handshakerResult = channel.newPromise();
+		EventLoop eventLoop = channel.eventLoop();
+		if (eventLoop.inEventLoop()) {
+			initHandshaker(wsUrl, websocketServerSpec, replaced);
+		}
+		else {
+			try {
+				eventLoop.execute(() -> {
+					try {
+						initHandshaker(wsUrl, websocketServerSpec, replaced);
+					}
+					catch (Exception e) {
+						handshakerResult.tryFailure(e);
+					}
+				});
+			}
+			catch (RuntimeException e) {
+				handshakerResult.setFailure(e);
+			}
+		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void initHandshaker(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
 		Channel channel = replaced.channel();
 
@@ -96,9 +117,11 @@ class WebsocketServerOperations extends HttpServerOperations
 				new WebSocketServerHandshakerFactory(wsUrl, websocketServerSpec.protocols(), true, websocketServerSpec.maxFramePayloadLength());
 		handshakerHttp11 = wsFactory.newHandshaker(replaced.nettyRequest);
 		if (handshakerHttp11 == null) {
-			//"FutureReturnValueIgnored" this is deliberate
-			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel);
-			handshakerResult = null;
+			Throwable throwable = new WebSocketServerHandshakeException("Websocket version [" +
+					replaced.requestHeaders().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION) +
+					"] is not supported");
+			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel)
+					.addListener(f -> handshakerResult.setFailure(throwable));
 		}
 		else {
 			removeHandler(NettyPipeline.HttpTrafficHandler);
@@ -109,7 +132,6 @@ class WebsocketServerOperations extends HttpServerOperations
 						new WebsocketHttpServerMetricsHandler((AbstractHttpServerMetricsHandler) handler));
 			}
 
-			handshakerResult = channel.newPromise();
 			HttpRequest request = new DefaultFullHttpRequest(replaced.version(),
 					replaced.method(),
 					replaced.uri());
@@ -154,15 +176,26 @@ class WebsocketServerOperations extends HttpServerOperations
 			                     request,
 			                     replaced.responseHeaders
 			                             .remove(HttpHeaderNames.TRANSFER_ENCODING),
-			                     handshakerResult)
+			                     channel.newPromise())
 			          .addListener(f -> {
-			              if (replaced.rebind(this)) {
-			                  markPersistent(false);
-			                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-			                  channel.read();
+			              try {
+			                  if (replaced.rebind(this)) {
+			                      markPersistent(false);
+			                      // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+			                      channel.read();
+			                  }
+			                  else if (log.isDebugEnabled()) {
+			                      log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
+			                  }
 			              }
-			              else if (log.isDebugEnabled()) {
-			                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
+			              finally {
+			                  // Notify subscribers only after the websocket operations have been bound
+			                  if (f.isSuccess()) {
+			                      handshakerResult.trySuccess();
+			                  }
+			                  else {
+			                      handshakerResult.tryFailure(f.cause());
+			                  }
 			              }
 			          });
 		}

@@ -111,8 +111,6 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 
 	@Override
 	void initHandshaker(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
-		handshakerResult = channel().newPromise();
-
 		if (isValid()) {
 			Channel channel = channel();
 
@@ -152,15 +150,26 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 			}
 
 			handshakerHttp2 = new WebsocketServerHandshaker(wsUrl, websocketServerSpec);
-			handshakerHttp2.handshake(channel, request, responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING), handshakerResult)
+			handshakerHttp2.handshake(channel, request, responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING), channel.newPromise())
 			               .addListener(f -> {
-			                   if (replaced.rebind(this)) {
-			                       markPersistent(false);
-			                       // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-			                       channel.read();
+			                   try {
+			                       if (replaced.rebind(this)) {
+			                           markPersistent(false);
+			                           // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+			                           channel.read();
+			                       }
+			                       else if (log.isDebugEnabled()) {
+			                           log.debug(format(channel, "Cannot bind Http2WebsocketServerOperations after the handshake."));
+			                       }
 			                   }
-			                   else if (log.isDebugEnabled()) {
-			                       log.debug(format(channel, "Cannot bind Http2WebsocketServerOperations after the handshake."));
+			                   finally {
+			                       // Notify subscribers only after the websocket operations have been bound
+			                       if (f.isSuccess()) {
+			                           handshakerResult.trySuccess();
+			                       }
+			                       else {
+			                           handshakerResult.tryFailure(f.cause());
+			                       }
 			                   }
 			               });
 		}
@@ -169,6 +178,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 	@SuppressWarnings("UndefinedEquals")
 	boolean isValid() {
 		String msg = null;
+		HttpResponseStatus status = HttpResponseStatus.BAD_REQUEST;
 		if (this.nettyRequest instanceof FullHttpRequest) {
 			msg = "Failed to upgrade to websocket. End of stream is received.";
 		}
@@ -181,12 +191,13 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 		else {
 			CharSequence version = requestHeaders().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
 			if (version == null || !version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
-				msg = "Websocket version [" + version + "] is not supported.";
+				msg = "Websocket version [" + version + "] is not supported";
+				status = HttpResponseStatus.UPGRADE_REQUIRED;
 			}
 		}
 
 		if (msg != null) {
-			HttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, EMPTY_BUFFER);
+			HttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, EMPTY_BUFFER);
 			res.headers().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 			Throwable handshakeException = new WebSocketServerHandshakeException(msg, nettyRequest);
 			channel().writeAndFlush(res)

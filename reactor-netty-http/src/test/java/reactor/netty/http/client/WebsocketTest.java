@@ -30,19 +30,29 @@ import java.util.function.Predicate;
 
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakeException;
+import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
@@ -53,11 +63,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyPipeline;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
@@ -1138,6 +1151,137 @@ class WebsocketTest extends BaseHttpTest {
 		assertThat(clientStatus.get()).isNotNull().isEqualTo(ABNORMAL_CLOSURE);
 		assertThat(connection.get()).isNotNull();
 		assertThat(connection.get().channel().isActive()).isFalse();
+	}
+
+	void doTestUpgradeOffEventLoop(HttpServer server, HttpClient client) {
+		AtomicBoolean pipelineUnchanged = new AtomicBoolean();
+		Sinks.Empty<Void> upgraded = Sinks.empty();
+		disposableServer =
+				server.accessLog(true)
+				      .handle((req, res) -> Mono.defer(() -> {
+				                  Channel channel = ((Connection) req).channel();
+				                  AtomicBoolean eventLoopReleased = new AtomicBoolean();
+				                  channel.eventLoop().execute(() -> {
+				                      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+				                      while (!eventLoopReleased.get() && System.nanoTime() < deadline) {
+				                          // The event loop cannot run the upgrade until released
+				                      }
+				                  });
+				                  Mono<Void> upgrade = res.sendWebsocket((in, out) -> out.sendString(Mono.just("doTestUpgradeOffEventLoop")));
+				                  // The pipeline is expected to be modified only on the event loop
+				                  pipelineUnchanged.set(channel.pipeline().get(NettyPipeline.AccessLogHandler) != null);
+				                  eventLoopReleased.set(true);
+				                  // The upgrade is expected to start without waiting for the subscription
+				                  return upgraded.asMono()
+				                                 .then(upgrade);
+				              })
+				              .subscribeOn(Schedulers.boundedElastic()))
+				      .bindNow();
+
+		client.websocket()
+		      .uri("/")
+		      .handle((in, out) -> {
+		          upgraded.tryEmitEmpty();
+		          return in.aggregateFrames().receive().asString();
+		      })
+		      .as(StepVerifier::create)
+		      .expectNext("doTestUpgradeOffEventLoop")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(10));
+
+		assertThat(pipelineUnchanged).as("pipeline modified from the caller thread").isTrue();
+	}
+
+	void doTestUpgradeOffEventLoopBeforeHandshakeCompletes(HttpServer server, HttpClient client) {
+		AtomicBoolean operationsBound = new AtomicBoolean();
+		disposableServer =
+				server.handle((req, res) -> Mono.defer(() -> {
+				                  Channel channel = ((Connection) req).channel();
+				                  AtomicBoolean eventLoopReleased = new AtomicBoolean();
+				                   channel.eventLoop().execute(() -> {
+				                       long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+				                       while (!eventLoopReleased.get() && System.nanoTime() < deadline) {
+				                           // The event loop cannot run the upgrade until released
+				                       }
+				                   });
+				                   Mono<Void> upgrade = res.sendWebsocket((in, out) -> {
+				                       in.withConnection(conn -> operationsBound.set(Connection.from(conn.channel()) == conn));
+				                       return out.sendString(Mono.just("doTestUpgradeOffEventLoopBeforeHandshakeCompletes"));
+				                   });
+				                   return Mono.<Void>create(sink -> {
+				                       try {
+				                           sink.onCancel(upgrade.subscribe(null, sink::error, sink::success));
+				                       }
+				                       finally {
+				                           eventLoopReleased.set(true);
+				                       }
+				                   });
+				              })
+				              .subscribeOn(Schedulers.boundedElastic()))
+				      .bindNow();
+
+		client.websocket()
+		      .uri("/")
+		      .handle((in, out) -> in.aggregateFrames().receive().asString())
+		      .as(StepVerifier::create)
+		      .expectNext("doTestUpgradeOffEventLoopBeforeHandshakeCompletes")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(10));
+
+		assertThat(operationsBound).as("websocket operations bound before handler startup").isTrue();
+	}
+
+	void doTestUnsupportedWebsocketVersion(HttpServer server, HttpClient client, boolean onEventLoop) throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		CountDownLatch errorLatch = new CountDownLatch(1);
+		disposableServer =
+				server.handle((req, res) -> {
+				            Mono<Void> mono = Mono.defer(() ->
+				                res.sendWebsocket((in, out) -> out.sendString(Mono.just("doTestUnsupportedWebsocketVersion")))
+				                   .then()
+				                   .doOnError(t -> {
+				                       error.set(t);
+				                       errorLatch.countDown();
+				                   }));
+				            return onEventLoop ? mono : mono.subscribeOn(Schedulers.boundedElastic());
+				      })
+				      .bindNow();
+
+		client.observe((conn, state) -> {
+		          if (state != ConnectionObserver.State.CONNECTED) {
+		              return;
+		          }
+		          conn.channel().pipeline().addAfter(NettyPipeline.HttpCodec, "doTestUnsupportedWebsocketVersion",
+		              new ChannelOutboundHandlerAdapter() {
+		                  @Override
+		                  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+		                      if (msg instanceof HttpRequest) {
+		                          HttpRequest request = (HttpRequest) msg;
+		                          if (request.headers().contains(HttpHeaderNames.UPGRADE)) {
+		                              request.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "99");
+		                          }
+		                      }
+		                      if (msg instanceof Http2HeadersFrame) {
+		                          Http2HeadersFrame frame = (Http2HeadersFrame) msg;
+		                          if (frame.headers().contains(Http2Headers.PseudoHeaderName.PROTOCOL.value(), HttpHeaderValues.WEBSOCKET)) {
+		                              frame.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "99");
+		                          }
+		                      }
+		                      ctx.write(msg, promise);
+		                  }
+		              });
+		      })
+		      .websocket()
+		      .uri("/")
+		      .handle((in, out) -> in.aggregateFrames().receive().asString().then())
+		      .as(StepVerifier::create)
+		      .expectErrorMatches(t -> t instanceof WebSocketClientHandshakeException &&
+		              "Invalid handshake response getStatus: 426 Upgrade Required".equals(t.getMessage()))
+		      .verify(Duration.ofSeconds(5));
+
+		assertThat(errorLatch.await(5, TimeUnit.SECONDS)).isTrue();
+		assertThat(error.get()).isInstanceOf(WebSocketServerHandshakeException.class)
+				.hasMessage("Websocket version [99] is not supported");
 	}
 
 	private static DisposableServer createDisposableServer(HttpServer server,
