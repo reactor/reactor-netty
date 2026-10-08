@@ -26,7 +26,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http2.DefaultHttp2GoAwayFrame;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.SslContext;
@@ -924,6 +926,74 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			    .expectNext(Arrays.asList("/1", "/2", "/3"))
 			    .expectComplete()
 			    .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void testHttp2PoolAndGoAwayWhileServerKeepsConnectionOpen() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		disposableServer =
+				createServer()
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(serverCtx))
+				        .route(r -> r.get("/1", (req, res) -> {
+				                         // Graceful GOAWAY as sent by a draining proxy, the connection stays open
+				                         req.withConnection(conn -> conn.channel().parent().writeAndFlush(
+				                                 new DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR).setExtraStreamIds(Integer.MAX_VALUE)));
+				                         return res.sendString(Mono.just("/1"));
+				                     })
+				                     .get("/2", (req, res) -> res.sendString(Mono.just("/2"))))
+				        .bindNow();
+
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testHttp2PoolAndGoAwayWhileServerKeepsConnectionOpen")
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofSeconds(2))
+				                  .build();
+		Sinks.Empty<Void> goAwayReceived = Sinks.empty();
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(clientCtx))
+				        .doOnChannelInit((observer, channel, address) -> {
+				            Http2FrameCodec http2FrameCodec = channel.pipeline().get(Http2FrameCodec.class);
+
+				            Http2Connection.Listener goAwayFrameListener = Mockito.mock(Http2Connection.Listener.class);
+				            Mockito.doAnswer(invocation -> {
+				                       goAwayReceived.tryEmitEmpty();
+				                       return null;
+				                   })
+				                   .when(goAwayFrameListener)
+				                   .onGoAwayReceived(Mockito.anyInt(), Mockito.anyLong(), Mockito.any());
+				            http2FrameCodec.connection().addListener(goAwayFrameListener);
+				        });
+
+		try {
+			client.get()
+			      .uri("/1")
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .concatWith(goAwayReceived.asMono()
+			                                .then(client.get()
+			                                            .uri("/2")
+			                                            .responseContent()
+			                                            .aggregate()
+			                                            .asString()))
+			      .collectList()
+			      .as(StepVerifier::create)
+			      .expectNext(Arrays.asList("/1", "/2"))
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
 		}
 		finally {
 			provider.disposeLater()

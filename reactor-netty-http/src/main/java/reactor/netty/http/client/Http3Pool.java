@@ -63,6 +63,7 @@ final class Http3Pool extends Http2Pool {
 			}
 			// received GO_AWAY
 			else if (ref.slot.goAwayReceived()) {
+				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
@@ -84,6 +85,9 @@ final class Http3Pool extends Http2Pool {
 
 		@Override
 		int availableStreams(int concurrency) {
+			if (get()) {
+				return 0;
+			}
 			int peerAllowed = peerAllowedMaxStreams();
 			if (pool.maxConcurrentStreams != -1) {
 				return Math.min(peerAllowed, Math.max(0, pool.maxConcurrentStreams - concurrency));
