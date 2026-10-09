@@ -117,6 +117,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	boolean read;
 	boolean needsFlush;
+	boolean needsRead;
 	boolean finalizingResponse;
 
 	HttpTrafficHandler(
@@ -349,8 +350,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	@Override
 	public void read(ChannelHandlerContext ctx) {
 		if (pipelined != null && pipelined.size() >= PIPELINED_QUEUE_LOW_LIMIT) {
+			needsRead = true;
 			return;
 		}
+		needsRead = false;
 		ctx.read();
 	}
 
@@ -598,7 +601,19 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	void requestRead() {
 		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout, HttpConnectionLiveness.CLOSE);
+		needsRead = false;
 		ctx.read();
+	}
+
+	// Resumes a read that was suppressed while the pipelined queue was full
+	@SuppressWarnings("NullAway")
+	void resumeSuppressedRead() {
+		// Deliberately suppress "NullAway"
+		// needsRead is set only when pipelined is not null
+		if (needsRead && pipelined.size() < PIPELINED_QUEUE_LOW_LIMIT && !ctx.isRemoved() && ctx.channel().isActive()) {
+			needsRead = false;
+			ctx.read();
+		}
 	}
 
 	@Override
@@ -611,6 +626,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		while ((next = pipelined.peek()) != null) {
 			if (next instanceof HttpRequestHolder) {
 				if (nextRequest != null) {
+					resumeSuppressedRead();
 					return;
 				}
 				if (!persistentConnection) {
@@ -689,6 +705,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		if (nextRequest == null && persistentConnection && !ctx.isRemoved() && ctx.channel().isActive() &&
 				!(ChannelOperations.get(ctx.channel()) instanceof HttpServerOperations)) {
 			requestRead();
+		}
+		else {
+			resumeSuppressedRead();
 		}
 	}
 

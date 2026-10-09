@@ -32,6 +32,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -438,6 +439,46 @@ class HttpServerTests extends BaseHttpTest {
 			out.write(getRequest("/next").getBytes(CharsetUtil.US_ASCII));
 			out.flush();
 			assertThat(readUntil(in, "next")).contains("next");
+		}
+	}
+
+	@Test
+	void testIssue4419() throws Exception {
+		disposableServer =
+				createServer()
+				        .route(r -> r.get("/slow", (req, res) ->
+				                             res.sendString(Mono.delay(Duration.ofMillis(500)).thenReturn("slow")))
+				                     .post("/data", (req, res) ->
+				                             res.sendString(req.receive().aggregate().asString().map(s -> "data " + s.length()))))
+				        .bindNow();
+
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		try (Socket socket = new Socket("localhost", disposableServer.port())) {
+			socket.setSoTimeout(10_000);
+			OutputStream out = socket.getOutputStream();
+			InputStream in = socket.getInputStream();
+
+			out.write(getRequest("/slow").getBytes(CharsetUtil.US_ASCII));
+			out.flush();
+
+			// /data is buffered while /slow is still in flight, until the pipelined queue is full
+			// and the server stops reading, so the body is written from another thread.
+			int length = 1_000_000;
+			byte[] body = new byte[length];
+			Arrays.fill(body, (byte) 'x');
+			Future<?> write = executor.submit(() -> {
+				out.write(("POST /data HTTP/1.1\r\nHost: localhost\r\nContent-Length: " + length + "\r\n\r\n")
+						.getBytes(CharsetUtil.US_ASCII));
+				out.write(body);
+				out.flush();
+				return null;
+			});
+
+			assertThat(readUntil(in, "data " + length)).contains("slow", "data " + length);
+			write.get(10, TimeUnit.SECONDS);
+		}
+		finally {
+			executor.shutdownNow();
 		}
 	}
 
