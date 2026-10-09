@@ -349,6 +349,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			}
 			// received GO_AWAY
 			if (ref.slot.goAwayReceived()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(ref.slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
+				}
 				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);

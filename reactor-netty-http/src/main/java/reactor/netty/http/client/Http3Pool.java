@@ -63,6 +63,9 @@ final class Http3Pool extends Http2Pool {
 			}
 			// received GO_AWAY
 			else if (ref.slot.goAwayReceived()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(ref.slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
+				}
 				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
