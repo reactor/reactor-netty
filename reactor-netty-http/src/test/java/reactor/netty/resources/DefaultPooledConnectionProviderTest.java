@@ -26,7 +26,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http2.DefaultHttp2GoAwayFrame;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.SslContext;
@@ -45,6 +47,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -862,9 +865,10 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		return result;
 	}
 
-	@Test
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
 	@SuppressWarnings({"FutureReturnValueIgnored", "deprecation"})
-	void testHttp2PoolAndGoAway() throws Exception {
+	void testHttp2PoolAndGoAway(boolean serverClosesConnection) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
@@ -877,8 +881,16 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .secure(spec -> spec.sslContext(serverCtx))
 				        .route(r -> r.get("/1", (req, res) -> res.sendString(startSending.asMono().then(Mono.just("/1"))))
 				                     .get("/2", (req, res) -> {
-				                         //"FutureReturnValueIgnored" this is deliberate
-				                         req.withConnection(conn -> conn.channel().parent().close());
+				                         if (serverClosesConnection) {
+				                             //"FutureReturnValueIgnored" this is deliberate
+				                             req.withConnection(conn -> conn.channel().parent().close());
+				                         }
+				                         else {
+				                             // Graceful GOAWAY as sent by a draining proxy, the connection stays open
+				                             //"FutureReturnValueIgnored" this is deliberate
+				                             req.withConnection(conn -> conn.channel().parent().writeAndFlush(
+				                                     new DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR).setExtraStreamIds(Integer.MAX_VALUE)));
+				                         }
 				                         startSending.tryEmitEmpty();
 				                         return res.sendString(Mono.just("/2"));
 				                     })

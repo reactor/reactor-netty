@@ -174,6 +174,149 @@ class Http2PoolTest {
 		}
 	}
 
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void goAwayReceivedClosesConnectionWhenLastStreamCompletes(boolean evictInBackground) throws Exception {
+		List<EmbeddedChannel> channels = new ArrayList<>();
+		Http2Pool http2Pool = goAwayTestPool(channels, evictInBackground);
+
+		try {
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			http2Pool.acquire().subscribe(acquired::add);
+			http2Pool.acquire().subscribe(acquired::add);
+			EmbeddedChannel channel = channels.get(0);
+			channel.runPendingTasks();
+			assertThat(acquired).hasSize(2);
+
+			channel.pipeline().get(Http2FrameCodec.class).connection()
+					.goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+			channel.runPendingTasks();
+			if (evictInBackground) {
+				http2Pool.evictInBackground();
+				channel.runPendingTasks();
+			}
+
+			assertThat(channel.isOpen()).as("open while a stream is active").isTrue();
+
+			acquired.get(1).invalidate().block(Duration.ofSeconds(1));
+			channel.runPendingTasks();
+			if (evictInBackground) {
+				assertThat(channel.isOpen()).as("open until the background eviction runs").isTrue();
+
+				http2Pool.evictInBackground();
+				channel.runPendingTasks();
+			}
+
+			assertThat(channel.isOpen()).as("closed once the last stream completes").isFalse();
+			assertThat(http2Pool.connections).as("removed from Http2Pool").isEmpty();
+			assertThat(http2Pool.allocatedSize()).as("permit returned to Http2Pool").isEqualTo(0);
+		}
+		finally {
+			disposeGoAwayTestPool(http2Pool, channels);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void goAwayReceivedClosesIdleConnectionOnAcquire(boolean evictInBackground) throws Exception {
+		List<EmbeddedChannel> channels = new ArrayList<>();
+		Http2Pool http2Pool = goAwayTestPool(channels, evictInBackground);
+
+		try {
+			PooledRef<Connection> ref1 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref1).isNotNull();
+			channels.get(0).runPendingTasks();
+			ref1.invalidate().block(Duration.ofSeconds(1));
+
+			EmbeddedChannel idleChannel = channels.get(0);
+			idleChannel.pipeline().get(Http2FrameCodec.class).connection()
+					.goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			assertThat(idleChannel.isOpen()).as("open until the next acquisition").isTrue();
+
+			PooledRef<Connection> ref2 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref2).isNotNull();
+			idleChannel.runPendingTasks();
+
+			assertThat(idleChannel.isOpen()).as("closed when found idle after GO_AWAY").isFalse();
+			assertThat(ref2.poolable().channel()).as("served by a new connection").isNotSameAs(idleChannel);
+
+			ref2.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			disposeGoAwayTestPool(http2Pool, channels);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void goAwayReceivedKeepsConnectionOpenOnAcquireWhileStreamIsActive(boolean evictInBackground) throws Exception {
+		List<EmbeddedChannel> channels = new ArrayList<>();
+		Http2Pool http2Pool = goAwayTestPool(channels, evictInBackground);
+
+		try {
+			PooledRef<Connection> ref1 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref1).isNotNull();
+			EmbeddedChannel goAwayChannel = channels.get(0);
+			goAwayChannel.runPendingTasks();
+
+			goAwayChannel.pipeline().get(Http2FrameCodec.class).connection()
+					.goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			http2Pool.acquire().subscribe(acquired::add);
+			goAwayChannel.runPendingTasks();
+
+			assertThat(goAwayChannel.isOpen()).as("open while a stream is active").isTrue();
+			assertThat(acquired).as("pending until the connection is closed").isEmpty();
+
+			ref1.invalidate().block(Duration.ofSeconds(1));
+			goAwayChannel.runPendingTasks();
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+
+			assertThat(goAwayChannel.isOpen()).as("closed once the last stream completes").isFalse();
+			assertThat(acquired).as("served by a new connection").hasSize(1);
+			assertThat(acquired.get(0).poolable().channel()).isNotSameAs(goAwayChannel);
+
+			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			disposeGoAwayTestPool(http2Pool, channels);
+		}
+	}
+
+	private static Http2Pool goAwayTestPool(List<EmbeddedChannel> channels, boolean evictInBackground) {
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build(),
+				                   new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+				               channels.add(channel);
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		if (evictInBackground) {
+			poolBuilder = poolBuilder.evictInBackground(Duration.ofSeconds(5));
+		}
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(2)
+				.build();
+		return poolBuilder.build(config -> new Http2Pool(config, strategy));
+	}
+
+	private static void disposeGoAwayTestPool(Http2Pool http2Pool, List<EmbeddedChannel> channels) {
+		http2Pool.dispose();
+		for (EmbeddedChannel channel : channels) {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
 	@Test
 	void memoizesConnectionWhenFrameCodecIsInstalledAfterSlotCreation() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(), new ChannelHandlerAdapter() {});
