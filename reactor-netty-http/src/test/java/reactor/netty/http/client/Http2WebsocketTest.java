@@ -534,8 +534,8 @@ class Http2WebsocketTest extends WebsocketTest {
 		                   }));
 
 		websocketOverH2Negative(server, configureClient(clientProtocols, clientCtx),
-				t -> "Invalid websocket handshake response status [400 Bad Request].".equals(t.getMessage()),
-				"Websocket version [7] is not supported.");
+				t -> "Invalid handshake response getStatus: 426 Upgrade Required".equals(t.getMessage()),
+				"Websocket version [7] is not supported");
 	}
 
 	@ParameterizedTest
@@ -595,7 +595,7 @@ class Http2WebsocketTest extends WebsocketTest {
 		                   }));
 
 		websocketOverH2Negative(configureServer(serverProtocols, serverCtx), client,
-				t -> "Invalid websocket handshake response status [400 Bad Request].".equals(t.getMessage()),
+				t -> "Invalid handshake response getStatus: 400 Bad Request".equals(t.getMessage()),
 				serverError);
 	}
 
@@ -638,6 +638,34 @@ class Http2WebsocketTest extends WebsocketTest {
 					.isNotNull()
 					.hasMessage(serverError);
 		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("http2CompatibleCombinations")
+	void testUnsupportedWebsocketVersion(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
+		doTestUnsupportedWebsocketVersion(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx), false);
+	}
+
+	@ParameterizedTest
+	@MethodSource("http2CompatibleCombinations")
+	void testUnsupportedWebsocketVersionOnEventLoop(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
+		doTestUnsupportedWebsocketVersion(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx), true);
+	}
+
+	@ParameterizedTest
+	@MethodSource("http2CompatibleCombinations")
+	void testUpgradeOffEventLoop(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) {
+		doTestUpgradeOffEventLoop(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx));
+	}
+
+	@ParameterizedTest
+	@MethodSource("http2CompatibleCombinations")
+	void testUpgradeOffEventLoopBeforeHandshakeCompletes(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) {
+		doTestUpgradeOffEventLoopBeforeHandshakeCompletes(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx));
 	}
 
 	@SuppressWarnings("deprecation")
