@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -425,6 +426,22 @@ class Http11WebsocketTest extends WebsocketTest {
 	@Test
 	void testIssue3295() throws Exception {
 		doTestIssue3295(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testUnsupportedWebsocketVersion(boolean onEventLoop) throws Exception {
+		doTestUnsupportedWebsocketVersion(createServer(), createClient(() -> disposableServer.address()), onEventLoop);
+	}
+
+	@Test
+	void testUpgradeOffEventLoop() {
+		doTestUpgradeOffEventLoop(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@Test
+	void testUpgradeOffEventLoopBeforeHandshakeCompletes() {
+		doTestUpgradeOffEventLoopBeforeHandshakeCompletes(createServer(), createClient(() -> disposableServer.address()));
 	}
 
 	static Stream<Arguments> http11CompatibleProtocols() {

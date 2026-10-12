@@ -108,7 +108,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 				if (notRedirected(response) && authenticationNotRequired()) {
 					HttpResponseStatus status = response.status();
 					String errorMsg = !HttpResponseStatus.OK.equals(status) ?
-							"Invalid websocket handshake response status [" + status + "]." :
+							"Invalid handshake response getStatus: " + status :
 							"Failed to upgrade to websocket. End of stream is received.";
 					recordHandshakeFailure(channel());
 					onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
