@@ -75,6 +75,9 @@ import static reactor.netty.ReactorNetty.format;
  *     and the negotiated protocol is HTTP/1.1.</li>
  * </ul>
  * <p>
+ * When GO_AWAY is received or the eviction predicate evaluates to true, the connection is also closed, so that the
+ * parent {@code ConnectionProvider} does not keep counting it against {@code maxConnections}.
+ * <p>
  * The connection is filtered out when:
  * <ul>
  *     <li>The connection's eviction predicate evaluates to true or GO_AWAY is received, and there are active streams. In this case, the
@@ -346,6 +349,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			}
 			// received GO_AWAY
 			if (ref.slot.goAwayReceived()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(ref.slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
+				}
+				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
@@ -538,6 +545,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 							if (log.isDebugEnabled()) {
 								log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
 							}
+							closeChannel(slot.connection.channel());
 							recordInteractionTimestamp();
 							slots.remove();
 							IDLE_SIZE.decrementAndGet(this);
@@ -610,6 +618,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
 					}
+					closeChannel(slot.connection.channel());
 					slot.invalidate();
 				}
 				continue;
