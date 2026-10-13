@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ import static reactor.netty.Metrics.OBSERVATION_KEY;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.UNKNOWN;
+import static reactor.netty.internal.util.ObservationErrors.recordObservationError;
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.NET_PEER_NAME;
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
@@ -157,8 +158,18 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			sample.start();
 			return resolver.get()
 			               .addListener(future -> {
-			                   handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
-			                   sample.stop();
+			                   try {
+			                       if (future.isSuccess()) {
+			                           handlerContext.status = SUCCESS;
+			                       }
+			                       else {
+			                           handlerContext.status = ERROR;
+			                           recordObservationError(sample, future.cause());
+			                       }
+			                   }
+			                   finally {
+			                       sample.stop();
+			                   }
 			               });
 		}
 
@@ -174,8 +185,18 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			Observation observation = Observation.start(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {
-			                   handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
-			                   observation.stop();
+			                   try {
+			                       if (future.isSuccess()) {
+			                           handlerContext.status = SUCCESS;
+			                       }
+			                       else {
+			                           handlerContext.status = ERROR;
+			                           recordObservationError(observation, future.cause());
+			                       }
+			                   }
+			                   finally {
+			                       observation.stop();
+			                   }
 			               });
 		}
 	}

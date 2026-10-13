@@ -23,12 +23,14 @@ import io.micrometer.observation.ObservationRegistry;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 import org.jspecify.annotations.Nullable;
+import reactor.netty.internal.util.ObservationErrors;
 import reactor.netty.observability.ReactorNettyTimerObservationHandler;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.function.BiFunction;
 
 /**
  * Constants and utilities around metrics.
@@ -344,6 +346,36 @@ public class Metrics {
 		ObservationRegistry previous = OBSERVATION_REGISTRY;
 		OBSERVATION_REGISTRY = observationRegistry;
 		return previous;
+	}
+
+	/**
+	 * Set the function that decides which error, if any, is recorded with {@link Observation#error(Throwable)}
+	 * when these fail:
+	 * <ul>
+	 * <li>the connection establishment</li>
+	 * <li>the TLS handshake</li>
+	 * <li>the hostname resolution</li>
+	 * </ul>
+	 * By default, no error is recorded, the observation only has a status tag with value {@link #ERROR}.
+	 * <p>This configuration is global and applies to all Reactor Netty clients and servers.
+	 * Configure it during application startup.
+	 * <p>The function receives the {@link Observation.Context} and the failure cause.
+	 * {@link Observation.Context#getName()} can be used to distinguish the observations,
+	 * for example {@code reactor.netty.tcp.server.tls.handshake.time}.
+	 * The function returns the error to record (the cause itself or a sanitized copy of it),
+	 * or {@code null} to record nothing.
+	 * <p><strong>Note:</strong> The failure cause may contain sensitive data received from the remote peer.
+	 * <p><strong>Note:</strong> The function can be invoked concurrently on different event loops.
+	 * It must be thread-safe and must not block.
+	 * When the function throws an exception, no error is recorded and the observation is still stopped.
+	 *
+	 * @param observationErrorMapper the function or {@code null} to not record errors (the default)
+	 * @return the previously configured function or {@code null}
+	 * @since 1.4.0
+	 */
+	public static @Nullable BiFunction<Observation.Context, Throwable, @Nullable Throwable> observationErrorMapper(
+			@Nullable BiFunction<Observation.Context, Throwable, @Nullable Throwable> observationErrorMapper) {
+		return ObservationErrors.observationErrorMapper(observationErrorMapper);
 	}
 
 	public static Context updateContext(Context context, Object observation) {
