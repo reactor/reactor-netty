@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1867,6 +1868,41 @@ class HttpClientTest extends BaseHttpTest {
 		    .block(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void sendFormProgressCancellationDoesNotInterruptUpload(boolean cleanOnTerminate) throws Exception {
+		disposableServer =
+				createServer()
+				          .handle((req, res) -> res.sendString(req.receive()
+				                                                .aggregate()
+				                                                .asString()
+				                                                .map(body -> Integer.toString(body.length()))))
+				          .bindNow();
+
+		try {
+			String value = String.join("", Collections.nCopies(20000, "x"));
+			createHttpClientForContextWithAddress()
+			        .post()
+			        .uri("/")
+			        .sendForm((req, form) -> form.cleanOnTerminate(cleanOnTerminate)
+			                                     .multipart(false)
+			                                     .attr("key", value),
+			                  progress -> progress.take(1).subscribe())
+			        .responseSingle((res, body) -> body.asString())
+			        .as(StepVerifier::create)
+					.expectNext(Integer.toString("key=".length() + value.length()))
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
+
+			Field field = HttpClientOperations.SendForm.DEFAULT_FACTORY.getClass().getDeclaredField("requestFileDeleteMap");
+			field.setAccessible(true);
+			assertThat((Map<?, ?>) field.get(HttpClientOperations.SendForm.DEFAULT_FACTORY)).isEmpty();
+		}
+		finally {
+			HttpClientOperations.SendForm.DEFAULT_FACTORY.cleanAllHttpData();
+		}
 	}
 
 	@Test

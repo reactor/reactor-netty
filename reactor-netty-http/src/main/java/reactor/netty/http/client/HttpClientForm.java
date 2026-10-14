@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,9 @@ public interface HttpClientForm {
 	/**
 	 * Should file attributes be cleaned and eventually removed from disk.
 	 * Default to false.
+	 * <p>If the default {@link HttpDataFactory} is in use, the data is always cleaned,
+	 * as it cannot be accessed outside the form. To keep the data, use {@link #factory(HttpDataFactory)}
+	 * to configure a custom {@link HttpDataFactory}.
 	 *
 	 * @param clean true if cleaned on termination (successful or failed)
 	 *
