@@ -121,7 +121,7 @@ class Issue4343EndToEndTest extends BaseHttpTest {
 		Disposable exchange =
 				createClient(disposableServer.port())
 				        .wiretap(false)
-				        .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(READ_SIZE))
+				        .option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(READ_SIZE))
 				        // records every content the connection decoded, so the test can tell what is
 				        // still sitting in the inbound queue: whatever the consumer never got
 				        .doOnConnected(c -> c.addHandlerLast("probe", new ChannelInboundHandlerAdapter() {
