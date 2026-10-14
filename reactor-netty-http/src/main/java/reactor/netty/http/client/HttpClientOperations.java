@@ -39,6 +39,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -1186,40 +1187,22 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				ChannelFuture f = parent.channel()
 				                        .writeAndFlush(r);
 
+				ChannelFutureListener cleanupListener = cleanupListener(encoder, parent.nettyRequest);
+
 				if (encoder.isChunked()) {
-					Flux<Long> tail = encoder.progressSink.asFlux().onBackpressureLatest();
-
-					if (encoder.cleanOnTerminate) {
-						tail = tail.doOnCancel(encoder)
-						           .doAfterTerminate(encoder);
-					}
-
 					if (progressCallback != null) {
-						progressCallback.accept(tail);
-					}
-					else {
-						tail.subscribe();
+						progressCallback.accept(encoder.progressSink.asFlux().onBackpressureLatest());
 					}
 					//"FutureReturnValueIgnored" this is deliberate
-					parent.channel()
-					      .writeAndFlush(encoder);
+					parent.channel().writeAndFlush(encoder).addListener(cleanupListener);
 				}
 				else {
-					Mono<Void> mono = FutureMono.from(f);
-
-					if (encoder.cleanOnTerminate) {
-						mono = mono.doOnCancel(encoder)
-						           .doAfterTerminate(encoder);
-					}
-
 					if (progressCallback != null) {
-						progressCallback.accept(mono.cast(Long.class)
-						                            .switchIfEmpty(Mono.just(encoder.length()))
-						                            .flux());
+						progressCallback.accept(
+								FutureMono.from(f).cast(Long.class).switchIfEmpty(Mono.just(encoder.length())).flux());
 					}
-					else {
-						mono.subscribe();
-					}
+					//"FutureReturnValueIgnored" this is deliberate
+					f.addListener(cleanupListener);
 				}
 				s.onComplete();
 
@@ -1228,8 +1211,28 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			catch (Throwable e) {
 				Exceptions.throwIfJvmFatal(e);
 				df.cleanRequestHttpData(parent.nettyRequest);
+				if (df != DEFAULT_FACTORY) {
+					DEFAULT_FACTORY.cleanRequestHttpData(parent.nettyRequest);
+				}
 				s.onError(Exceptions.unwrap(e));
 			}
+		}
+
+		/**
+		 * The data is cleaned once the body is written or the write fails, not when the progress
+		 * {@link Flux} terminates, so cancelling the progress does not release data still being written.
+		 * {@link #DEFAULT_FACTORY} is shared and not reachable from user code, so the data it holds
+		 * for this request is always cleaned, even when {@code cleanOnTerminate} is {@code false}
+		 * or a custom factory is configured after the default one has created parts.
+		 */
+		static ChannelFutureListener cleanupListener(HttpClientFormEncoder encoder, HttpRequest request) {
+			boolean cleanEncoder = encoder.cleanOnTerminate;
+			return future -> {
+				if (cleanEncoder) {
+					encoder.cleanFiles();
+				}
+				DEFAULT_FACTORY.cleanRequestHttpData(request);
+			};
 		}
 	}
 
