@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +43,7 @@ import reactor.core.publisher.Sinks;
  * <p>
  * This encoder will help to encode Request for a FORM as POST.
  */
-final class HttpClientFormEncoder extends HttpPostRequestEncoder
-		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
+final class HttpClientFormEncoder extends HttpPostRequestEncoder implements ChunkedInput<HttpContent>, HttpClientForm {
 
 	final Sinks.Many<Long> progressSink;
 	final HttpRequest request;
@@ -303,11 +302,6 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			throw Exceptions.propagate(new ErrorDataEncoderException(e));
 		}
 		return this;
-	}
-
-	@Override
-	public void run() {
-		cleanFiles();
 	}
 
 	final HttpClientFormEncoder applyChanges(HttpRequest request) {
