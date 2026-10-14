@@ -17,4 +17,6 @@ See xref:observability.adoc#observability-metrics-pending-connections[Pending Co
 See xref:observability.adoc#observability-metrics-pending-connections-time[Pending Connections Time]
 | reactor.netty.connection.provider.max.pending.connections | Gauge | The maximum number of requests that will be queued while waiting for a ready connection.
 See xref:observability.adoc#observability-metrics-max-pending-connections[Max Pending Connections]
+| reactor.netty.connection.provider.connections.lifetime | Timer | Time that the connection existed in the connection pool, from its allocation until its destruction.
+See xref:observability.adoc#observability-metrics-connections-lifetime[Connections Lifetime]
 |=======

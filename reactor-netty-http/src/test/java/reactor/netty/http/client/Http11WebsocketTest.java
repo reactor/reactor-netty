@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -319,6 +320,16 @@ class Http11WebsocketTest extends WebsocketTest {
 	}
 
 	@Test
+	void testMaxDecompressionBufferSizeServer() throws Exception {
+		doTestMaxDecompressionBufferSizeServer(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@Test
+	void testMaxDecompressionBufferSizeClient() {
+		doTestMaxDecompressionBufferSizeClient(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@Test
 	@SuppressWarnings("NullAway")
 	void websocketOperationsBadValues() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
@@ -415,6 +426,22 @@ class Http11WebsocketTest extends WebsocketTest {
 	@Test
 	void testIssue3295() throws Exception {
 		doTestIssue3295(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testUnsupportedWebsocketVersion(boolean onEventLoop) throws Exception {
+		doTestUnsupportedWebsocketVersion(createServer(), createClient(() -> disposableServer.address()), onEventLoop);
+	}
+
+	@Test
+	void testUpgradeOffEventLoop() {
+		doTestUpgradeOffEventLoop(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@Test
+	void testUpgradeOffEventLoopBeforeHandshakeCompletes() {
+		doTestUpgradeOffEventLoopBeforeHandshakeCompletes(createServer(), createClient(() -> disposableServer.address()));
 	}
 
 	static Stream<Arguments> http11CompatibleProtocols() {

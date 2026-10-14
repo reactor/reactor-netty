@@ -17,10 +17,13 @@ package reactor.netty.http.server;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -29,6 +32,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -105,6 +109,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.AttributeKey;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
@@ -408,6 +413,90 @@ class HttpServerTests extends BaseHttpTest {
 				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
 				          .block(Duration.ofSeconds(5));
 		assertThat(code).isEqualTo(500);
+	}
+
+	@Test
+	void pipelinedRequestResumesReadWhenOnlyTrailingContentIsQueued() throws Exception {
+		disposableServer =
+				createServer()
+				        .route(r -> r.get("/slow", (req, res) ->
+				                             res.sendString(Mono.delay(Duration.ofMillis(500)).thenReturn("slow")))
+				                     .get("/fast", (req, res) -> res.sendString(Mono.just("fast")))
+				                     .get("/next", (req, res) -> res.sendString(Mono.just("next"))))
+				        .bindNow();
+
+		try (Socket socket = new Socket("localhost", disposableServer.port())) {
+			socket.setSoTimeout(10_000);
+			OutputStream out = socket.getOutputStream();
+			InputStream in = socket.getInputStream();
+
+			// One write, so /fast is buffered while /slow is still in flight and is then answered off
+			// the pipelined queue, leaving only its own trailing content behind.
+			out.write((getRequest("/slow") + getRequest("/fast")).getBytes(CharsetUtil.US_ASCII));
+			out.flush();
+			assertThat(readUntil(in, "fast")).contains("slow", "fast");
+
+			out.write(getRequest("/next").getBytes(CharsetUtil.US_ASCII));
+			out.flush();
+			assertThat(readUntil(in, "next")).contains("next");
+		}
+	}
+
+	@Test
+	void testIssue4419() throws Exception {
+		disposableServer =
+				createServer()
+				        .route(r -> r.get("/slow", (req, res) ->
+				                             res.sendString(Mono.delay(Duration.ofMillis(500)).thenReturn("slow")))
+				                     .post("/data", (req, res) ->
+				                             res.sendString(req.receive().aggregate().asString().map(s -> "data " + s.length()))))
+				        .bindNow();
+
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		try (Socket socket = new Socket("localhost", disposableServer.port())) {
+			socket.setSoTimeout(10_000);
+			OutputStream out = socket.getOutputStream();
+			InputStream in = socket.getInputStream();
+
+			out.write(getRequest("/slow").getBytes(CharsetUtil.US_ASCII));
+			out.flush();
+
+			// /data is buffered while /slow is still in flight, until the pipelined queue is full
+			// and the server stops reading, so the body is written from another thread.
+			int length = 1_000_000;
+			byte[] body = new byte[length];
+			Arrays.fill(body, (byte) 'x');
+			Future<?> write = executor.submit(() -> {
+				out.write(("POST /data HTTP/1.1\r\nHost: localhost\r\nContent-Length: " + length + "\r\n\r\n")
+						.getBytes(CharsetUtil.US_ASCII));
+				out.write(body);
+				out.flush();
+				return null;
+			});
+
+			assertThat(readUntil(in, "data " + length)).contains("slow", "data " + length);
+			write.get(10, TimeUnit.SECONDS);
+		}
+		finally {
+			executor.shutdownNow();
+		}
+	}
+
+	private static String getRequest(String uri) {
+		return "GET " + uri + " HTTP/1.1\r\nHost: localhost\r\n\r\n";
+	}
+
+	private static String readUntil(InputStream in, String token) throws IOException {
+		StringBuilder received = new StringBuilder();
+		byte[] buffer = new byte[256];
+		while (received.indexOf(token) < 0) {
+			int read = in.read(buffer);
+			if (read < 0) {
+				throw new IOException("Connection closed before receiving '" + token + "': " + received);
+			}
+			received.append(new String(buffer, 0, read, CharsetUtil.US_ASCII));
+		}
+		return received.toString();
 	}
 
 	@ParameterizedTest
@@ -4148,5 +4237,71 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(firstParent)
 				.as("parent connection should not be a terminable ChannelOperations")
 				.isNotInstanceOf(ChannelOperations.class);
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {2, 4})
+	void testMaxPipelineDepth(int maxPipelineDepth) throws InterruptedException {
+		AtomicInteger i = new AtomicInteger();
+
+		HttpServer server = createServer()
+			    .route(r -> r.get("/", (req, resp) ->
+			        resp.sendString(Mono.just(i.incrementAndGet())
+			                    .flatMap(d ->
+			                        Mono.delay(Duration.ofSeconds(4 - d))
+			                            .map(x -> d + "")))));
+		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(128);
+
+		server = server.maxPipelineDepth(maxPipelineDepth);
+		assertThat(server.configuration().maxPipelineDepth()).isEqualTo(maxPipelineDepth);
+
+		disposableServer = server.bindNow();
+
+		DefaultFullHttpRequest request =
+				new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+
+		CountDownLatch latch = new CountDownLatch(10);
+		Connection client =
+			TcpClient.create()
+			         .port(disposableServer.port())
+			         .handle((in, out) -> {
+			                 in.withConnection(x ->
+			                         x.addHandlerFirst(new HttpClientCodec()))
+			                   .receiveObject()
+			                   .map(o -> {
+			                       if (o == LastHttpContent.EMPTY_LAST_CONTENT) {
+			                           return new DefaultHttpContent(
+			                               Unpooled.wrappedBuffer((i.incrementAndGet() + "").getBytes(Charset.defaultCharset())));
+			                       }
+			                       return o;
+			                   })
+			                   .ofType(DefaultHttpContent.class)
+			                   .as(ByteBufFlux::fromInbound)
+			                   .asString()
+			                   .log()
+			                   .map(Integer::parseInt)
+			                   .subscribe(d -> {
+			                       for (int x = 0; x < d; x++) {
+			                           latch.countDown();
+			                       }
+			                   });
+
+			                 return out.sendObject(Flux.just(request.retain(),
+			                                                 request.retain(),
+			                                                 request.retain(),
+			                                                 request.retain()))
+			                           .neverComplete();
+			         })
+			         .wiretap(true)
+			         .connectNow();
+		if (maxPipelineDepth < 4) {
+			// Should never complete due to "java.lang.IllegalStateException: maxPipelineDepth exceeded: 2"
+			client.onDispose().block(Duration.ofSeconds(5));
+			assertThat(latch.getCount()).as("pending responses").isGreaterThan(0);
+		}
+		else {
+			assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isTrue();
+		}
+		client.disposeNow();
 	}
 }

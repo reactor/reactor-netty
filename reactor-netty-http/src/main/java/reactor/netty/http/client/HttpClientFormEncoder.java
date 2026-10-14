@@ -43,8 +43,7 @@ import reactor.core.publisher.Sinks;
  * <p>
  * This encoder will help to encode Request for a FORM as POST.
  */
-final class HttpClientFormEncoder extends HttpPostRequestEncoder
-		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
+final class HttpClientFormEncoder extends HttpPostRequestEncoder implements ChunkedInput<HttpContent>, HttpClientForm {
 
 	final Sinks.Many<Long> progressSink;
 	final HttpRequest request;
@@ -348,11 +347,6 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			throw Exceptions.propagate(new ErrorDataEncoderException(e));
 		}
 		return this;
-	}
-
-	@Override
-	public void run() {
-		cleanFiles();
 	}
 
 	@Override

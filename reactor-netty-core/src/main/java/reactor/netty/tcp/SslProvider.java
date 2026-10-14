@@ -241,20 +241,6 @@ public final class SslProvider {
 		Builder sslContext(GenericSslContextSpec<?> spec);
 
 		/**
-		 * SslContext builder that provides, specific for the protocol, default configuration
-		 * e.g. {@link DefaultSslContextSpec}, {@link TcpSslContextSpec} etc.
-		 * The default configuration is applied before any other custom configuration.
-		 *
-		 * @param spec SslContext builder that provides, specific for the protocol, default configuration
-		 * @return {@literal this}
-		 * @since 1.0.6
-		 * @deprecated as of 1.2.0. Prefer using {@link #sslContext(SslProvider.GenericSslContextSpec)}.
-		 * This method will be removed in version 1.3.0.
-		 */
-		@Deprecated
-		Builder sslContext(ProtocolSslContextSpec spec);
-
-		/**
 		 * The SslContext to set when configuring SSL.
 		 *
 		 * @param sslContext The context to set when configuring SSL
@@ -403,7 +389,7 @@ public final class SslProvider {
 		this.handshakeTimeoutMillis = from.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
-		this.builderHashCode = from.builderHashCode;
+		this.builderHashCode = 31 * from.builderHashCode + Objects.hashCode(handlerConfigurator);
 		this.confPerDomainName = from.confPerDomainName;
 		this.serverNames = from.serverNames;
 		this.sniMappings = from.sniMappings;
@@ -539,12 +525,6 @@ public final class SslProvider {
 		@Override
 		public Builder sslContext(GenericSslContextSpec<?> genericSslContextSpec) {
 			this.genericSslContextSpec = genericSslContextSpec;
-			return this;
-		}
-
-		@Override
-		public Builder sslContext(ProtocolSslContextSpec protocolSslContextSpec) {
-			this.genericSslContextSpec = protocolSslContextSpec;
 			return this;
 		}
 

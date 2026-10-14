@@ -23,7 +23,8 @@ ext {
 			"Import-Package" : "!javax.annotation,*",
 			"Bundle-Name" : "reactor-netty-quic",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-quic",
-			"Bundle-Version" : "$osgiVersion"
+			"Bundle-Version" : "$osgiVersion",
+			"-noextraheaders": "true"
 	]
 }
 

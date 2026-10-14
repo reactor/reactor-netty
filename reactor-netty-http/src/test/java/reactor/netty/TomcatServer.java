@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ public class TomcatServer {
 	private static Wrapper addServlet(Context ctx, HttpServlet servlet, String mapping) {
 		String servletName = servlet.getClass().getName();
 		Wrapper wrapper = Tomcat.addServlet(ctx, servletName, servlet);
-		ctx.addServletMappingDecoded(mapping, servletName);
+		ctx.addServletMapping(mapping, servletName);
 		return wrapper;
 	}
 

@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import java.net.URI;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
@@ -73,9 +74,12 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	@Nullable AbstractWebSocketClientMetricsHandler micrometerWsHandler;
 
+	boolean handshakeFailure;
+
 	volatile int closeSent;
 
 	static final String INBOUND_CANCEL_LOG = "WebSocket client inbound receiver cancelled, closing Websocket.";
+	static final String HANDSHAKE_REQUEST_NOT_SENT = "Failed to send the websocket handshake request.";
 
 	WebsocketClientOperations(URI currentURI,
 			WebsocketClientSpec websocketClientSpec,
@@ -100,12 +104,12 @@ class WebsocketClientOperations extends HttpClientOperations
 			PerMessageDeflateClientExtensionHandshaker perMessageDeflateClientExtensionHandshaker =
 					new PerMessageDeflateClientExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 							MAX_WINDOW_SIZE, websocketClientSpec.compressionAllowClientNoContext(),
-							websocketClientSpec.compressionRequestedServerNoContext(), 0);
+							websocketClientSpec.compressionRequestedServerNoContext(), websocketClientSpec.maxDecompressionBufferSize());
 			addHandlerFirst(NettyPipeline.WsCompressionHandler,
 					new WebSocketClientExtensionHandler(
 							perMessageDeflateClientExtensionHandshaker,
-							new DeflateFrameClientExtensionHandshaker(6, false, 0),
-							new DeflateFrameClientExtensionHandshaker(6, true, 0)));
+							new DeflateFrameClientExtensionHandshaker(6, false, websocketClientSpec.maxDecompressionBufferSize()),
+							new DeflateFrameClientExtensionHandshaker(6, true, websocketClientSpec.maxDecompressionBufferSize())));
 		}
 
 		String subprotocols = websocketClientSpec.protocols();
@@ -121,9 +125,11 @@ class WebsocketClientOperations extends HttpClientOperations
 		                .addListener(f -> {
 		                    markPersistent(false);
 		                    if (!f.isSuccess()) {
-		                        recordHandshakeFailure(channel);
+		                        onHandshakeFailure(channel, f.cause());
 		                    }
-		                    channel.read();
+		                    else {
+		                        channel.read();
+		                    }
 		                });
 	}
 
@@ -221,7 +227,7 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	protected void onInboundClose() {
-		if (isHandshakeComplete()) {
+		if (isHandshakeComplete() || handshakeFailure) {
 			terminate();
 		}
 		else {
@@ -233,6 +239,30 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	boolean isHandshakeComplete() {
 		return handshakerHttp11.isHandshakeComplete();
+	}
+
+	void onHandshakeFailure(Channel channel, Throwable cause) {
+		handshakeFailure = true;
+		recordHandshakeFailure(channel);
+		Throwable error = handshakeFailureCause(cause);
+		if (log.isDebugEnabled()) {
+			log.debug(format(channel(), HANDSHAKE_REQUEST_NOT_SENT), error);
+		}
+		onInboundError(error);
+	}
+
+	static Throwable handshakeFailureCause(@Nullable Throwable cause) {
+		if (cause == null) {
+			return new WebSocketClientHandshakeException(HANDSHAKE_REQUEST_NOT_SENT);
+		}
+		if (cause instanceof WebSocketClientHandshakeException ||
+				cause instanceof ClosedChannelException) {
+			return cause;
+		}
+		WebSocketClientHandshakeException  error =
+				new WebSocketClientHandshakeException(HANDSHAKE_REQUEST_NOT_SENT);
+		error.initCause(cause);
+		return error;
 	}
 
 	void swapMetricsHandler() {

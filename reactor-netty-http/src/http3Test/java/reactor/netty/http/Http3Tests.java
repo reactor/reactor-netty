@@ -66,6 +66,7 @@ import reactor.netty.http.server.ConnectionInformation;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
+import reactor.netty.http.server.ProxyProtocolSupportType;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.resources.ConnectionProvider;
@@ -1339,6 +1340,28 @@ class Http3Tests {
 		          .as(StepVerifier::create)
 		          .expectErrorMatches(t -> t instanceof UnsupportedOperationException &&
 		                  t.getMessage().contains("maxConnections is not supported for HTTP/3 protocol"))
+		          .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testProxyProtocolNotSupportedForHttp3() throws Exception {
+		doTestProxyProtocolNotSupportedForHttp3(ProxyProtocolSupportType.ON);
+		doTestProxyProtocolNotSupportedForHttp3(ProxyProtocolSupportType.AUTO);
+	}
+
+	private void doTestProxyProtocolNotSupportedForHttp3(ProxyProtocolSupportType type) throws Exception {
+		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
+
+		HttpServer.create()
+		          .port(0)
+		          .protocol(HttpProtocol.HTTP3)
+		          .secure(spec -> spec.sslContext(serverCtx))
+		          .proxyProtocol(type)
+		          .handle((req, res) -> res.sendString(Mono.just("OK")))
+		          .bind()
+		          .as(StepVerifier::create)
+		          .expectErrorMatches(t -> t instanceof UnsupportedOperationException &&
+		                  t.getMessage().contains("proxyProtocol is not supported for HTTP/3 protocol"))
 		          .verify(Duration.ofSeconds(5));
 	}
 

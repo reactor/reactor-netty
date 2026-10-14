@@ -37,7 +37,8 @@ ext {
 			].join(","),
 			"Bundle-Name" : "reactor-netty-core",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-core",
-			"Bundle-Version" : "$osgiVersion"
+			"Bundle-Version" : "$osgiVersion",
+			"-noextraheaders": "true"
 	]
 }
 
@@ -204,6 +205,7 @@ components.java.withVariantsFromConfiguration(configurations.testFixturesRuntime
 
 japicmp {
 	methodExcludes = [
+			'reactor.netty.tcp.SslProvider$SslContextSpec#sslContext(reactor.netty.tcp.SslProvider$ProtocolSslContextSpec)'
 	]
 
 	classExcludes = [

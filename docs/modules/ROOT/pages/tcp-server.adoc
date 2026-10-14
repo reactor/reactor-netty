@@ -306,6 +306,8 @@ NOTE: When you enable Reactor Netty tracing within a framework, you may need to 
 For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry(io.micrometer.observation.ObservationRegistry)[`reactor.netty.Metrics#observationRegistry`].
 You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
+include::partial$observation-errors.adoc[]
+
 [[unix-domain-sockets]]
 == Unix Domain Sockets
 The `TCP` server supports Unix Domain Sockets (UDS) when native transport is in use for all java versions

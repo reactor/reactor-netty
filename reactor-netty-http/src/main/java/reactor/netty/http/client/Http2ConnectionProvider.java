@@ -17,6 +17,7 @@ package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
@@ -127,6 +128,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			MonoSink<Connection> sink,
 			Context currentContext) {
 		boolean acceptGzip = false;
+		int maxDecompressionBufferSize = 0;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		SocketAddress proxyAddress = ((ClientTransportConfig<?>) config).proxyProvider() != null ?
 				((ClientTransportConfig<?>) config).proxyProvider().getProxyAddress() : null;
@@ -135,11 +137,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		if (config instanceof HttpClientConfig) {
 			HttpClientConfig httpClientConfig = (HttpClientConfig) config;
 			acceptGzip = httpClientConfig.acceptGzip;
+			maxDecompressionBufferSize = httpClientConfig.decoder.maxDecompressionBufferSize();
 			uriTagValue = httpClientConfig.uriTagValue;
 			http2SettingsSpec = httpClientConfig.http2Settings;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, http2SettingsSpec, metricsRecorder, pendingAcquireTimeout, pool, proxyAddress, remoteAddress,
+				acceptGzip, maxDecompressionBufferSize, http2SettingsSpec, metricsRecorder, pendingAcquireTimeout, pool, proxyAddress, remoteAddress,
 				sink, currentContext, uriTagValue);
 	}
 
@@ -280,6 +283,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
 		final boolean acceptGzip;
+		final int maxDecompressionBufferSize;
 		final @Nullable Http2SettingsSpec http2SettingsSpec;
 		final @Nullable ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
@@ -304,6 +308,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				ConnectionObserver obs,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
+				int maxDecompressionBufferSize,
 				@Nullable Http2SettingsSpec http2SettingsSpec,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long pendingAcquireTimeout,
@@ -318,6 +323,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.acceptGzip = acceptGzip;
+			this.maxDecompressionBufferSize = maxDecompressionBufferSize;
 			this.http2SettingsSpec = http2SettingsSpec;
 			this.metricsRecorder = metricsRecorder;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
@@ -335,6 +341,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.obs = parent.obs;
 			this.opsFactory = parent.opsFactory;
 			this.acceptGzip = parent.acceptGzip;
+			this.maxDecompressionBufferSize = parent.maxDecompressionBufferSize;
 			this.http2SettingsSpec = parent.http2SettingsSpec;
 			this.metricsRecorder = parent.metricsRecorder;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
@@ -494,12 +501,11 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			if (future.isSuccess()) {
 				Channel channel = pooledRef.poolable().channel();
 				Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
-				ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
+				Http2Connection http2Connection = http2PooledRef.slot.http2Connection;
 				Http2StreamChannel ch = future.getNow();
 
-				if (!channel.isActive() || frameCodec == null ||
-						((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived() ||
-						!((Http2FrameCodec) frameCodec.handler()).connection().local().canOpenStream()) {
+				if (!channel.isActive() || http2Connection == null || http2Connection.goAwayReceived()
+				    || !http2Connection.local().canOpenStream()) {
 					invalidate(this);
 					if (!retried) {
 						if (log.isDebugEnabled()) {
@@ -522,7 +528,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					// Deliberately suppress "NullAway"
 					// remoteAddress null is handled in Http2ConnectionProvider.DisposableAcquire.onNext
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
-							opsFactory, acceptGzip, false, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
+							opsFactory, acceptGzip, maxDecompressionBufferSize, false, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 
 					if (log.isDebugEnabled()) {
 						logStreamsState(ch, http2PooledRef.slot, "Stream opened");

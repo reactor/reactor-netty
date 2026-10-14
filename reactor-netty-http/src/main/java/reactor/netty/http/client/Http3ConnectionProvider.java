@@ -134,14 +134,16 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 			Context currentContext) {
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		boolean acceptGzip = false;
+		int maxDecompressionBufferSize = 0;
 		Function<String, String> uriTagValue = null;
 		boolean validate = true;
 		if (config instanceof HttpClientConfig) {
 			acceptGzip = ((HttpClientConfig) config).acceptGzip;
+			maxDecompressionBufferSize = ((HttpClientConfig) config).decoder.maxDecompressionBufferSize();
 			uriTagValue = ((HttpClientConfig) config).uriTagValue;
 			validate = ((HttpClientConfig) config).decoder.validateHeaders();
 		}
-		return new DisposableAcquire(acceptGzip, config.attributes(), currentContext, config.loggingHandler(),
+		return new DisposableAcquire(acceptGzip, maxDecompressionBufferSize, config.attributes(), currentContext, config.loggingHandler(),
 				metricsRecorder, pendingAcquireTimeout, pool, connectionObserver, config.channelOperationsProvider(),
 				config.options(), remoteAddress, sink, uriTagValue, validate);
 	}
@@ -261,6 +263,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 	static final class DisposableAcquire
 			implements CoreSubscriber<PooledRef<Connection>>, ConnectionObserver, Disposable, GenericFutureListener<Future<QuicStreamChannel>> {
 		final boolean acceptGzip;
+		final int maxDecompressionBufferSize;
 		final Map<AttributeKey<?>, ?> attributes;
 		final Disposable.Composite cancellations;
 		final Context currentContext;
@@ -289,6 +292,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		DisposableAcquire(
 				boolean acceptGzip,
+				int maxDecompressionBufferSize,
 				Map<AttributeKey<?>, ?> attributes,
 				Context currentContext,
 				@Nullable LoggingHandler loggingHandler,
@@ -303,6 +307,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 				@Nullable Function<String, String> uriTagValue,
 				boolean validate) {
 			this.acceptGzip = acceptGzip;
+			this.maxDecompressionBufferSize = maxDecompressionBufferSize;
 			this.attributes = attributes;
 			this.cancellations = Disposables.composite();
 			this.currentContext = currentContext;
@@ -322,6 +327,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		DisposableAcquire(DisposableAcquire parent) {
 			this.acceptGzip = parent.acceptGzip;
+			this.maxDecompressionBufferSize = parent.maxDecompressionBufferSize;
 			this.attributes = parent.attributes;
 			this.cancellations = parent.cancellations;
 			this.currentContext = parent.currentContext;
@@ -397,7 +403,7 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 					// remoteAddress null is handled above
 					Http3.newRequestStreamBootstrap((QuicChannel) channel,
 							new Http3Codec(obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
-									opsFactory, acceptGzip, loggingHandler, metricsRecorder, remoteAddress, uriTagValue, validate));
+									opsFactory, acceptGzip, maxDecompressionBufferSize, loggingHandler, metricsRecorder, remoteAddress, uriTagValue, validate));
 			attributes(bootstrap, attributes);
 			channelOptions(bootstrap, options);
 			bootstrap.create().addListener(this);

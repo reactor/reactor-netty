@@ -69,7 +69,13 @@ class UriEndpointFactoryTest {
 				new @Nullable String[]{"localhost?key=val", null, "localhost", null, "?key=val"},
 				new @Nullable String[]{"localhost:80", null, "localhost", "80", null},
 				new @Nullable String[]{"localhost:80?key=val", null, "localhost", "80", "?key=val"},
-				new @Nullable String[]{"localhost/:1234", null, "localhost", null, "/:1234"}
+				new @Nullable String[]{"localhost/:1234", null, "localhost", null, "/:1234"},
+				new String[]{"http://localhost:1/path", "http", "localhost", "1", "/path"},
+				new String[]{"http://localhost:1", "http", "localhost", "1", null},
+				new String[]{"http://127.0.0.1:1", "http", "127.0.0.1", "1", null},
+				new String[]{"http://127.0.0.1:1/path", "http", "127.0.0.1", "1", "/path"},
+				new String[]{"http://[::1]:1", "http", "[::1]", "1", null},
+				new @Nullable String[]{"localhost:1", null, "localhost", "1", null}
 				);
 
 		for (String[] input : inputs) {
@@ -114,12 +120,25 @@ class UriEndpointFactoryTest {
 				new String[]{"http://[::1]:80?key=val", "http://[::1]/?key=val"},
 				new String[]{"http://[::1]:80/?key=val#fragment", "http://[::1]/?key=val"},
 				new String[]{"http://[::1]:80/?key=%223", "http://[::1]/?key=%223"},
-				new String[]{"http://[::1]:1234", "http://[::1]:1234/"}
-		);
+				new String[]{"http://[::1]:1234", "http://[::1]:1234/"},
+				new String[]{"http://localhost:1", "http://localhost:1/"},
+				new String[]{"http://127.0.0.1:1/path", "http://127.0.0.1:1/path"},
+				new String[]{"http://[::1]:1", "http://[::1]:1/"}
+				);
 
 		for (String[] input : inputs) {
 			assertThat(externalForm(this.builder.build(), input[0], false, true)).isEqualTo(input[1]);
 		}
+	}
+
+	@Test
+	void createUriEndpointOneDigitPort() {
+		UriEndpoint endpoint = this.builder.build()
+				.createUriEndpoint("http://127.0.0.1:1", false);
+
+		assertThat(endpoint.host).isEqualTo("127.0.0.1");
+		assertThat(endpoint.port).isEqualTo(1);
+		assertThat(endpoint.toExternalForm()).isEqualTo("http://127.0.0.1:1/");
 	}
 
 	@Test

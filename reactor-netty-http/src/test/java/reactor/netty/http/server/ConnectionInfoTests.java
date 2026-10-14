@@ -973,6 +973,35 @@ class ConnectionInfoTests extends BaseHttpTest {
 				});
 	}
 
+	@Test
+	void forwardedBy() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
+						"by=203.0.113.43;host=a.example.com:8080;for=192.168.0.1"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("203.0.113.43");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(disposableServer.port());
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(((InetSocketAddress) serverRequest.connectionHostAddress()).getHostString())
+							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+				});
+	}
+
+	@Test
+	void forwardedByWithoutHost() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
+						"by=\"203.0.113.43:8080\""),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("203.0.113.43");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).containsPattern("^\\[::1\\]|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(disposableServer.port());
+				});
+	}
+
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 	                               Consumer<HttpServerRequest> serverRequestConsumer,
 	                               boolean useCustomForwardedHandler) {

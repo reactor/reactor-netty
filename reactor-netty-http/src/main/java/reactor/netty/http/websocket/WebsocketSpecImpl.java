@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,12 +30,14 @@ public class WebsocketSpecImpl implements WebsocketSpec {
 	private final int maxFramePayloadLength;
 	private final boolean proxyPing;
 	private final boolean compress;
+	private final int maxDecompressionBufferSize;
 
 	protected WebsocketSpecImpl(WebsocketSpec.Builder<?> builder) {
 		this.protocols = builder.protocols;
 		this.maxFramePayloadLength = builder.maxFramePayloadLength;
 		this.proxyPing = builder.handlePing;
 		this.compress = builder.compress;
+		this.maxDecompressionBufferSize = builder.maxDecompressionBufferSize;
 	}
 
 	@Override
@@ -56,5 +58,10 @@ public class WebsocketSpecImpl implements WebsocketSpec {
 	@Override
 	public boolean compress() {
 		return compress;
+	}
+
+	@Override
+	public final int maxDecompressionBufferSize() {
+		return maxDecompressionBufferSize;
 	}
 }

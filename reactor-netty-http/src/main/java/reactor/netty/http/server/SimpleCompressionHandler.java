@@ -48,14 +48,14 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		super((CompressionOptions[]) null);
 	}
 
-	private SimpleCompressionHandler(CompressionOptions... options) {
-		super(options);
+	private SimpleCompressionHandler(int maxPipelineDepth, CompressionOptions... options) {
+		super(0, maxPipelineDepth, options);
 	}
 
 	static SimpleCompressionHandler create(@Nullable HttpCompressionOptionsSpec compressionOptions) {
 		return compressionOptions == null ?
 				new SimpleCompressionHandler() :
-				new SimpleCompressionHandler(compressionOptions.adapt());
+				new SimpleCompressionHandler(compressionOptions.maxPipelineDepth(), compressionOptions.adapt());
 	}
 
 	@Override

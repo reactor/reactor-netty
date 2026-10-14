@@ -72,6 +72,7 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 import static reactor.netty.micrometer.GaugeAssert.assertGauge;
 import static reactor.netty.micrometer.TimerAssert.assertTimer;
+import static reactor.netty.resources.ConnectionProviderMeters.CONNECTIONS_LIFETIME;
 import static reactor.netty.resources.ConnectionProviderMeters.PENDING_CONNECTIONS_TIME;
 
 /**
@@ -507,6 +508,45 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
 			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testConnectionsLifetime() throws Exception {
+		String poolName = "testConnectionsLifetime";
+
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just(poolName)))
+				        .bindNow();
+
+		ConnectionProvider provider =
+				ConnectionProvider.builder(poolName)
+				                  .maxConnections(1)
+				                  .metrics(true)
+				                  .build();
+
+		try {
+			CountDownLatch latch = new CountDownLatch(1);
+			createClient(provider, disposableServer.port())
+			        .headers(h -> h.set("Connection", "close"))
+			        .doOnResponse((res, conn) -> conn.channel().closeFuture().addListener(f -> latch.countDown()))
+			        .get()
+			        .uri("/")
+			        .responseContent()
+			        .aggregate()
+			        .asString()
+			        .as(StepVerifier::create)
+			        .expectNext(poolName)
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(5));
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertTimer(registry, CONNECTIONS_LIFETIME.getName(), NAME, poolName).hasCountEqualTo(1);
 		}
 		finally {
 			provider.disposeLater()

@@ -57,8 +57,12 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncod
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil;
 import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2HeadersFrame;
+import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty.handler.codec.http2.HttpConversionUtil;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 import org.jspecify.annotations.Nullable;
@@ -94,16 +98,35 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
+			started = true;
+
 			FullHttpResponse response = (FullHttpResponse) msg;
-			HttpResponseStatus status = response.status();
-			response.content().release();
-			String errorMsg = !HttpResponseStatus.OK.equals(status) ?
-					"Invalid websocket handshake response status [" + status + "]." :
-					"Failed to upgrade to websocket. End of stream is received.";
-			recordHandshakeFailure(channel());
-			onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.close();
+
+			setNettyResponse(response);
+
+			try {
+				if (notRedirected(response) && authenticationNotRequired()) {
+					HttpResponseStatus status = response.status();
+					String errorMsg = !HttpResponseStatus.OK.equals(status) ?
+							"Invalid handshake response getStatus: " + status :
+							"Failed to upgrade to websocket. End of stream is received.";
+					recordHandshakeFailure(channel());
+					onInboundError(new WebSocketClientHandshakeException(errorMsg, response));
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.close();
+				}
+				else {
+					if (redirecting != null) {
+						listener().onUncaughtException(this, redirecting);
+					}
+					else if (authenticating != null) {
+						listener().onUncaughtException(this, authenticating);
+					}
+				}
+			}
+			finally {
+				response.content().release();
+			}
 		}
 		else if (msg instanceof HttpResponse) {
 			started = true;
@@ -169,12 +192,12 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			PerMessageDeflateClientExtensionHandshaker perMessageDeflateClientExtensionHandshaker =
 					new PerMessageDeflateClientExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 							MAX_WINDOW_SIZE, websocketClientSpec.compressionAllowClientNoContext(),
-							websocketClientSpec.compressionRequestedServerNoContext(), 0);
+							websocketClientSpec.compressionRequestedServerNoContext(), websocketClientSpec.maxDecompressionBufferSize());
 			addHandlerFirst(NettyPipeline.WsCompressionHandler,
 					new WebsocketClientExtensionHandler(Arrays.asList(
 							perMessageDeflateClientExtensionHandshaker,
-							new DeflateFrameClientExtensionHandshaker(6, false, 0),
-							new DeflateFrameClientExtensionHandshaker(6, true, 0))));
+							new DeflateFrameClientExtensionHandshaker(6, false, websocketClientSpec.maxDecompressionBufferSize()),
+							new DeflateFrameClientExtensionHandshaker(6, true, websocketClientSpec.maxDecompressionBufferSize()))));
 		}
 
 		String subProtocols = websocketClientSpec.protocols();
@@ -189,9 +212,11 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 		               .addListener(f -> {
 		                   markPersistent(false);
 		                   if (!f.isSuccess()) {
-		                       recordHandshakeFailure(channel);
+		                       onHandshakeFailure(channel, f.cause());
 		                   }
-		                   channel.read();
+		                   else {
+		                       channel.read();
+		                   }
 		               });
 	}
 
@@ -476,7 +501,7 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 				return promise;
 			}
 
-			pipeline.addBefore(codec.name(), ProtocolHeaderHandler.NAME, ProtocolHeaderHandler.INSTANCE);
+			pipeline.addAfter(codec.name(), HandshakeRequestEncoder.NAME, HandshakeRequestEncoder.INSTANCE);
 
 			HttpRequest request = newHandshakeRequest();
 
@@ -601,9 +626,9 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			return schemePrefix + host;
 		}
 
-		static final class ProtocolHeaderHandler extends ChannelOutboundHandlerAdapter {
-			static final ProtocolHeaderHandler INSTANCE = new ProtocolHeaderHandler();
-			static final String NAME = LEFT + "protocolHeaderHandler";
+		static final class HandshakeRequestEncoder extends ChannelOutboundHandlerAdapter {
+			static final HandshakeRequestEncoder INSTANCE = new HandshakeRequestEncoder();
+			static final String NAME = LEFT + "wsHandshakeRequestEncoder";
 
 			@Override
 			public boolean isSharable() {
@@ -613,12 +638,34 @@ final class Http2WebsocketClientOperations extends WebsocketClientOperations {
 			@Override
 			@SuppressWarnings("FutureReturnValueIgnored")
 			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-				if (msg instanceof Http2HeadersFrame) {
-					((Http2HeadersFrame) msg).headers().set(Http2Headers.PseudoHeaderName.PROTOCOL.value(), HttpHeaderValues.WEBSOCKET);
+				if (msg instanceof HttpRequest) {
+					Http2Headers http2Headers = newHandshakeHeaders((HttpRequest) msg, ctx.channel());
 					ctx.pipeline().remove(this);
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(new DefaultHttp2HeadersFrame(http2Headers, false), promise);
 				}
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
+				else {
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(msg, promise);
+				}
+			}
+
+			static Http2Headers newHandshakeHeaders(HttpRequest request, Channel channel) {
+				HttpHeaders headers = request.headers();
+				Http2Headers result = new DefaultHttp2Headers(true, headers.size() + 5);
+				result.method(request.method().asciiName());
+				result.path(request.uri());
+				result.authority(headers.get(HttpHeaderNames.HOST));
+				headers.remove(HttpHeaderNames.HOST);
+				result.scheme(schemeValue(channel));
+				result.set(Http2Headers.PseudoHeaderName.PROTOCOL.value(), HttpHeaderValues.WEBSOCKET);
+				HttpConversionUtil.toHttp2Headers(headers, result);
+				return result;
+			}
+
+			static CharSequence schemeValue(Channel channel) {
+				Channel parent = channel instanceof Http2StreamChannel ? channel.parent() : channel;
+				return parent.pipeline().get(SslHandler.class) != null ? HttpScheme.HTTPS.name() : HttpScheme.HTTP.name();
 			}
 		}
 

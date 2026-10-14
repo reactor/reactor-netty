@@ -50,6 +50,9 @@ public interface HttpClientForm {
 	/**
 	 * Should file attributes be cleaned and eventually removed from disk.
 	 * Default to true.
+	 * <p>If the default {@link HttpDataFactory} is in use, the data is always cleaned,
+	 * as it cannot be accessed outside the form. To keep the data, use {@link #factory(HttpDataFactory)}
+	 * to configure a custom {@link HttpDataFactory}.
 	 *
 	 * @param clean true if cleaned on termination (successful or failed)
 	 *
