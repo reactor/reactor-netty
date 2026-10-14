@@ -1,0 +1,29 @@
+[[observation-errors]]
+=== Record Observation Errors
+By default, for the events below, Reactor Netty does not record the failure cause in the `Observation`, only the `status` tag has value `ERROR`:
+
+* the connection establishment
+* the TLS handshake
+* the hostname resolution
+
+To record the failure cause, configure a function with
+{javadoc}/reactor/netty/Metrics.html#observationErrorMapper(java.util.function.BiFunction)[`reactor.netty.Metrics#observationErrorMapper`].
+The function receives the `Observation.Context` and the failure cause, and returns the error to record or `null` to record nothing.
+Reactor Netty passes the returned error to `Observation#error(Throwable)`, for example, the tracing handlers add it to the span.
+
+The configuration is global and applies to all Reactor Netty clients and servers.
+Configure it during application startup.
+The function can be invoked concurrently on different event loops, so it must be thread-safe and must not block.
+If the function throws an exception, no error is recorded and the observation is still stopped.
+
+WARNING: The failure cause may contain sensitive data received from the remote peer.
+Check the failure cause and record only the information that you need.
+
+[source,java]
+----
+import io.netty.handler.ssl.NotSslRecordException;
+import reactor.netty.Metrics;
+
+Metrics.observationErrorMapper((context, cause) ->
+        cause instanceof NotSslRecordException ? new NotSslRecordException("not an SSL/TLS record") : cause);
+----
