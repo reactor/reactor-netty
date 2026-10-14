@@ -46,7 +46,9 @@ public class Metrics {
 		OBSERVATION_REGISTRY.observationConfig().observationHandler(
 				new ObservationHandler.FirstMatchingCompositeObservationHandler(
 						new ReactorNettyTimerObservationHandler(REGISTRY),
-						new DefaultMeterObservationHandler(REGISTRY)));
+						DefaultMeterObservationHandler.builder(REGISTRY)
+						                              .includeActiveObservationLongTaskTimer(true)
+						                              .build()));
 	}
 
 
