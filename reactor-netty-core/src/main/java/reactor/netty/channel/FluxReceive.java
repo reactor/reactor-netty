@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,16 +214,49 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
-	final void cleanQueue(@Nullable Queue<Object> q) {
+	/**
+	 * Releases all queued items. A failing release does not stop the cleanup,
+	 * the first failure is returned and the next ones are added to it as suppressed.
+	 *
+	 * @param q the queue to clean
+	 * @return the first release failure or {@code null}
+	 */
+	final @Nullable Throwable cleanQueue(@Nullable Queue<Object> q) {
+		Throwable error = null;
 		if (q != null) {
 			Object o;
 			while ((o = q.poll()) != null) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(parent.channel(), "{}: dropping frame {}"), this, parent.asDebugLogMessage(o));
 				}
-				ReferenceCountUtil.release(o);
+				try {
+					ReferenceCountUtil.release(o);
+				}
+				catch (Throwable t) {
+					if (error == null) {
+						error = t;
+					}
+					else {
+						error.addSuppressed(t);
+					}
+				}
 			}
 		}
+		return error;
+	}
+
+	final void cleanQueueAndTerminateReceiver(@Nullable Queue<Object> q, CoreSubscriber<?> a) {
+		Throwable error = cleanQueue(q);
+		if (error != null) {
+			Throwable ex = inboundError;
+			if (ex == null) {
+				inboundError = error;
+			}
+			else if (ex != error) {
+				ex.addSuppressed(error);
+			}
+		}
+		terminateReceiver(q, a);
 	}
 
 	@SuppressWarnings("NullAway")
@@ -240,7 +273,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 			if (a == null) {
 				if (isCancelled()) {
-					cleanQueue(q);
+					Throwable error = cleanQueue(q);
+					if (error != null) {
+						parent.listener.onUncaughtException(parent, error);
+					}
 					return;
 				}
 				if (d && getPending() == 0) {
@@ -264,8 +300,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 			while (e != r) {
 				if (isCancelled()) {
-					cleanQueue(q);
-					terminateReceiver(q, a);
+					cleanQueueAndTerminateReceiver(q, a);
 					return;
 				}
 
@@ -301,8 +336,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					}
 					catch (Throwable t) {
 						inboundError = t;
-						cleanQueue(q);
-						terminateReceiver(q, a);
+						cleanQueueAndTerminateReceiver(q, a);
 					}
 				}
 
@@ -310,8 +344,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 
 			if (isCancelled()) {
-				cleanQueue(q);
-				terminateReceiver(q, a);
+				cleanQueueAndTerminateReceiver(q, a);
 				return;
 			}
 
