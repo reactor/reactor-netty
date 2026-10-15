@@ -29,7 +29,6 @@ import reactor.util.Loggers;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -48,7 +47,7 @@ abstract class AbstractWebSocketServerMetricsHandler extends ChannelDuplexHandle
 
 	final String path;
 
-	final ContextView contextView;
+	ContextView contextView;
 
 	long dataReceived;
 
@@ -62,7 +61,7 @@ abstract class AbstractWebSocketServerMetricsHandler extends ChannelDuplexHandle
 
 	long handshakeStartTime;
 
-	volatile int handshakeFinalized;
+	boolean handshakeFinalized;
 
 	protected AbstractWebSocketServerMetricsHandler(SocketAddress remoteAddress, String path, ContextView contextView,
 			String method) {
@@ -86,6 +85,14 @@ abstract class AbstractWebSocketServerMetricsHandler extends ChannelDuplexHandle
 	@Override
 	public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
 		try {
+			recordPendingHandshake();
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+			}
+		}
+		try {
 			if (connectionStartTime > 0) {
 				recordConnectionClosed();
 			}
@@ -98,22 +105,27 @@ abstract class AbstractWebSocketServerMetricsHandler extends ChannelDuplexHandle
 		super.handlerRemoved(ctx);
 	}
 
+	void recordPendingHandshake() {
+	}
+
 	void startHandshake(Channel channel) {
 		handshakeStartTime = System.nanoTime();
 	}
 
 	void recordHandshakeComplete(Channel channel, String status) {
-		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
+		if (handshakeFinalized) {
 			return;
 		}
+		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		recorder().recordWebSocketHandshakeTime(remoteAddress, path, status, time);
 	}
 
 	void recordHandshakeFailure(Channel channel) {
-		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
+		if (handshakeFinalized) {
 			return;
 		}
+		handshakeFinalized = true;
 		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
 		recorder().recordWebSocketHandshakeTime(remoteAddress, path, "ERROR", time);
 	}
@@ -242,8 +254,5 @@ abstract class AbstractWebSocketServerMetricsHandler extends ChannelDuplexHandle
 
 		recorder().recordDataSent(address, path, sentBytes);
 	}
-
-	static final AtomicIntegerFieldUpdater<AbstractWebSocketServerMetricsHandler> HANDSHAKE_FINALIZED =
-			AtomicIntegerFieldUpdater.newUpdater(AbstractWebSocketServerMetricsHandler.class, "handshakeFinalized");
 
 }

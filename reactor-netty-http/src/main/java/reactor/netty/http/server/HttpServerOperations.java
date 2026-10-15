@@ -89,6 +89,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -1309,13 +1310,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ops = new WebsocketServerOperations(url, websocketServerSpec, this);
 			}
 
-			return FutureMono.from(ops.handshakerResult)
-			                 .doOnEach(signal -> {
-			                     if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
-			                         websocketHandler.apply(ops, ops)
-			                                         .subscribe(ops.websocketSubscriber(signal.getContextView()));
-			                     }
-			                 });
+			return Mono.deferContextual(contextView -> {
+				Mono<Void> handshake = Mono.defer(() -> {
+					ops.updateMetricsContext(contextView);
+					return FutureMono.from(ops.handshakerResult);
+				}).doOnEach(signal -> {
+					if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+						websocketHandler.apply(ops, ops)
+						                .subscribe(ops.websocketSubscriber(signal.getContextView()));
+					}
+				});
+				// Update the context before observing even an already completed handshake.
+				return channel().eventLoop().inEventLoop() ? handshake :
+						handshake.subscribeOn(Schedulers.fromExecutor(channel().eventLoop()));
+			});
 		}
 		else {
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));

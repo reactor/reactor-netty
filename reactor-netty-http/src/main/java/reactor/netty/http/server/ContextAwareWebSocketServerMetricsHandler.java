@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import io.netty.channel.Channel;
+import org.jspecify.annotations.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
@@ -31,6 +32,10 @@ import java.time.Duration;
 final class ContextAwareWebSocketServerMetricsHandler extends AbstractWebSocketServerMetricsHandler {
 
 	final ContextAwareWebSocketServerMetricsRecorder recorder;
+
+	boolean contextViewAvailable;
+	@Nullable String handshakeStatus;
+	@Nullable Duration handshakeTime;
 
 	ContextAwareWebSocketServerMetricsHandler(ContextAwareWebSocketServerMetricsRecorder recorder,
 			SocketAddress remoteAddress,
@@ -48,20 +53,42 @@ final class ContextAwareWebSocketServerMetricsHandler extends AbstractWebSocketS
 
 	@Override
 	void recordHandshakeComplete(Channel channel, String status) {
-		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
+		if (handshakeFinalized) {
 			return;
 		}
-		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
-		recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, path, status, time);
+		handshakeFinalized = true;
+		handshakeTime = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
+		handshakeStatus = status;
+		recordHandshake();
 	}
 
 	@Override
 	void recordHandshakeFailure(Channel channel) {
-		if (HANDSHAKE_FINALIZED.getAndSet(this, 1) != 0) {
-			return;
+		recordHandshakeComplete(channel, "ERROR");
+	}
+
+	void contextView(ContextView contextView) {
+		this.contextView = contextView;
+		contextViewAvailable = true;
+		recordHandshake();
+	}
+
+	void recordHandshake() {
+		// The handshake can finish before subscription supplies the context. Keep its original duration.
+		if (contextViewAvailable && handshakeStatus != null && handshakeTime != null) {
+			String status = handshakeStatus;
+			Duration time = handshakeTime;
+			handshakeStatus = null;
+			handshakeTime = null;
+			recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, path, status, time);
 		}
-		Duration time = Duration.ofNanos(System.nanoTime() - handshakeStartTime);
-		recorder.recordWebSocketHandshakeTime(contextView, remoteAddress, path, "ERROR", time);
+	}
+
+	@Override
+	void recordPendingHandshake() {
+		// The upgrade is never subscribed, record the pending handshake with the available context
+		contextViewAvailable = true;
+		recordHandshake();
 	}
 
 	@Override

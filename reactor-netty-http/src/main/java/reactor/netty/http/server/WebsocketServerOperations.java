@@ -94,7 +94,13 @@ class WebsocketServerOperations extends HttpServerOperations
 		handshakerResult = channel.newPromise();
 		EventLoop eventLoop = channel.eventLoop();
 		if (eventLoop.inEventLoop()) {
-			initHandshaker(wsUrl, websocketServerSpec, replaced);
+			try {
+				initHandshaker(wsUrl, websocketServerSpec, replaced);
+			}
+			catch (Exception e) {
+				recordHandshakeFailure(channel);
+				handshakerResult.tryFailure(e);
+			}
 		}
 		else {
 			try {
@@ -103,6 +109,7 @@ class WebsocketServerOperations extends HttpServerOperations
 						initHandshaker(wsUrl, websocketServerSpec, replaced);
 					}
 					catch (Exception e) {
+						recordHandshakeFailure(channel);
 						handshakerResult.tryFailure(e);
 					}
 				});
@@ -197,17 +204,13 @@ class WebsocketServerOperations extends HttpServerOperations
 			              finally {
 			                  // Notify subscribers only after the websocket operations have been bound
 			                  if (f.isSuccess()) {
+			                      recordHandshakeComplete(channel, "101");
 			                      handshakerResult.trySuccess();
 			                  }
 			                  else {
+			                      recordHandshakeFailure(channel);
 			                      handshakerResult.tryFailure(f.cause());
 			                  }
-			              }
-			              if (f.isSuccess()) {
-			                  recordHandshakeComplete(channel, "101");
-			              }
-			              else {
-			                  recordHandshakeFailure(channel);
 			              }
 			          });
 		}
@@ -263,9 +266,7 @@ class WebsocketServerOperations extends HttpServerOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
-			// An application error flowing through Reactor (WebsocketSubscriber.onError ->
-			// ChannelOperations.onError -> this method) never reaches exceptionCaught, so it would
-			// otherwise never be counted by the errors meter. Record it here, once, before closing.
+			// Outbound errors do not reach exceptionCaught
 			recordOutboundError(channel());
 			sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.PROTOCOL_ERROR),
 					f -> terminate());
@@ -373,8 +374,9 @@ class WebsocketServerOperations extends HttpServerOperations
 		String rawPath = resolvePath(this);
 		String resolvedPath = handler.uriTagValue != null ? handler.uriTagValue.apply(rawPath) : rawPath;
 		ContextView ctxView = currentContext();
-		SocketAddress remoteAddress = channel.remoteAddress();
-		String httpMethod = replaced.method().name();
+		// Use remoteSocketAddress() in order to obtain UDS info
+		SocketAddress remoteAddress = replaced.remoteSocketAddress();
+		String httpMethod = handler.methodTagValue.apply(replaced.method().name());
 
 		AbstractWebSocketServerMetricsHandler wsHandler;
 		if (handler instanceof MicrometerHttpServerMetricsHandler) {
@@ -412,6 +414,20 @@ class WebsocketServerOperations extends HttpServerOperations
 		channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.WsMetricsHandler, wsHandler);
 	}
 
+	void updateMetricsContext(ContextView contextView) {
+		Channel channel = channel();
+		try {
+			if (micrometerWsHandler instanceof ContextAwareWebSocketServerMetricsHandler) {
+				((ContextAwareWebSocketServerMetricsHandler) micrometerWsHandler).contextView(contextView);
+			}
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
 	void recordHandshakeStart(Channel channel) {
 		if (micrometerWsHandler == null) {
 			return;
@@ -441,7 +457,8 @@ class WebsocketServerOperations extends HttpServerOperations
 	}
 
 	void recordHandshakeFailure(Channel channel) {
-		if (micrometerWsHandler == null) {
+		// Nothing to record when the failure happens before the handshake is started
+		if (micrometerWsHandler == null || micrometerWsHandler.handshakeStartTime == 0) {
 			return;
 		}
 		try {
