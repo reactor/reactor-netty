@@ -120,6 +120,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 			if (handler != null) {
 				replaceHandler(NettyPipeline.HttpMetricsHandler,
 						new WebsocketHttpServerMetricsHandler((AbstractHttpServerMetricsHandler) handler));
+				swapMetricsHandler((AbstractHttpServerMetricsHandler) handler, replaced);
 			}
 
 			HttpRequest request = new DefaultHttpRequest(replaced.version(), replaced.method(), replaced.uri());
@@ -150,6 +151,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 			}
 
 			handshakerHttp2 = new WebsocketServerHandshaker(wsUrl, websocketServerSpec);
+			recordHandshakeStart(channel);
 			handshakerHttp2.handshake(channel, request, responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING), channel.newPromise())
 			               .addListener(f -> {
 			                   try {
@@ -170,6 +172,12 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 			                       else {
 			                           handshakerResult.tryFailure(f.cause());
 			                       }
+			                   }
+			                   if (f.isSuccess()) {
+			                       recordHandshakeComplete(channel, "200");
+			                   }
+			                   else {
+			                       recordHandshakeFailure(channel);
 			                   }
 			               });
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,15 @@ public final class DistributionSummaryAssert extends AbstractAssert<Distribution
 		long count = actual.count();
 		if (count != expected) {
 			failWithMessage("%nExpecting count:%n  %s%nto be equal to:%n  %s", count, expected);
+		}
+		return this;
+	}
+
+	public DistributionSummaryAssert hasTotalAmountEqualTo(double expected) {
+		isNotNull();
+		double totalAmount = actual.totalAmount();
+		if (totalAmount != expected) {
+			failWithMessage("%nExpecting total amount:%n  %s%nto be equal to:%n  %s", totalAmount, expected);
 		}
 		return this;
 	}
