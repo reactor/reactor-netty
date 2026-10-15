@@ -46,6 +46,7 @@ import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.SocketAddress;
@@ -55,6 +56,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -148,6 +150,14 @@ class HttpClientWithTomcatTest {
 	}
 
 	@Test
+	void postUploadWithCustomFactoryLimitAndMultipartConfiguredAfterParts() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		customFactory.setMaxLimit(4);
+		doTestPostUpload((req, form) -> form.factory(customFactory).attr("attr1", "é").multipart(true), "attr1 ");
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
+	}
+
+	@Test
 	void customFactoryIsCleanedWhenFormCallbackFails() throws Exception {
 		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 		HttpClient client = HttpClient.create()
@@ -185,6 +195,29 @@ class HttpClientWithTomcatTest {
 		                                      .multipart(false)
 		                                      .attr("attr1", "*"),
 				"attr1=%2A");
+	}
+
+	@Test
+	void postUploadStreamNoMultipartWithCustomFactory() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		doTestPostUpload((req, form) -> form.factory(customFactory).multipart(false)
+		                                    .file("attr1", "attr2", new ByteArrayInputStream(new byte[] {1, 2}), "text/plain"),
+				"attr1=attr2");
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
+	}
+
+	@Test
+	void postUploadWithCustomFactoryKeepsDataWhenCleanOnTerminateIsFalse() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		try {
+			doTestPostUpload((req, form) -> form.cleanOnTerminate(false).factory(customFactory)
+			                                    .multipart(true).attr("attr1", "attr2"),
+					"attr1 ");
+			assertThat(getRequestFileDeleteMap(customFactory)).isNotEmpty();
+		}
+		finally {
+			new ArrayList<>(getRequestFileDeleteMap(customFactory).keySet()).forEach(customFactory::cleanRequestHttpData);
+		}
 	}
 
 	@Test
