@@ -69,11 +69,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	 * @throws NullPointerException      for request or charset or factory
 	 * @throws ErrorDataEncoderException if the request is not a POST
 	 */
-	HttpClientFormEncoder(HttpDataFactory factory,
-			HttpRequest request,
-			boolean multipart,
-			Charset charset,
-			EncoderMode encoderMode) throws ErrorDataEncoderException {
+	HttpClientFormEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart, Charset charset, EncoderMode encoderMode)
+			throws ErrorDataEncoderException {
 		super(factory, request, multipart, charset, encoderMode);
 		this.newCharset = charset;
 		this.request = request;
@@ -164,10 +161,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	@Override
-	public HttpClientForm file(String name,
-			String filename,
-			File file,
-			@Nullable String contentType) {
+	public HttpClientForm file(String name, String filename, File file, @Nullable String contentType) {
 		HttpClientFormEncoder encoder = applyChanges(request);
 		if (encoder != this) {
 			return encoder.file(name, filename, file, contentType);
@@ -200,10 +194,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	@Override
-	public HttpClientForm file(String name,
-			String filename,
-			InputStream stream,
-			@Nullable String contentType) {
+	public HttpClientForm file(String name, String filename, InputStream stream, @Nullable String contentType) {
 		HttpClientFormEncoder encoder = applyChanges(request);
 		if (encoder != this) {
 			return encoder.file(name, filename, stream, contentType);
@@ -236,9 +227,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	@Override
-	public HttpClientForm files(String name,
-			File[] files,
-			String[] contentTypes) {
+	public HttpClientForm files(String name, File[] files, String[] contentTypes) {
 		for (int i = 0; i < files.length; i++) {
 			file(name, files[i], contentTypes[i]);
 		}
@@ -246,10 +235,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	@Override
-	public HttpClientForm files(String name,
-			File[] files,
-			String[] contentTypes,
-			boolean[] textFiles) {
+	public HttpClientForm files(String name, File[] files, String[] contentTypes, boolean[] textFiles) {
 		HttpClientFormEncoder encoder = applyChanges(request);
 		if (encoder != this) {
 			return encoder.files(name, files, contentTypes, textFiles);
@@ -313,9 +299,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	@Override
-	public HttpClientForm textFile(String name,
-			InputStream stream,
-			@Nullable String contentType) {
+	public HttpClientForm textFile(String name, InputStream stream, @Nullable String contentType) {
 		HttpClientFormEncoder encoder = applyChanges(request);
 		if (encoder != this) {
 			return encoder.textFile(name, stream, contentType);
@@ -329,13 +313,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 				scontentType = DEFAULT_TEXT_CONTENT_TYPE;
 			}
 
-			FileUpload fileUpload = newFactory.createFileUpload(request,
-					name,
-					"",
-					scontentType,
-					null,
-					newCharset,
-					-1);
+			FileUpload fileUpload = newFactory.createFileUpload(request, name, "", scontentType, null, newCharset, -1);
 			fileUpload.setMaxSize(-1);
 			fileUpload.setContent(stream);
 			addBodyHttpData(fileUpload);
@@ -369,11 +347,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 		}
 
 		try {
-			HttpClientFormEncoder encoder = new HttpClientFormEncoder(newFactory,
-					request,
-					newMultipart,
-					newCharset,
-					newMode);
+			HttpClientFormEncoder encoder = new HttpClientFormEncoder(newFactory, request, newMultipart, newCharset, newMode);
 
 			encoder.cleanOnTerminate = cleanOnTerminate;
 			nextEncoder = encoder;
@@ -397,18 +371,14 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	static final Map<Pattern, String> percentEncodings            = new HashMap<>();
-	static final String               DEFAULT_BINARY_CONTENT_TYPE =
-			"application/octet-stream";
+	static final String               DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
 	static final String               DEFAULT_TRANSFER_ENCODING   = "binary";
 	static final String               DEFAULT_TEXT_CONTENT_TYPE   = "text/plain";
 
 	static {
-		DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file
-		// on exit (in normal
-		// exit)
+		DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
 		DiskFileUpload.baseDirectory = null; // system temp directory
-		DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on
-		// exit (in normal exit)
+		DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
 		DiskAttribute.baseDirectory = null; // system temp directory
 
 		percentEncodings.put(Pattern.compile("\\*"), "%2A");
