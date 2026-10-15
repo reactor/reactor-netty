@@ -403,7 +403,7 @@ public final class SslProvider {
 		this.handshakeTimeoutMillis = from.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
-		this.builderHashCode = from.builderHashCode;
+		this.builderHashCode = 31 * from.builderHashCode + Objects.hashCode(handlerConfigurator);
 		this.confPerDomainName = from.confPerDomainName;
 		this.serverNames = from.serverNames;
 		this.sniMappings = from.sniMappings;

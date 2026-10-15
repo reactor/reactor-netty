@@ -63,6 +63,10 @@ final class Http3Pool extends Http2Pool {
 			}
 			// received GO_AWAY
 			else if (ref.slot.goAwayReceived()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(ref.slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
+				}
+				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
@@ -84,6 +88,9 @@ final class Http3Pool extends Http2Pool {
 
 		@Override
 		int availableStreams(int concurrency) {
+			if (get()) {
+				return 0;
+			}
 			int peerAllowed = peerAllowedMaxStreams();
 			if (pool.maxConcurrentStreams != -1) {
 				return Math.min(peerAllowed, Math.max(0, pool.maxConcurrentStreams - concurrency));
@@ -99,6 +106,11 @@ final class Http3Pool extends Http2Pool {
 			this.maxConcurrentStreams = newMaxConcurrentStreams;
 			log.debug(format(connection.channel(), "Max streams for this channel [{}]"), newMaxConcurrentStreams);
 			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, newMaxConcurrentStreams);
+		}
+
+		@Override
+		boolean isH2cUpgrade() {
+			return false;
 		}
 
 		@Override

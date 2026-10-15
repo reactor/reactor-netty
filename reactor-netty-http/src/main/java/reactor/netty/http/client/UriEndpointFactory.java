@@ -31,7 +31,7 @@ final class UriEndpointFactory {
 	final BiFunction<String, Integer, InetSocketAddress> inetSocketAddressFunction;
 
 	static final Pattern URL_PATTERN = Pattern.compile(
-			"(?:(\\w+)://)?((?:\\[.+?])|(?<!\\[)(?:[^/?]+?))(?::(\\d{2,5}))?([/?].*)?");
+			"(?:(\\w+)://)?((?:\\[.+?])|(?<!\\[)(?:[^/?]+?))(?::(\\d{1,5}))?([/?].*)?");
 	static final Pattern SCHEME_PATTERN = Pattern.compile("https?|wss?");
 
 	UriEndpointFactory(Supplier<? extends SocketAddress> connectAddress, boolean defaultSecure,

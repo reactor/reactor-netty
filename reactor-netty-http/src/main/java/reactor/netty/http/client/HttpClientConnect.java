@@ -609,6 +609,34 @@ class HttpClientConnect extends HttpClient {
 
 				Publisher<Void> result;
 
+				Consumer<HttpClientRequest> consumer = null;
+				if (fromURI != null && (!toURI.equals(fromURI) || (fromURI.isSecure() && !toURI.isSecure()))) {
+					if (handler instanceof RedirectSendHandler) {
+						headers.remove(HttpHeaderNames.EXPECT)
+						       .remove(HttpHeaderNames.COOKIE)
+						       .remove(HttpHeaderNames.AUTHORIZATION)
+						       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
+					}
+					else {
+						consumer = request ->
+						        request.requestHeaders()
+						               .remove(HttpHeaderNames.EXPECT)
+						               .remove(HttpHeaderNames.COOKIE)
+						               .remove(HttpHeaderNames.AUTHORIZATION)
+						               .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
+					}
+				}
+				if (this.redirectRequestConsumer != null) {
+					consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) : this.redirectRequestConsumer;
+				}
+
+				if (redirectRequestBiConsumer != null) {
+					ch.previousRequestHeaders = previousRequestHeaders;
+					ch.redirectRequestBiConsumer = redirectRequestBiConsumer;
+				}
+
+				ch.redirectRequestConsumer(consumer);
+
 				if (websocketClientSpec != null) {
 					// ReferenceEquality is deliberate
 					if (ch.version == H2) {
@@ -630,33 +658,6 @@ class HttpClientConnect extends HttpClient {
 					result = wsResult;
 				}
 				else {
-					Consumer<HttpClientRequest> consumer = null;
-					if (fromURI != null && (!toURI.equals(fromURI) || (fromURI.isSecure() && !toURI.isSecure()))) {
-						if (handler instanceof RedirectSendHandler) {
-							headers.remove(HttpHeaderNames.EXPECT)
-							       .remove(HttpHeaderNames.COOKIE)
-							       .remove(HttpHeaderNames.AUTHORIZATION)
-							       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
-						}
-						else {
-							consumer = request ->
-							        request.requestHeaders()
-							               .remove(HttpHeaderNames.EXPECT)
-							               .remove(HttpHeaderNames.COOKIE)
-							               .remove(HttpHeaderNames.AUTHORIZATION)
-							               .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
-						}
-					}
-					if (this.redirectRequestConsumer != null) {
-						consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) : this.redirectRequestConsumer;
-					}
-
-					if (redirectRequestBiConsumer != null) {
-						ch.previousRequestHeaders = previousRequestHeaders;
-						ch.redirectRequestBiConsumer = redirectRequestBiConsumer;
-					}
-
-					ch.redirectRequestConsumer(consumer);
 					if (handler != null) {
 						Publisher<Void> publisher = handler.apply(ch, ch);
 						result = ch.equals(publisher) ? ch.send() : publisher;

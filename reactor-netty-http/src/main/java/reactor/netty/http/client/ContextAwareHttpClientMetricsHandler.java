@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,50 +70,50 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	}
 
 	@Override
-	protected void recordWrite(SocketAddress address) {
+	protected void recordWrite() {
 		if (contextView != null) {
 			if (proxyAddress == null) {
-				recorder.recordDataSentTime(contextView, address, requireNonNull(path), requireNonNull(method),
+				recorder.recordDataSentTime(contextView, remoteAddress, requireNonNull(path), requireNonNull(method),
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-				recorder.recordDataSent(contextView, address, path, dataSent);
+				recorder.recordDataSent(contextView, remoteAddress, path, dataSent);
 			}
 			else {
-				recorder.recordDataSentTime(contextView, address, proxyAddress, requireNonNull(path), requireNonNull(method),
+				recorder.recordDataSentTime(contextView, remoteAddress, proxyAddress, requireNonNull(path), requireNonNull(method),
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-				recorder.recordDataSent(contextView, address, proxyAddress, path, dataSent);
+				recorder.recordDataSent(contextView, remoteAddress, proxyAddress, path, dataSent);
 			}
 		}
 		else {
-			super.recordWrite(address);
+			super.recordWrite();
 		}
 	}
 
 	@Override
-	protected void recordRead(Channel channel, SocketAddress address) {
+	protected void recordRead(Channel channel) {
 		if (contextView != null) {
 			if (proxyAddress == null) {
-				recorder.recordDataReceivedTime(contextView, address, requireNonNull(path), requireNonNull(method), requireNonNull(status),
+				recorder.recordDataReceivedTime(contextView, remoteAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 						Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-				recorder.recordResponseTime(contextView, address, path, method, status,
+				recorder.recordResponseTime(contextView, remoteAddress, path, method, status,
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-				recorder.recordDataReceived(contextView, address, path, dataReceived);
+				recorder.recordDataReceived(contextView, remoteAddress, path, dataReceived);
 			}
 			else {
-				recorder.recordDataReceivedTime(contextView, address, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
+				recorder.recordDataReceivedTime(contextView, remoteAddress, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 						Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-				recorder.recordResponseTime(contextView, address, proxyAddress, path, method, status,
+				recorder.recordResponseTime(contextView, remoteAddress, proxyAddress, path, method, status,
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-				recorder.recordDataReceived(contextView, address, proxyAddress, path, dataReceived);
+				recorder.recordDataReceived(contextView, remoteAddress, proxyAddress, path, dataReceived);
 			}
 		}
 		else {
-			super.recordRead(channel, address);
+			super.recordRead(channel);
 		}
 	}
 }

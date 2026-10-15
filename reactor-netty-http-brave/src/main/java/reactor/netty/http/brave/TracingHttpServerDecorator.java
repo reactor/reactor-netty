@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -246,8 +246,6 @@ final class TracingHttpServerDecorator {
 		final CurrentTraceContext currentTraceContext;
 		final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
 
-		volatile @Nullable Throwable throwable;
-
 		TracingMapHandle(
 				CurrentTraceContext currentTraceContext,
 				HttpServerHandler<HttpServerRequest, HttpServerResponse> handler) {
@@ -267,13 +265,14 @@ final class TracingHttpServerDecorator {
 			// At the point of doFinally the connection might be disposed and there might be no event loop
 			// associated with the disposed connection
 			EventLoop eventLoop = connection.channel().eventLoop();
+			Throwable[] throwable = new Throwable[1];
 			return voidMono.doFinally(sig -> {
 			                   if (braveRequest.unwrap() instanceof reactor.netty.http.server.HttpServerResponse) {
 			                       reactor.netty.http.server.HttpServerResponse response =
 			                               (reactor.netty.http.server.HttpServerResponse) braveRequest.unwrap();
 			                       Span localSpan = sig == SignalType.CANCEL ? span.annotate("cancel") : span;
 			                       HttpServerResponse braveResponse =
-			                               new DelegatingHttpResponse(response, braveRequest, throwable);
+			                               new DelegatingHttpResponse(response, braveRequest, throwable[0]);
 			                       if (eventLoop.inEventLoop()) {
 			                           handler.handleSend(braveResponse, localSpan);
 			                       }
@@ -282,13 +281,9 @@ final class TracingHttpServerDecorator {
 			                       }
 			                   }
 			               })
-			               .doOnError(this::throwable)
+			               .doOnError(t -> throwable[0] = t)
 			               .contextWrite(ctx -> ctx.put(TraceContext.class, span.context())
 			                                       .put(SpanCustomizer.class, span.customizer()));
-		}
-
-		void throwable(Throwable t) {
-			this.throwable = t;
 		}
 
 		static void cleanup(Channel channel) {

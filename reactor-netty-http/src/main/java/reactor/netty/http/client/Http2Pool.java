@@ -32,6 +32,7 @@ import java.util.function.Function;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
@@ -73,6 +74,9 @@ import static reactor.netty.ReactorNetty.format;
  *     <li>When the client is in one of the two modes: 1) H2 and HTTP/1.1 or 2) H2C and HTTP/1.1,
  *     and the negotiated protocol is HTTP/1.1.</li>
  * </ul>
+ * <p>
+ * When GO_AWAY is received or the eviction predicate evaluates to true, the connection is also closed, so that the
+ * parent {@code ConnectionProvider} does not keep counting it against {@code maxConnections}.
  * <p>
  * The connection is filtered out when:
  * <ul>
@@ -344,7 +348,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				removeSlot(ref.slot);
 			}
 			// received GO_AWAY
-			if (ref.slot.goAwayReceived()) {
+			else if (ref.slot.goAwayReceived()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(ref.slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
+				}
+				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
@@ -537,6 +545,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 							if (log.isDebugEnabled()) {
 								log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
 							}
+							closeChannel(slot.connection.channel());
 							recordInteractionTimestamp();
 							slots.remove();
 							IDLE_SIZE.decrementAndGet(this);
@@ -609,6 +618,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
 					}
+					closeChannel(slot.connection.channel());
 					slot.invalidate();
 				}
 				continue;
@@ -990,7 +1000,14 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			return Mono.defer(() -> {
 				if (compareAndSet(false, true)) {
 					ACQUIRED.decrementAndGet(slot.pool);
-					return slot.pool.destroyPoolable(this).doFinally(st -> slot.pool.drain());
+					// destroyPoolable is synchronous (returns an already-terminal Mono); run the
+					// follow-up drain in a finally instead of allocating a doFinally per release.
+					try {
+						return slot.pool.destroyPoolable(this);
+					}
+					finally {
+						slot.pool.drain();
+					}
 				}
 				else {
 					return Mono.empty();
@@ -1047,6 +1064,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		volatile @Nullable ChannelHandlerContext http2FrameCodecCtx;
 		volatile @Nullable ChannelHandlerContext http2MultiplexHandlerCtx;
 		volatile @Nullable ChannelHandlerContext h2cUpgradeHandlerCtx;
+		volatile @Nullable Http2Connection http2Connection;
+
+		// Not volatile: confined to the channel event loop, see the assert in h2cUpgradeHandlerCtx()
+		boolean h2cUpgradeHandlerAbsent;
 
 		// Set on the event loop by Http2ConnectionLiveness when a PING liveness check starts/ends.
 		// Read on the acquire path so the connection is not handed out while it is being probed.
@@ -1089,8 +1110,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		private int computeMaxConcurrentStreams() {
 			assert connection.channel().eventLoop().inEventLoop();
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
-			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
-				int maxActiveStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
+			Http2Connection conn = http2Connection;
+			if (frameCodec != null && conn != null && http2MultiplexHandlerCtx() != null) {
+				int maxActiveStreams = conn.local().maxActiveStreams();
 				return pool.maxConcurrentStreams == -1 ? maxActiveStreams :
 						Math.min(pool.maxConcurrentStreams, maxActiveStreams);
 			}
@@ -1142,8 +1164,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		boolean goAwayReceived() {
-			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
-			return frameCodec != null && ((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived();
+			Http2Connection conn = http2Connection;
+			return conn != null && conn.goAwayReceived();
 		}
 
 		boolean connectionLivenessCheckInProgress() {
@@ -1157,6 +1179,9 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 				return ctx;
 			}
 			ctx = connection.channel().pipeline().context(Http2FrameCodec.class);
+			// Kept in lockstep with the context, so the memoized connection never outlives the codec
+			http2Connection = ctx != null ? ((Http2FrameCodec) ctx.handler()).connection() : null;
+			// Written last, so the fast path above never returns a context without the matching connection
 			http2FrameCodecCtx = ctx;
 			return ctx;
 		}
@@ -1173,6 +1198,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		@Nullable ChannelHandlerContext h2cUpgradeHandlerCtx() {
+			assert connection.channel().eventLoop().inEventLoop();
+			if (h2cUpgradeHandlerAbsent) {
+				return null;
+			}
 			ChannelHandlerContext ctx = h2cUpgradeHandlerCtx;
 			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
 			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {
@@ -1180,6 +1209,11 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			}
 			ctx = connection.channel().pipeline().context(NettyPipeline.H2CUpgradeHandler);
 			h2cUpgradeHandlerCtx = ctx;
+			if (ctx == null) {
+				// The upgrade handler is added once at channel init and removes itself after the
+				// upgrade; it is never re-added, so a miss is permanent — stop re-walking.
+				h2cUpgradeHandlerAbsent = true;
+			}
 			return ctx;
 		}
 
@@ -1199,7 +1233,10 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		boolean isH2cUpgrade() {
-			return h2cUpgradeHandlerCtx() != null && http2MultiplexHandlerCtx() == null;
+			// An h2c upgrade only exists on cleartext connections (no SslHandler, so null ALPN);
+			// TLS connections never carry the upgrade handler, so skip the pipeline lookups.
+			return applicationProtocol == null &&
+					h2cUpgradeHandlerCtx() != null && http2MultiplexHandlerCtx() == null;
 		}
 
 		@Override

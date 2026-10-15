@@ -122,7 +122,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 						// Record write, unless channelRead has already done it (because an early full response has been received)
 						if (currentLastWriteSeq == lastWriteSeq) {
 							lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
-							recordWrite(remoteAddress);
+							recordWrite();
 						}
 					}
 					catch (RuntimeException e) {
@@ -166,9 +166,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
 				if ((lastReadSeq > lastWriteSeq) || (lastReadSeq == 0 && lastWriteSeq == Integer.MAX_VALUE)) {
 					lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
-					recordWrite(remoteAddress);
+					recordWrite();
 				}
-				recordRead(ctx.channel(), remoteAddress);
+				recordRead(ctx.channel());
 				reset();
 			}
 		}
@@ -207,7 +207,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			contextView = ops.currentContextView();
 		}
 
-		startWrite(request, ctx.channel(), remoteAddress);
+		startWrite(request, ctx.channel());
 	}
 
 	private static long extractProcessedDataFromBuffer(Object msg) {
@@ -231,39 +231,39 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		}
 	}
 
-	protected void recordRead(Channel channel, SocketAddress address) {
+	protected void recordRead(Channel channel) {
 		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(address, requireNonNull(path), requireNonNull(method), requireNonNull(status),
+			recorder().recordDataReceivedTime(remoteAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-			recorder().recordResponseTime(address, path, method, status,
+			recorder().recordResponseTime(remoteAddress, path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-			recorder().recordDataReceived(address, path, dataReceived);
+			recorder().recordDataReceived(remoteAddress, path, dataReceived);
 		}
 		else {
-			recorder().recordDataReceivedTime(address, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
+			recorder().recordDataReceivedTime(remoteAddress, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-			recorder().recordResponseTime(address, proxyAddress, path, method, status,
+			recorder().recordResponseTime(remoteAddress, proxyAddress, path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
+			recorder().recordDataReceived(remoteAddress, proxyAddress, path, dataReceived);
 		}
 	}
 
-	protected void recordWrite(SocketAddress address) {
+	protected void recordWrite() {
 		if (proxyAddress == null) {
-			recorder().recordDataSentTime(address, requireNonNull(path), requireNonNull(method),
+			recorder().recordDataSentTime(remoteAddress, requireNonNull(path), requireNonNull(method),
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-			recorder().recordDataSent(address, path, dataSent);
+			recorder().recordDataSent(remoteAddress, path, dataSent);
 		}
 		else {
-			recorder().recordDataSentTime(address, proxyAddress, requireNonNull(path), requireNonNull(method),
+			recorder().recordDataSentTime(remoteAddress, proxyAddress, requireNonNull(path), requireNonNull(method),
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-			recorder().recordDataSent(address, proxyAddress, path, dataSent);
+			recorder().recordDataSent(remoteAddress, proxyAddress, path, dataSent);
 		}
 	}
 
@@ -283,7 +283,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(HttpRequest msg, Channel channel, SocketAddress address) {
+	protected void startWrite(HttpRequest msg, Channel channel) {
 		dataSentTime = System.nanoTime();
 	}
 

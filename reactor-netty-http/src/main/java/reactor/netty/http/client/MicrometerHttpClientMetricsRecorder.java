@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,20 +68,21 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		recordDataReceivedTime(remoteAddress, NA, uri, method, status, time);
+		recordDataReceivedTime(formatSocketAddress(remoteAddress), NA, uri, method, status, time);
 	}
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, String status, Duration time) {
-		recordDataReceivedTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, status, time);
+		recordDataReceivedTime(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, status, time);
 	}
 
-	void recordDataReceivedTime(SocketAddress remoteAddress, String proxyAddress, String uri, String method, String status, Duration time) {
-		String address = formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, method, status);
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
+	void recordDataReceivedTime(String remoteAddress, String proxyAddress, String uri, String method, String status, Duration time) {
+		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, method, status);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
-				                   .tags(HttpClientMeters.DataReceivedTimeTags.REMOTE_ADDRESS.asString(), address,
+				                   .tags(HttpClientMeters.DataReceivedTimeTags.REMOTE_ADDRESS.asString(), remoteAddress,
 				                         HttpClientMeters.DataReceivedTimeTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                         HttpClientMeters.DataReceivedTimeTags.URI.asString(), uri,
 				                         HttpClientMeters.DataReceivedTimeTags.METHOD.asString(), method,
@@ -94,20 +95,21 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-		recordDataSentTime(remoteAddress, NA, uri, method, time);
+		recordDataSentTime(formatSocketAddress(remoteAddress), NA, uri, method, time);
 	}
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, Duration time) {
-		recordDataSentTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, time);
+		recordDataSentTime(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, time);
 	}
 
-	void recordDataSentTime(SocketAddress remoteAddress, String proxyAddress, String uri, String method, Duration time) {
-		String address = formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, method, null);
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
+	void recordDataSentTime(String remoteAddress, String proxyAddress, String uri, String method, Duration time) {
+		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, method, null);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
-				                   .tags(HttpClientMeters.DataSentTimeTags.REMOTE_ADDRESS.asString(), address,
+				                   .tags(HttpClientMeters.DataSentTimeTags.REMOTE_ADDRESS.asString(), remoteAddress,
 				                         HttpClientMeters.DataSentTimeTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                         HttpClientMeters.DataSentTimeTags.URI.asString(), uri,
 				                         HttpClientMeters.DataSentTimeTags.METHOD.asString(), method)
@@ -143,21 +145,22 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-		recordDataReceived(remoteAddress, NA, uri, bytes);
+		recordDataReceived(formatSocketAddress(remoteAddress), NA, uri, bytes);
 	}
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, long bytes) {
-		recordDataReceived(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
+		recordDataReceived(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, bytes);
 	}
 
-	void recordDataReceived(SocketAddress remoteAddress, String proxyAddress, String uri, long bytes) {
-		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
+	void recordDataReceived(String remoteAddress, String proxyAddress, String uri, long bytes) {
+		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, null, null);
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
-				                                 .tags(ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
+				                                 .tags(ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), remoteAddress,
 				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                                       ChannelMeters.ChannelMetersTags.URI.asString(), uri)
 				                                 .register(REGISTRY)));
@@ -168,21 +171,22 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-		recordDataSent(remoteAddress, NA, uri, bytes);
+		recordDataSent(formatSocketAddress(remoteAddress), NA, uri, bytes);
 	}
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, long bytes) {
-		recordDataSent(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
+		recordDataSent(formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, bytes);
 	}
 
-	void recordDataSent(SocketAddress remoteAddress, String proxyAddress, String uri, long bytes) {
-		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
+	// Both addresses arrive already formatted, so callers that hold connection-constant strings
+	// (see MicrometerHttpClientMetricsHandler) do not rebuild them per request.
+	void recordDataSent(String remoteAddress, String proxyAddress, String uri, long bytes) {
+		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, null, null);
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
-				                                 .tags(ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
+				                                 .tags(ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), remoteAddress,
 				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                                       ChannelMeters.ChannelMetersTags.URI.asString(), uri)
 				                                 .register(REGISTRY)));

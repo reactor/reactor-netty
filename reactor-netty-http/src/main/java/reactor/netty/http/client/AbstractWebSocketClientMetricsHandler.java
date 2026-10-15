@@ -156,7 +156,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 						promise = promise.unvoid();
 						promise.addListener(f -> {
 							try {
-								recordWrite(remoteAddress, sentBytes, sentTimeNanos);
+								recordWrite(sentBytes, sentTimeNanos);
 							}
 							catch (RuntimeException e) {
 								if (log.isWarnEnabled()) {
@@ -191,7 +191,7 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 
 					if (frame.isFinalFragment()) {
 						// dataReceived is reset inside recordRead
-						recordRead(remoteAddress);
+						recordRead();
 						dataReceivedTime = 0;
 					}
 				}
@@ -251,32 +251,32 @@ abstract class AbstractWebSocketClientMetricsHandler extends ChannelDuplexHandle
 		}
 	}
 
-	protected void recordRead(SocketAddress address) {
+	protected void recordRead() {
 		Duration duration = Duration.ofNanos(System.nanoTime() - dataReceivedTime);
 		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(address, path, method, "n/a", duration);
+			recorder().recordDataReceivedTime(remoteAddress, path, method, "n/a", duration);
 
-			recorder().recordDataReceived(address, path, dataReceived);
+			recorder().recordDataReceived(remoteAddress, path, dataReceived);
 		}
 		else {
-			recorder().recordDataReceivedTime(address, proxyAddress, path, method, "n/a", duration);
+			recorder().recordDataReceivedTime(remoteAddress, proxyAddress, path, method, "n/a", duration);
 
-			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
+			recorder().recordDataReceived(remoteAddress, proxyAddress, path, dataReceived);
 		}
 		dataReceived = 0;
 	}
 
-	protected void recordWrite(SocketAddress address, long sentBytes, long sentTimeNanos) {
+	protected void recordWrite(long sentBytes, long sentTimeNanos) {
 		Duration duration = Duration.ofNanos(System.nanoTime() - sentTimeNanos);
 		if (proxyAddress == null) {
-			recorder().recordDataSentTime(address, path, method, duration);
+			recorder().recordDataSentTime(remoteAddress, path, method, duration);
 
-			recorder().recordDataSent(address, path, sentBytes);
+			recorder().recordDataSent(remoteAddress, path, sentBytes);
 		}
 		else {
-			recorder().recordDataSentTime(address, proxyAddress, path, method, duration);
+			recorder().recordDataSentTime(remoteAddress, proxyAddress, path, method, duration);
 
-			recorder().recordDataSent(address, proxyAddress, path, sentBytes);
+			recorder().recordDataSent(remoteAddress, proxyAddress, path, sentBytes);
 		}
 	}
 

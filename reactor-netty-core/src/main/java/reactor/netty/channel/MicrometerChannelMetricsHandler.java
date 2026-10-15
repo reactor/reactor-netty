@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty.channel;
 
 import io.micrometer.common.KeyValues;
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
 import io.netty.channel.ChannelHandler;
@@ -63,6 +64,9 @@ import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalit
 public final class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 	final MicrometerChannelMetricsRecorder recorder;
+	// The meter is constant for the life of a connection; cache it here rather than re-resolving per event.
+	@Nullable DistributionSummary dataReceivedMeter;
+	@Nullable DistributionSummary dataSentMeter;
 
 	MicrometerChannelMetricsHandler(MicrometerChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress, boolean onServer) {
 		super(remoteAddress, onServer);
@@ -81,6 +85,35 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 	@Override
 	public MicrometerChannelMetricsRecorder recorder() {
 		return recorder;
+	}
+
+	@Override
+	protected void recordRead(ChannelHandlerContext ctx, SocketAddress address, long bytes) {
+		// A null remoteAddress means the address varies per datagram (unconnected UDP), so it can't be cached.
+		if (remoteAddress == null) {
+			super.recordRead(ctx, address, bytes);
+			return;
+		}
+		if (dataReceivedMeter == null) {
+			dataReceivedMeter = recorder.dataReceivedMeter(address, proxyAddress == null ? NA : formatSocketAddress(proxyAddress));
+		}
+		if (dataReceivedMeter != null) {
+			dataReceivedMeter.record(bytes);
+		}
+	}
+
+	@Override
+	protected void recordWrite(ChannelHandlerContext ctx, SocketAddress address, long bytes) {
+		if (remoteAddress == null) {
+			super.recordWrite(ctx, address, bytes);
+			return;
+		}
+		if (dataSentMeter == null) {
+			dataSentMeter = recorder.dataSentMeter(address, proxyAddress == null ? NA : formatSocketAddress(proxyAddress));
+		}
+		if (dataSentMeter != null) {
+			dataSentMeter.record(bytes);
+		}
 	}
 
 	// ConnectMetricsHandler is Observation.Context and ChannelOutboundHandler in order to reduce allocations,

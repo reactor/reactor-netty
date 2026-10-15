@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultAllowDuplicateContentLengths;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultInitialBufferSize;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultMaxChunkSize;
@@ -56,6 +57,7 @@ class HttpResponseDecoderSpecTest {
 		checkDefaultAllowDuplicateContentLengths(conf);
 		checkDefaultParseHttpAfterConnectRequest(conf);
 		checkDefaultH2cMaxContentLength(conf);
+		checkDefaultMaxDecompressionBufferSize(conf);
 	}
 
 	@Test
@@ -74,6 +76,7 @@ class HttpResponseDecoderSpecTest {
 		checkDefaultAllowDuplicateContentLengths(conf);
 		checkDefaultFailOnMissingResponse(conf);
 		checkDefaultParseHttpAfterConnectRequest(conf);
+		checkDefaultMaxDecompressionBufferSize(conf);
 	}
 
 	@Test
@@ -92,6 +95,33 @@ class HttpResponseDecoderSpecTest {
 		checkDefaultAllowDuplicateContentLengths(conf);
 		checkDefaultFailOnMissingResponse(conf);
 		checkDefaultH2cMaxContentLength(conf);
+		checkDefaultMaxDecompressionBufferSize(conf);
+	}
+
+	@Test
+	void maxDecompressionBufferSize() {
+		checkDefaultMaxDecompressionBufferSize(conf);
+
+		conf.maxDecompressionBufferSize(10 * 1024 * 1024);
+
+		assertThat(conf.maxDecompressionBufferSize()).as("max decompression buffer size").isEqualTo(10 * 1024 * 1024);
+
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
+		checkDefaultFailOnMissingResponse(conf);
+		checkDefaultParseHttpAfterConnectRequest(conf);
+		checkDefaultH2cMaxContentLength(conf);
+	}
+
+	@Test
+	void maxDecompressionBufferSizeBadValues() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> conf.maxDecompressionBufferSize(-1))
+				.withMessageContaining("maxDecompressionBufferSize must be positive or zero");
 	}
 
 	private static void checkDefaultFailOnMissingResponse(HttpResponseDecoderSpec conf) {
@@ -110,5 +140,11 @@ class HttpResponseDecoderSpecTest {
 		assertThat(conf.parseHttpAfterConnectRequest).as("default parse http after connect request")
 				.isEqualTo(HttpResponseDecoderSpec.DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST)
 				.isFalse();
+	}
+
+	private static void checkDefaultMaxDecompressionBufferSize(HttpResponseDecoderSpec conf) {
+		assertThat(conf.maxDecompressionBufferSize()).as("default max decompression buffer size")
+				.isEqualTo(HttpResponseDecoderSpec.DEFAULT_MAX_DECOMPRESSION_BUFFER_SIZE)
+				.isZero();
 	}
 }

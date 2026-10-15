@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,9 @@ import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCa
  */
 final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetricsHandler {
 	final MicrometerHttpClientMetricsRecorder recorder;
+	// Fixed for the life of the connection; format once and reuse across every recorder dispatch.
+	final String remoteAddressStr;
+	final String proxyAddressStr;
 
 	@SuppressWarnings("NullAway")
 	// Deliberately suppress "NullAway"
@@ -78,11 +81,15 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			@Nullable Function<String, String> uriTagValue) {
 		super(remoteAddress, proxyAddress, uriTagValue);
 		this.recorder = recorder;
+		this.remoteAddressStr = formatSocketAddress(remoteAddress);
+		this.proxyAddressStr = proxyAddress != null ? formatSocketAddress(proxyAddress) : NA;
 	}
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsHandler copy) {
 		super(copy);
 		this.recorder = copy.recorder;
+		this.remoteAddressStr = copy.remoteAddressStr;
+		this.proxyAddressStr = copy.proxyAddressStr;
 
 		this.responseTimeHandlerContext = copy.responseTimeHandlerContext;
 		this.responseTimeObservation = copy.responseTimeObservation;
@@ -95,19 +102,11 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	}
 
 	@Override
-	protected void recordRead(Channel channel, SocketAddress address) {
-		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(address, requireNonNull(path), requireNonNull(method), requireNonNull(status),
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+	protected void recordRead(Channel channel) {
+		recorder.recordDataReceivedTime(remoteAddressStr, proxyAddressStr, requireNonNull(path), requireNonNull(method), requireNonNull(status),
+				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-			recorder().recordDataReceived(address, path, dataReceived);
-		}
-		else {
-			recorder().recordDataReceivedTime(address, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
-					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
-
-			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
-		}
+		recorder.recordDataReceived(remoteAddressStr, proxyAddressStr, path, dataReceived);
 
 		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
@@ -117,6 +116,14 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		responseTimeObservation.stop();
 
 		setChannelContext(channel, parentContextView);
+	}
+
+	@Override
+	protected void recordWrite() {
+		recorder.recordDataSentTime(remoteAddressStr, proxyAddressStr, requireNonNull(path), requireNonNull(method),
+				Duration.ofNanos(System.nanoTime() - dataSentTime));
+
+		recorder.recordDataSent(remoteAddressStr, proxyAddressStr, path, dataSent);
 	}
 
 	@Override
@@ -141,10 +148,10 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 	// writing the request
 	@Override
-	protected void startWrite(HttpRequest msg, Channel channel, SocketAddress address) {
-		super.startWrite(msg, channel, address);
+	protected void startWrite(HttpRequest msg, Channel channel) {
+		super.startWrite(msg, channel);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, requireNonNull(path), address, proxyAddress);
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, requireNonNull(path), remoteAddress, proxyAddress);
 		responseTimeObservation = Observation.createNotStarted(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		parentContextView = updateChannelContext(channel, responseTimeObservation);
 		responseTimeObservation.start();

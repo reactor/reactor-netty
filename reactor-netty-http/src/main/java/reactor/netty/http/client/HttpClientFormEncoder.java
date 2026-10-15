@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +43,7 @@ import reactor.core.publisher.Sinks;
  * <p>
  * This encoder will help to encode Request for a FORM as POST.
  */
-final class HttpClientFormEncoder extends HttpPostRequestEncoder
-		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
+final class HttpClientFormEncoder extends HttpPostRequestEncoder implements ChunkedInput<HttpContent>, HttpClientForm {
 
 	final Sinks.Many<Long> progressSink;
 	final HttpRequest request;
@@ -69,11 +68,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	 * @throws NullPointerException      for request or charset or factory
 	 * @throws ErrorDataEncoderException if the request is not a POST
 	 */
-	HttpClientFormEncoder(HttpDataFactory factory,
-			HttpRequest request,
-			boolean multipart,
-			Charset charset,
-			EncoderMode encoderMode) throws ErrorDataEncoderException {
+	HttpClientFormEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart, Charset charset, EncoderMode encoderMode)
+			throws ErrorDataEncoderException {
 		super(factory, request, multipart, charset, encoderMode);
 		this.newCharset = charset;
 		this.request = request;
@@ -148,10 +144,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientForm file(String name,
-			String filename,
-			File file,
-			@Nullable String contentType) {
+	public HttpClientForm file(String name, String filename, File file, @Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(file, "file");
 		Objects.requireNonNull(filename, "filename");
@@ -180,10 +173,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientForm file(String name,
-			String filename,
-			InputStream stream,
-			@Nullable String contentType) {
+	public HttpClientForm file(String name, String filename, InputStream stream, @Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
 		try {
@@ -212,9 +202,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientForm files(String name,
-			File[] files,
-			String[] contentTypes) {
+	public HttpClientForm files(String name, File[] files, String[] contentTypes) {
 		for (int i = 0; i < files.length; i++) {
 			file(name, files[i], contentTypes[i]);
 		}
@@ -222,10 +210,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientForm files(String name,
-			File[] files,
-			String[] contentTypes,
-			boolean[] textFiles) {
+	public HttpClientForm files(String name, File[] files, String[] contentTypes, boolean[] textFiles) {
 		try {
 			addBodyFileUploads(name, files, contentTypes, textFiles);
 		}
@@ -273,9 +258,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientForm textFile(String name,
-			InputStream stream,
-			@Nullable String contentType) {
+	public HttpClientForm textFile(String name, InputStream stream, @Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
 		try {
@@ -285,13 +268,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 				scontentType = DEFAULT_TEXT_CONTENT_TYPE;
 			}
 
-			FileUpload fileUpload = newFactory.createFileUpload(request,
-					name,
-					"",
-					scontentType,
-					null,
-					newCharset,
-					-1);
+			FileUpload fileUpload = newFactory.createFileUpload(request, name, "", scontentType, null, newCharset, -1);
 			fileUpload.setMaxSize(-1);
 			fileUpload.setContent(stream);
 			addBodyHttpData(fileUpload);
@@ -305,22 +282,13 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		return this;
 	}
 
-	@Override
-	public void run() {
-		cleanFiles();
-	}
-
 	final HttpClientFormEncoder applyChanges(HttpRequest request) {
 		if (!needNewEncoder) {
 			return this;
 		}
 
 		try {
-			HttpClientFormEncoder encoder = new HttpClientFormEncoder(newFactory,
-					request,
-					newMultipart,
-					newCharset,
-					newMode);
+			HttpClientFormEncoder encoder = new HttpClientFormEncoder(newFactory, request, newMultipart, newCharset, newMode);
 
 			encoder.setBodyHttpDatas(getBodyListAttributes());
 
@@ -334,18 +302,14 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	static final Map<Pattern, String> percentEncodings            = new HashMap<>();
-	static final String               DEFAULT_BINARY_CONTENT_TYPE =
-			"application/octet-stream";
+	static final String               DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
 	static final String               DEFAULT_TRANSFER_ENCODING   = "binary";
 	static final String               DEFAULT_TEXT_CONTENT_TYPE   = "text/plain";
 
 	static {
-		DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file
-		// on exit (in normal
-		// exit)
+		DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
 		DiskFileUpload.baseDirectory = null; // system temp directory
-		DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on
-		// exit (in normal exit)
+		DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
 		DiskAttribute.baseDirectory = null; // system temp directory
 
 		percentEncodings.put(Pattern.compile("\\*"), "%2A");

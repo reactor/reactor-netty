@@ -37,7 +37,8 @@ ext {
 			].join(","),
 			"Bundle-Name" : "reactor-netty-core",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-core",
-			"Bundle-Version" : "$osgiVersion"
+			"Bundle-Version" : "$osgiVersion",
+			"-noextraheaders": "true"
 	]
 }
 

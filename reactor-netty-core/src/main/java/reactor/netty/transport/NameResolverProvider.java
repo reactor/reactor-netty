@@ -520,6 +520,7 @@ public final class NameResolverProvider {
 				disableOptionalRecord == that.disableOptionalRecord &&
 				disableRecursionDesired == that.disableRecursionDesired &&
 				Objects.equals(dnsAddressResolverGroupProvider, that.dnsAddressResolverGroupProvider) &&
+				Objects.equals(hostsFileEntriesResolver, that.hostsFileEntriesResolver) &&
 				Objects.equals(loggingFactory, that.loggingFactory) &&
 				Objects.equals(loopResources, that.loopResources) &&
 				maxPayloadSize == that.maxPayloadSize &&
@@ -547,6 +548,7 @@ public final class NameResolverProvider {
 		result = 31 * result + Boolean.hashCode(disableOptionalRecord);
 		result = 31 * result + Boolean.hashCode(disableRecursionDesired);
 		result = 31 * result + Objects.hashCode(dnsAddressResolverGroupProvider);
+		result = 31 * result + Objects.hashCode(hostsFileEntriesResolver);
 		result = 31 * result + Objects.hashCode(loggingFactory);
 		result = 31 * result + Objects.hashCode(loopResources);
 		result = 31 * result + maxPayloadSize;

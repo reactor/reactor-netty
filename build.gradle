@@ -17,18 +17,18 @@ import java.text.SimpleDateFormat
 import org.gradle.api.attributes.java.TargetJvmVersion
 
 plugins {
-	id "com.diffplug.spotless" version "8.9.0"
+	id "com.diffplug.spotless" version "8.10.4"
 	id 'com.google.osdetector' version '1.7.3'
-	id 'org.gradle.test-retry' version '1.6.5'
+	id 'org.gradle.test-retry' version '1.6.6'
 	id 'io.spring.nohttp' version '0.0.11'
 	id 'com.gradleup.shadow' version '9.6.1' apply false
 	id 'com.jfrog.artifactory' version '6.0.4' apply false
 	id 'me.champeau.gradle.japicmp' version '0.4.6' apply false
 	id 'de.undercouch.download' version '5.7.0' apply false
-	id 'biz.aQute.bnd.builder' version '7.3.0' apply false
+	id 'biz.aQute.bnd.builder' version '7.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.11.5' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
-	id 'net.ltgt.errorprone' version '5.1.0' apply false
+	id 'net.ltgt.errorprone' version '5.1.1' apply false
 	id 'me.champeau.mrjar' version '0.1.1' apply false
 }
 
@@ -109,7 +109,7 @@ ext {
 	logbackVersion = '1.2.13'
 
 	// Netty
-	nettyDefaultVersion = '4.2.16.Final'
+	nettyDefaultVersion = '4.2.19.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -121,14 +121,14 @@ ext {
 
 	// Testing
 	brotli4jVersion = '1.23.0'
-	zstdJniVersion = '1.5.7-12'
-	jacksonDatabindVersion = '2.22.1'
+	zstdJniVersion = '1.5.7-23'
+	jacksonDatabindVersion = '2.22.3'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.27.7'
 	awaitilityVersion = '4.3.0'
 	hoverflyJavaVersion = '0.19.1'
-	tomcatVersion = '9.0.120'
-	boringSslVersion = '2.0.81.Final'
+	tomcatVersion = '9.0.123'
+	boringSslVersion = '2.0.84.Final'
 	junitVersion = '5.14.4'
 	junitPlatformLauncherVersion = '1.14.4'
 	mockitoVersion = '4.11.0'
@@ -136,7 +136,7 @@ ext {
 	reflectionsVersion = '0.10.2'
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
-	bouncycastleVersion = '1.85'
+	bouncycastleVersion = '1.86'
 
 	// Antora
 	antoraPluginVersion = '1.0.0'
@@ -149,8 +149,7 @@ ext {
 					"https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.2/api/",
-					"https://projectreactor.io/docs/netty/release/api/",
-					"https://javadoc.io/doc/io.micrometer/micrometer-core/${micrometerVersion}/"] as String[]
+					"https://projectreactor.io/docs/netty/release/api/"] as String[]
 }
 
 nohttp {
@@ -341,9 +340,14 @@ subprojects {
 		enabled = false
 	}
 
+	tasks.withType(AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+
 	jar {
 		manifest {
-			attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
+			attributes("Build-Jdk-Spec": "${System.getProperty("java.specification.version")}",
 					"Implementation-Title": project.name,
 					"Implementation-Version": project.version)
 		}
