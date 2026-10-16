@@ -548,7 +548,7 @@ class WebSocketServerMetricsHandlerTests extends BaseHttpTest {
 	void doTestServerWebSocketCustomRecorder(HttpServer server, HttpClient client) {
 		ServerWebSocketRecorder recorder = new ServerWebSocketRecorder();
 		disposableServer =
-				server.forwarded(true)
+				server.forwarded(true, false)
 				      .metrics(true, () -> recorder, Function.identity(), m -> "m_" + m)
 				      .handle((req, res) -> res.sendWebsocket((in, out) -> out.sendString(Mono.just("Hello World!"))))
 				      .bindNow();
