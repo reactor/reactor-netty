@@ -167,17 +167,13 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 			                   finally {
 			                       // Notify subscribers only after the websocket operations have been bound
 			                       if (f.isSuccess()) {
+			                           recordHandshakeComplete(channel, "200");
 			                           handshakerResult.trySuccess();
 			                       }
 			                       else {
+			                           recordHandshakeFailure(channel);
 			                           handshakerResult.tryFailure(f.cause());
 			                       }
-			                   }
-			                   if (f.isSuccess()) {
-			                       recordHandshakeComplete(channel, "200");
-			                   }
-			                   else {
-			                       recordHandshakeFailure(channel);
 			                   }
 			               });
 		}
