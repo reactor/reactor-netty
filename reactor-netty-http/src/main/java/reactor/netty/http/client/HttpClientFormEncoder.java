@@ -19,7 +19,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -32,6 +34,7 @@ import io.netty.handler.codec.http.multipart.DiskFileUpload;
 import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.stream.ChunkedInput;
 import org.jspecify.annotations.Nullable;
 import reactor.core.Exceptions;
@@ -49,11 +52,15 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	final HttpRequest request;
 
 	boolean         needNewEncoder;
+	boolean         needNewFactory;
+	boolean         partsEncoded;
 	HttpDataFactory newFactory;
 	boolean         cleanOnTerminate;
 	Charset         newCharset;
 	boolean         newMultipart;
 	EncoderMode     newMode;
+
+	@Nullable HttpClientFormEncoder nextEncoder;
 
 	/**
 	 * Constructs a new {@link HttpClientFormEncoder}.
@@ -81,6 +88,28 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	@Override
+	public void addBodyHttpData(InterfaceHttpData data) throws ErrorDataEncoderException {
+		if (!partsEncoded) {
+			// Create parts with the configured factory, but wait for the final form settings
+			// before encoding them. A temporary encoding can exceed the factory's size limit.
+			getBodyListAttributes().add(Objects.requireNonNull(data, "data"));
+		}
+		else {
+			super.addBodyHttpData(data);
+		}
+	}
+
+	@Override
+	public HttpRequest finalizeRequest() throws ErrorDataEncoderException {
+		if (!partsEncoded) {
+			List<InterfaceHttpData> parts = new ArrayList<>(getBodyListAttributes());
+			partsEncoded = true;
+			setBodyHttpDatas(parts);
+		}
+		return super.finalizeRequest();
+	}
+
+	@Override
 	public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
 		HttpContent c = super.readChunk(allocator);
 		if (c == null) {
@@ -97,6 +126,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 
 	@Override
 	public HttpClientForm attr(String name, String value) {
+		HttpClientFormEncoder encoder = encoderForParts();
+		if (encoder != this) {
+			return encoder.attr(name, value);
+		}
 		try {
 			addBodyAttribute(name, value);
 		}
@@ -108,13 +141,24 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 
 	@Override
 	public HttpClientForm charset(Charset charset) {
-		this.newCharset = Objects.requireNonNull(charset, "charset");
-		this.needNewEncoder = true;
+		Objects.requireNonNull(charset, "charset");
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.charset(charset);
+		}
+		if (!charset.equals(newCharset)) {
+			this.newCharset = charset;
+			this.needNewEncoder = true;
+		}
 		return this;
 	}
 
 	@Override
 	public HttpClientForm cleanOnTerminate(boolean clean) {
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.cleanOnTerminate(clean);
+		}
 		this.cleanOnTerminate = clean;
 		return this;
 	}
@@ -126,8 +170,16 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 					"starting appending Parts, call factory(f) at the earliest occasion" +
 					" offered");
 		}
-		this.newFactory = Objects.requireNonNull(factory, "factory");
-		this.needNewEncoder = true;
+		Objects.requireNonNull(factory, "factory");
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.factory(factory);
+		}
+		if (factory != newFactory) {
+			this.newFactory = factory;
+			this.needNewEncoder = true;
+			this.needNewFactory = true;
+		}
 		return this;
 	}
 
@@ -148,6 +200,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(file, "file");
 		Objects.requireNonNull(filename, "filename");
+		HttpClientFormEncoder encoder = encoderForParts();
+		if (encoder != this) {
+			return encoder.file(name, filename, file, contentType);
+		}
 		String scontentType = contentType;
 		if (contentType == null) {
 			scontentType = DEFAULT_BINARY_CONTENT_TYPE;
@@ -176,6 +232,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	public HttpClientForm file(String name, String filename, InputStream stream, @Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
+		HttpClientFormEncoder encoder = encoderForParts();
+		if (encoder != this) {
+			return encoder.file(name, filename, stream, contentType);
+		}
 		try {
 			String scontentType = contentType;
 			if (contentType == null) {
@@ -211,6 +271,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 
 	@Override
 	public HttpClientForm files(String name, File[] files, String[] contentTypes, boolean[] textFiles) {
+		HttpClientFormEncoder encoder = encoderForParts();
+		if (encoder != this) {
+			return encoder.files(name, files, contentTypes, textFiles);
+		}
 		try {
 			addBodyFileUploads(name, files, contentTypes, textFiles);
 		}
@@ -222,14 +286,25 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 
 	@Override
 	public HttpClientForm encoding(EncoderMode mode) {
-		this.newMode = Objects.requireNonNull(mode, "mode");
-		this.needNewEncoder = true;
+		Objects.requireNonNull(mode, "mode");
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.encoding(mode);
+		}
+		if (mode != newMode) {
+			this.newMode = mode;
+			this.needNewEncoder = true;
+		}
 		return this;
 	}
 
 	@Override
 	public HttpClientForm multipart(boolean isMultipart) {
-		this.needNewEncoder = isChunked() != isMultipart;
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			return encoder.multipart(isMultipart);
+		}
+		this.needNewEncoder |= isMultipart() != isMultipart;
 		this.newMultipart = isMultipart;
 		return this;
 	}
@@ -242,6 +317,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 
 	@Override
 	public HttpClientForm textFile(String name, File file, @Nullable String contentType) {
+		HttpClientFormEncoder encoder = encoderForParts();
+		if (encoder != this) {
+			return encoder.textFile(name, file, contentType);
+		}
 		try {
 			addBodyFileUpload(name, file, contentType, true);
 		}
@@ -261,6 +340,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	public HttpClientForm textFile(String name, InputStream stream, @Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
+		HttpClientFormEncoder encoder = encoderForParts();
+		if (encoder != this) {
+			return encoder.textFile(name, stream, contentType);
+		}
 		try {
 			String scontentType = contentType;
 
@@ -282,23 +365,56 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 		return this;
 	}
 
+	@Override
+	public void cleanFiles() {
+		HttpClientFormEncoder encoder = currentEncoder();
+		if (encoder != this) {
+			encoder.cleanFiles();
+		}
+		else {
+			super.cleanFiles();
+		}
+	}
+
 	final HttpClientFormEncoder applyChanges(HttpRequest request) {
-		if (!needNewEncoder) {
-			return this;
+		HttpClientFormEncoder current = currentEncoder();
+		if (!current.needNewEncoder) {
+			return current;
 		}
 
 		try {
-			HttpClientFormEncoder encoder = new HttpClientFormEncoder(newFactory, request, newMultipart, newCharset, newMode);
+			HttpClientFormEncoder encoder = new HttpClientFormEncoder(current.newFactory, request, current.newMultipart, current.newCharset, current.newMode);
 
-			encoder.setBodyHttpDatas(getBodyListAttributes());
+			encoder.cleanOnTerminate = current.cleanOnTerminate;
+			encoder.setBodyHttpDatas(current.getBodyListAttributes());
 
-			needNewEncoder = false;
+			current.needNewEncoder = false;
+			current.needNewFactory = false;
+			current.nextEncoder = encoder;
 
 			return encoder;
 		}
 		catch (ErrorDataEncoderException ee) {
 			throw Exceptions.propagate(ee);
 		}
+	}
+
+	/**
+	 * Parts must be created by the configured factory, so a pending factory change is
+	 * applied before adding a part. The other settings are applied to all parts by the
+	 * final {@link #applyChanges(HttpRequest)}, so they do not trigger a rebuild here.
+	 */
+	private HttpClientFormEncoder encoderForParts() {
+		HttpClientFormEncoder encoder = currentEncoder();
+		return encoder.needNewFactory ? encoder.applyChanges(request) : encoder;
+	}
+
+	private HttpClientFormEncoder currentEncoder() {
+		HttpClientFormEncoder encoder = this;
+		while (encoder.nextEncoder != null) {
+			encoder = encoder.nextEncoder;
+		}
+		return encoder;
 	}
 
 	static final Map<Pattern, String> percentEncodings            = new HashMap<>();
