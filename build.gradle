@@ -207,6 +207,16 @@ subprojects {
 		}
 	}
 
+	// JDK 8 javac does not produce reproducible output, compile the main sources with JDK 17 for Java 8
+	tasks.named('compileJava') {
+		if (java.toolchain.languageVersion.get() == JavaLanguageVersion.of(8)) {
+			javaCompiler = javaToolchains.compilerFor {
+				languageVersion = JavaLanguageVersion.of(17)
+			}
+			options.release = 8
+		}
+	}
+
 	// Force TargetJvmVersion=8 on consumable configurations because the Artifactory
 	// plugin resets it to the toolchain JDK when it adds maven-publish to subprojects.
 	plugins.withType(JavaPlugin) {
