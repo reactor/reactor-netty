@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,30 @@
  */
 package reactor.netty.http.internal;
 
-import io.netty.handler.codec.quic.Quic;
-
 /**
  * Utility class around HTTP/3.
  * <p><strong>Note:</strong> This utility class is for internal use only. It can be removed at any time.
  *
  * @author Violeta Georgieva
+ * @author Tobias Soloschenko
  * @since 1.2.0
  */
 public final class Http3 {
+
+	private static final boolean isHttp3Available;
+
+	static {
+		boolean http3Check = false;
+		try {
+			Class.forName("io.netty.handler.codec.quic.Quic");
+			Class.forName("io.netty.handler.codec.http3.Http3");
+			http3Check = io.netty.handler.codec.quic.Quic.isAvailable();
+		}
+		catch (ClassNotFoundException cnfe) {
+			// noop
+		}
+		isHttp3Available = http3Check;
+	}
 
 	/**
 	 * Check if the current runtime supports HTTP/3, by verifying if {@code io.netty:netty-codec-native-quic} is on the classpath.
@@ -32,7 +46,7 @@ public final class Http3 {
 	 * @return true if {@code io.netty:netty-codec-native-quic} is available
 	 */
 	public static boolean isHttp3Available() {
-		return Quic.isAvailable();
+		return isHttp3Available;
 	}
 
 	private Http3() {}
