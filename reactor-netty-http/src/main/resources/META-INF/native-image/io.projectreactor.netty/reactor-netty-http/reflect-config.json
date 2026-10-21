@@ -418,5 +418,17 @@
 		},
 		"name": "reactor.netty.http.server.logging.error.BaseErrorLogHandler",
 		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.internal.Http3"
+		},
+		"name": "io.netty.handler.codec.quic.Quic",
+		"methods": [
+			{
+				"name": "isAvailable",
+				"parameterTypes": []
+			}
+		]
 	}
 ]
