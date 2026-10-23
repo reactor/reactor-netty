@@ -121,7 +121,7 @@ ext {
 
 	// Testing
 	brotli4jVersion = '1.23.0'
-	zstdJniVersion = '1.5.7-23'
+	zstdJniVersion = '1.5.7-24'
 	jacksonDatabindVersion = '2.22.4'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.27.7'
