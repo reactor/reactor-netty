@@ -373,7 +373,24 @@ final class HttpPredicate
 
 		@Override
 		public boolean test(HttpServerRequest key) {
-			return method.equals(key.method()) && key.uri().startsWith(prefix);
+			if (!method.equals(key.method())) {
+				return false;
+			}
+			String uri = key.uri();
+			if (!uri.startsWith(prefix)) {
+				return false;
+			}
+			// A plain startsWith check would also match an unrelated sibling path that merely
+			// shares the same characters, e.g. prefix "/files" would incorrectly also match
+			// "/filesystem-status". This is a true [prefix]/** match (see #prefix's Javadoc) only
+			// when the prefix is the whole URI, or is immediately followed by '/' (a sub-path) or
+			// '?' (a query string on the bare prefix).
+			int prefixLength = prefix.length();
+			if (uri.length() == prefixLength) {
+				return true;
+			}
+			char next = uri.charAt(prefixLength);
+			return next == '/' || next == '?';
 		}
 	}
 }
