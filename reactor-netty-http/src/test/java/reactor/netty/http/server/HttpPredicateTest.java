@@ -15,10 +15,9 @@
  */
 package reactor.netty.http.server;
 
-import java.util.function.Predicate;
-
 import io.netty.handler.codec.http.HttpMethod;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,29 +28,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 class HttpPredicateTest {
 
 	/**
-	 * {@link HttpPredicate#prefix(String)}'s own Javadoc describes the semantics as
-	 * {@code [prefix]/**} (a segment-bounded wildcard), which is also what
-	 * {@link DefaultHttpServerRoutes#directory} relies on to serve files under a mapped
-	 * path. The underlying {@code HttpPrefixPredicate} matched with a plain
-	 * {@link String#startsWith(String)} instead, with no check for a following
-	 * {@code '/'} or exact-match boundary, so a route registered for prefix
-	 * {@code "/files"} also incorrectly matched an unrelated sibling path such as
-	 * {@code "/filesystem-status"} that merely shares the same characters.
+	 * {@link HttpPredicate#prefix(String)} matches {@code [prefix]/**}: the prefix itself, or the prefix followed
+	 * by a segment boundary (a {@code '/'}, also percent-encoded, or the query string), but not an unrelated
+	 * sibling such as {@code /filesystem-status} for {@code /files}. A prefix that already ends with {@code '/'}
+	 * needs no further boundary.
 	 */
-	@Test
-	void prefixPredicateRespectsSegmentBoundary() {
-		Predicate<HttpServerRequest> predicate = HttpPredicate.prefix("/files");
-
-		assertThat(predicate.test(requestFor("/files"))).as("exact match").isTrue();
-		assertThat(predicate.test(requestFor("/files/report.txt"))).as("true descendant").isTrue();
-		assertThat(predicate.test(requestFor("/files?download=1"))).as("exact match with query string").isTrue();
-
-		assertThat(predicate.test(requestFor("/filesystem-status")))
-				.as("unrelated sibling path must not match a rule for '/files'")
-				.isFalse();
-		assertThat(predicate.test(requestFor("/files-admin")))
-				.as("unrelated sibling path must not match a rule for '/files'")
-				.isFalse();
+	@ParameterizedTest(name = "prefix(\"{0}\") on \"{1}\" is {2}")
+	@CsvSource({
+			"/files,  /files,                 true",
+			"/files,  /files/report.txt,      true",
+			"/files,  /files?download=1,      true",
+			"/files,  /files%2Freport.txt,    true",
+			"/files,  /files%2freport.txt,    true",
+			"/files,  /filesystem-status,     false",
+			"/files,  /files-admin,           false",
+			"/files/, /files/,                true",
+			"/files/, /files/report.txt,      true",
+			"/files/, /files,                 false",
+			"/files/, /filesystem-status,     false",
+			"/,       /,                      true",
+			"/,       /index.html,            true",
+			"/,       /files/report.txt,      true"
+	})
+	void prefixPredicateRespectsSegmentBoundary(String prefix, String uri, boolean expected) {
+		assertThat(HttpPredicate.prefix(prefix).test(requestFor(uri))).isEqualTo(expected);
 	}
 
 	private static HttpServerRequest requestFor(String uri) {

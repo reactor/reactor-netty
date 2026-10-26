@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -380,17 +380,12 @@ final class HttpPredicate
 			if (!uri.startsWith(prefix)) {
 				return false;
 			}
-			// A plain startsWith check would also match an unrelated sibling path that merely
-			// shares the same characters, e.g. prefix "/files" would incorrectly also match
-			// "/filesystem-status". This is a true [prefix]/** match (see #prefix's Javadoc) only
-			// when the prefix is the whole URI, or is immediately followed by '/' (a sub-path) or
-			// '?' (a query string on the bare prefix).
-			int prefixLength = prefix.length();
-			if (uri.length() == prefixLength) {
+			if (prefix.endsWith("/") || uri.length() == prefix.length()) {
 				return true;
 			}
-			char next = uri.charAt(prefixLength);
-			return next == '/' || next == '?';
+			// [prefix]/**: the prefix must end at a segment boundary, a '/' (possibly percent-encoded) or a query
+			char next = uri.charAt(prefix.length());
+			return next == '/' || next == '?' || uri.regionMatches(true, prefix.length(), "%2F", 0, 3);
 		}
 	}
 }
