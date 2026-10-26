@@ -383,7 +383,6 @@ final class HttpPredicate
 			if (prefix.endsWith("/") || uri.length() == prefix.length()) {
 				return true;
 			}
-			// [prefix]/**: the prefix must end at a segment boundary, a '/' (possibly percent-encoded) or a query
 			char next = uri.charAt(prefix.length());
 			return next == '/' || next == '?' || uri.regionMatches(true, prefix.length(), "%2F", 0, 3);
 		}
