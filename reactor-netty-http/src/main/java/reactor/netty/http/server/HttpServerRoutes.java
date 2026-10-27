@@ -256,6 +256,23 @@ public interface HttpServerRoutes extends
 	}
 
 	/**
+	 * Listens for HTTP QUERY on the passed path to be used as a routing condition. Incoming
+	 * connections will query the internal registry to invoke the matching handler.
+	 * <p>Additional regex matching is available e.g.
+	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}</p>
+	 *
+	 * @param path The QUERY path used by clients
+	 * @param handler an I/O handler to invoke for the given condition
+	 *
+	 * @return this {@link HttpServerRoutes}
+	 * @since 1.3.7
+	 */
+	default HttpServerRoutes query(String path,
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+		return route(HttpPredicate.query(path), handler);
+	}
+
+	/**
 	 * A generic route predicate that if matched already register I/O handler use
 	 * {@link HttpServerRoutes#route(Predicate, BiFunction)} will be removed.
 	 *

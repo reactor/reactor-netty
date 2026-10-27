@@ -228,10 +228,10 @@ The following example shows how to do so:
 include::{examples-dir}/read/headers/Application.java[tags=snippet-application]
 ----
 
-[[reading-post-form-or-multipart-data]]
-=== Reading Post Form or Multipart Data
+[[reading-form-or-multipart-data]]
+=== Reading Form or Multipart Data
 
-When you receive data from the connected clients, you might want to access `POST` `form` (`application/x-www-form-urlencoded`) or
+When you receive data from the connected clients, you might want to access `POST` or `QUERY` `form` (`application/x-www-form-urlencoded`) or
 `multipart` (`multipart/form-data`) data. You can obtain this data by using
 {javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
 
@@ -240,7 +240,7 @@ When you receive data from the connected clients, you might want to access `POST
 ----
 include::{examples-dir}/multipart/Application.java[tags=snippet-application]
 ----
-<1> Receives `POST` form/multipart data.
+<1> Receives `POST` or `QUERY` form/multipart data.
 
 When you need to change the default settings, you can configure the `HttpServer` or you can provide a configuration per request:
 
