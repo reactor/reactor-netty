@@ -48,6 +48,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -432,6 +433,17 @@ class Http11WebsocketTest extends WebsocketTest {
 	@ValueSource(booleans = {true, false})
 	void testUnsupportedWebsocketVersion(boolean onEventLoop) throws Exception {
 		doTestUnsupportedWebsocketVersion(createServer(), createClient(() -> disposableServer.address()), onEventLoop);
+	}
+
+	@Test
+	void testUnsupportedWebsocketVersionSubscribeAfterTerminate() throws Exception {
+		doTestUnsupportedWebsocketVersion(createServer(), createClient(() -> disposableServer.address()), false, true);
+	}
+
+	@Test
+	void testInvalidWebsocketRequestSubscribeAfterTerminateWithMetrics() throws Exception {
+		doTestInvalidWebsocketRequestSubscribeAfterTerminate(createServer().metrics(true, Function.identity()),
+				createClient(() -> disposableServer.address()));
 	}
 
 	@Test

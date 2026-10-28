@@ -61,6 +61,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -1232,17 +1234,28 @@ class WebsocketTest extends BaseHttpTest {
 	}
 
 	void doTestUnsupportedWebsocketVersion(HttpServer server, HttpClient client, boolean onEventLoop) throws Exception {
+		doTestUnsupportedWebsocketVersion(server, client, onEventLoop, false);
+	}
+
+	void doTestUnsupportedWebsocketVersion(HttpServer server, HttpClient client, boolean onEventLoop,
+			boolean subscribeAfterTerminate) throws Exception {
 		AtomicReference<Throwable> error = new AtomicReference<>();
 		CountDownLatch errorLatch = new CountDownLatch(1);
+		AtomicReference<Channel> serverChannel = new AtomicReference<>();
 		disposableServer =
 				server.handle((req, res) -> {
-				            Mono<Void> mono = Mono.defer(() ->
-				                res.sendWebsocket((in, out) -> out.sendString(Mono.just("doTestUnsupportedWebsocketVersion")))
-				                   .then()
-				                   .doOnError(t -> {
-				                       error.set(t);
-				                       errorLatch.countDown();
-				                   }));
+				            Channel channel = ((Connection) req).channel();
+				            serverChannel.set(channel);
+				            Mono<Void> mono = Mono.defer(() -> {
+				                Mono<Void> upgrade =
+				                        res.sendWebsocket((in, out) -> out.sendString(Mono.just("doTestUnsupportedWebsocketVersion")))
+				                           .then()
+				                           .doOnError(t -> {
+				                               error.set(t);
+				                               errorLatch.countDown();
+				                           });
+				                return subscribeAfterTerminate ? subscribeAfterTerminate(channel, upgrade) : upgrade;
+				            });
 				            return onEventLoop ? mono : mono.subscribeOn(Schedulers.boundedElastic());
 				      })
 				      .bindNow();
@@ -1279,9 +1292,81 @@ class WebsocketTest extends BaseHttpTest {
 		              "Invalid handshake response getStatus: 426 Upgrade Required".equals(t.getMessage()))
 		      .verify(Duration.ofSeconds(5));
 
+		if (subscribeAfterTerminate) {
+			// HTTP/2 closes the stream after the rejected handshake, HTTP/1.1 keeps the connection open.
+			// Close it to terminate the HTTP operations.
+			assertThat(serverChannel.get()).isNotNull();
+			serverChannel.get().close();
+		}
+
 		assertThat(errorLatch.await(5, TimeUnit.SECONDS)).isTrue();
 		assertThat(error.get()).isInstanceOf(WebSocketServerHandshakeException.class)
 				.hasMessage("Websocket version [99] is not supported");
+	}
+
+	void doTestInvalidWebsocketRequestSubscribeAfterTerminate(HttpServer server, HttpClient client) throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		CountDownLatch errorLatch = new CountDownLatch(1);
+		disposableServer =
+				server.handle((req, res) -> {
+				          Channel channel = ((Connection) req).channel();
+				          // On the event loop the handshake fails synchronously, after the WebSocket metrics handler is added.
+				          // No response is sent, close the connection to terminate the HTTP operations.
+				          Mono<Void> upgrade =
+				                  res.sendWebsocket((in, out) -> out.sendString(Mono.just("doTestInvalidWebsocketRequestSubscribeAfterTerminate")))
+				                     .then()
+				                     .doOnError(t -> {
+				                         error.set(t);
+				                         errorLatch.countDown();
+				                     });
+				          Mono<Void> result = subscribeAfterTerminate(channel, upgrade);
+				          channel.close();
+				          return result;
+				      })
+				      .bindNow();
+
+		client.observe((conn, state) -> {
+		          if (state != ConnectionObserver.State.CONNECTED) {
+		              return;
+		          }
+		          conn.channel().pipeline().addAfter(NettyPipeline.HttpCodec, "doTestInvalidWebsocketRequestSubscribeAfterTerminate",
+		              new ChannelOutboundHandlerAdapter() {
+		                  @Override
+		                  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+		                      if (msg instanceof HttpRequest) {
+		                          ((HttpRequest) msg).headers().remove(HttpHeaderNames.SEC_WEBSOCKET_KEY);
+		                      }
+		                      ctx.write(msg, promise);
+		                  }
+		              });
+		      })
+		      .disableRetry(true)
+		      .websocket()
+		      .uri("/")
+		      .handle((in, out) -> in.aggregateFrames().receive().asString().then())
+		      .as(StepVerifier::create)
+		      .expectError()
+		      .verify(Duration.ofSeconds(5));
+
+		assertThat(errorLatch.await(5, TimeUnit.SECONDS)).isTrue();
+		assertThat(error.get()).isInstanceOf(WebSocketServerHandshakeException.class)
+				.hasMessage("not a WebSocket request: missing key");
+	}
+
+	/**
+	 * Returns a handler result that defers the subscription to {@code upgrade} until the HTTP operations are terminated.
+	 * The termination cancels the handler result and then replaces the connection, so {@code upgrade} is subscribed
+	 * after that, off the event loop, by a subscriber that is already cancelled.
+	 * Pass the channel captured before starting the handshake, as the HTTP operations may already be terminated here.
+	 */
+	static Mono<Void> subscribeAfterTerminate(Channel channel, Mono<Void> upgrade) {
+		Sinks.Empty<Void> terminated = Sinks.empty();
+		terminated.asMono()
+		          // Continue after terminate() returns
+		          .publishOn(Schedulers.fromExecutor(channel.eventLoop()))
+		          .publishOn(Schedulers.boundedElastic())
+		          .subscribe(null, null, () -> upgrade.subscribe(new CancelledSubscriber()));
+		return Mono.<Void>never().doOnCancel(terminated::tryEmitEmpty);
 	}
 
 	private static DisposableServer createDisposableServer(HttpServer server,
@@ -1336,5 +1421,25 @@ class WebsocketTest extends BaseHttpTest {
 		      .expectNextMatches(l -> expectedBody.equals(l.get(0)))
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(30));
+	}
+
+	static final class CancelledSubscriber implements CoreSubscriber<Void> {
+
+		@Override
+		public void onSubscribe(Subscription s) {
+			s.cancel();
+		}
+
+		@Override
+		public void onNext(Void unused) {
+		}
+
+		@Override
+		public void onError(Throwable t) {
+		}
+
+		@Override
+		public void onComplete() {
+		}
 	}
 }
