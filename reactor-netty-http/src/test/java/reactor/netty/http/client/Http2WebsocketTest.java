@@ -656,6 +656,13 @@ class Http2WebsocketTest extends WebsocketTest {
 
 	@ParameterizedTest
 	@MethodSource("http2CompatibleCombinations")
+	void testUnsupportedWebsocketVersionSubscribeAfterTerminate(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
+		doTestUnsupportedWebsocketVersion(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx), false, true);
+	}
+
+	@ParameterizedTest
+	@MethodSource("http2CompatibleCombinations")
 	void testUpgradeOffEventLoop(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) {
 		doTestUpgradeOffEventLoop(configureServer(serverProtocols, serverCtx), configureClient(clientProtocols, clientCtx));

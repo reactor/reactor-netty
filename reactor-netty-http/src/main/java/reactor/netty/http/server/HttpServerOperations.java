@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
@@ -43,6 +44,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -108,6 +110,7 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
@@ -1301,6 +1304,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
 			isWebsocket = true;
+			EventLoop eventLoop = channel().eventLoop();
 			WebsocketServerOperations ops;
 			// ReferenceEquality is deliberate
 			if (version() == H2) {
@@ -1311,6 +1315,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 
 			return Mono.deferContextual(contextView -> {
+				// A failed handshake can terminate the HTTP operations before subscription. There is no handler
+				// to start, so propagate the failure without scheduling a subscription that the termination could cancel.
+				if (ops.handshakerResult.isDone() && !ops.handshakerResult.isSuccess()) {
+					if (ops.micrometerWsHandler != null) {
+						updateMetricsContextOnEventLoop(ops, contextView, eventLoop);
+					}
+					return FutureMono.from(ops.handshakerResult);
+				}
 				Mono<Void> handshake = Mono.defer(() -> {
 					ops.updateMetricsContext(contextView);
 					return FutureMono.from(ops.handshakerResult);
@@ -1321,14 +1333,29 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					}
 				});
 				// Update the context before observing even an already completed handshake.
-				return channel().eventLoop().inEventLoop() ? handshake :
-						handshake.subscribeOn(Schedulers.fromExecutor(channel().eventLoop()));
+				return eventLoop.inEventLoop() ? handshake :
+						handshake.subscribeOn(Schedulers.fromExecutor(eventLoop));
 			});
 		}
 		else {
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
+	}
+
+	static void updateMetricsContextOnEventLoop(WebsocketServerOperations ops, ContextView contextView, EventLoop eventLoop) {
+		if (eventLoop.inEventLoop()) {
+			ops.updateMetricsContext(contextView);
+			return;
+		}
+		try {
+			eventLoop.execute(() -> ops.updateMetricsContext(contextView));
+		}
+		catch (RejectedExecutionException e) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(ops.channel(), "Cannot update the WebSocket metrics context."), e);
+			}
+		}
 	}
 
 	static final class WebsocketSubscriber implements CoreSubscriber<Void>, ChannelFutureListener {
