@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -373,7 +373,18 @@ final class HttpPredicate
 
 		@Override
 		public boolean test(HttpServerRequest key) {
-			return method.equals(key.method()) && key.uri().startsWith(prefix);
+			if (!method.equals(key.method())) {
+				return false;
+			}
+			String uri = key.uri();
+			if (!uri.startsWith(prefix)) {
+				return false;
+			}
+			if (prefix.endsWith("/") || uri.length() == prefix.length()) {
+				return true;
+			}
+			char next = uri.charAt(prefix.length());
+			return next == '/' || next == '?' || uri.regionMatches(true, prefix.length(), "%2F", 0, 3);
 		}
 	}
 }
