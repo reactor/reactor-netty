@@ -41,9 +41,10 @@ public final class Http3 {
 	}
 
 	/**
-	 * Check if the current runtime supports HTTP/3, by verifying if {@code io.netty:netty-codec-native-quic} is on the classpath.
+	 * Check if the current runtime supports HTTP/3, by verifying if {@code io.netty:netty-codec-native-quic}
+	 * and {@code io.netty:netty-codec-http3} are on the classpath.
 	 *
-	 * @return true if {@code io.netty:netty-codec-native-quic} is available
+	 * @return true if {@code io.netty:netty-codec-native-quic} and {@code io.netty:netty-codec-http3} are available
 	 */
 	public static boolean isHttp3Available() {
 		return isHttp3Available;
