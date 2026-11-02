@@ -97,7 +97,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	void recordDataReceived(SocketAddress remoteAddress, String proxyAddress, long bytes) {
 		DistributionSummary ds = dataReceivedMeter(remoteAddress, proxyAddress);
 		if (ds != null) {
-			ds.record(bytes);
+			ds.record((double) bytes);
 		}
 	}
 
@@ -132,7 +132,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	void recordDataSent(SocketAddress remoteAddress, String proxyAddress, long bytes) {
 		DistributionSummary ds = dataSentMeter(remoteAddress, proxyAddress);
 		if (ds != null) {
-			ds.record(bytes);
+			ds.record((double) bytes);
 		}
 	}
 

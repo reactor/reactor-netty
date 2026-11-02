@@ -645,6 +645,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final HttpClient cookiesWhen(String name, Function<? super Cookie, Mono<? extends Cookie>> cookieBuilder) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
@@ -1114,6 +1115,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final HttpClient headersWhen(Function<? super HttpHeaders, Mono<? extends HttpHeaders>> headerBuilder) {
 		Objects.requireNonNull(headerBuilder, "headerBuilder");
 		HttpClient dup = duplicate();
@@ -1273,6 +1275,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.7
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final HttpClient metrics(boolean enable, Function<String, String> uriTagValue) {
 		if (enable) {
 			if (!Metrics.isMicrometerAvailable() && !Metrics.isTracingAvailable()) {
@@ -1692,6 +1695,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @see #resolver(AddressResolverGroup)
 	 * @see #resolver(Consumer)
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final HttpClient proxyWhen(
 			BiFunction<HttpClientConfig, ? super ProxyProvider.TypeSpec, Mono<? extends ProxyProvider.Builder>> proxyBuilder) {
 		Objects.requireNonNull(proxyBuilder, "proxyBuilder");

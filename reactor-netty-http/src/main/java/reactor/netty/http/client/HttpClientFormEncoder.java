@@ -164,6 +164,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 	}
 
 	@Override
+	@SuppressWarnings("ReferenceEquality")
 	public HttpClientForm factory(HttpDataFactory factory) {
 		if (!getBodyListAttributes().isEmpty()) {
 			throw new IllegalStateException("Cannot set a new HttpDataFactory after " +

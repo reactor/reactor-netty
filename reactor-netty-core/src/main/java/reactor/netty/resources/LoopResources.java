@@ -285,6 +285,7 @@ public interface LoopResources extends Disposable {
 	 *
 	 * @return true if environment supports native connections
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	static boolean hasNativeSupport() {
 		return DefaultLoopNativeDetector.INSTANCE != DefaultLoopNativeDetector.NIO;
 	}

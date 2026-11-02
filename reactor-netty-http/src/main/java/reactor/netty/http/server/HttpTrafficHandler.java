@@ -169,6 +169,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	}
 
 	@Override
+	@SuppressWarnings("ReferenceEquality")
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		read = true;
 		if (secure == null) {
@@ -412,7 +413,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		Class<?> msgClass = msg.getClass();
 		// modify message on way out to add headers if needed

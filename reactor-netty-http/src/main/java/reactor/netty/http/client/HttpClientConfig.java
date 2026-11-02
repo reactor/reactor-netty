@@ -1350,7 +1350,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void onStateChange(Connection connection, State state) {
 			if (state == State.DISCONNECTING) {
 				if (connection.channel().isActive()) {

@@ -226,6 +226,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED) {
 				if (doOnBound != null) {
@@ -251,7 +252,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED && channelGroup != null) {
 				Channel channel = connection.channel();

@@ -245,6 +245,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());

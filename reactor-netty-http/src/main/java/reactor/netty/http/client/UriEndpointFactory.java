@@ -20,6 +20,7 @@ import org.jspecify.annotations.Nullable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.Locale;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -52,7 +53,7 @@ final class UriEndpointFactory {
 		Matcher matcher = URL_PATTERN.matcher(url);
 		if (matcher.matches()) {
 			// scheme is optional in pattern. use default if it's not specified
-			String scheme = matcher.group(1) != null ? validateScheme(matcher.group(1).toLowerCase())
+			String scheme = matcher.group(1) != null ? validateScheme(matcher.group(1).toLowerCase(Locale.ROOT))
 					: resolveScheme(isWs);
 			String host = cleanHostString(matcher.group(2));
 
@@ -76,7 +77,7 @@ final class UriEndpointFactory {
 		if (url.getHost() == null) {
 			throw new IllegalArgumentException("Host is not specified");
 		}
-		String scheme = url.getScheme() != null ? validateScheme(url.getScheme().toLowerCase()) : resolveScheme(isWs);
+		String scheme = url.getScheme() != null ? validateScheme(url.getScheme().toLowerCase(Locale.ROOT)) : resolveScheme(isWs);
 		String host = cleanHostString(url.getHost());
 		int port = url.getPort() != -1 ? url.getPort() : (UriEndpoint.isSecureScheme(scheme) ? 443 : 80);
 		String rawPath = url.getRawPath() != null ? url.getRawPath() : "";

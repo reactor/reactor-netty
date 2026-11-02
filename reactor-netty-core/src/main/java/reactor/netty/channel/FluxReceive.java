@@ -112,6 +112,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return receiverQueue != null ? receiverQueue.size() : 0;
 	}
 
+	@SuppressWarnings("ReferenceEquality")
 	final boolean isCancelled() {
 		return receiverCancel == CANCELLED;
 	}
@@ -194,6 +195,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
+	@SuppressWarnings("ReferenceEquality")
 	final void cancelReceiver(int cancelCode) {
 		IntConsumer c = receiverCancel;
 		if (c != CANCELLED) {
@@ -245,6 +247,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return error;
 	}
 
+	@SuppressWarnings("ReferenceEquality")
 	final void cleanQueueAndTerminateReceiver(@Nullable Queue<Object> q, CoreSubscriber<?> a) {
 		Throwable error = cleanQueue(q);
 		if (error != null) {

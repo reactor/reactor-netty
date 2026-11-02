@@ -28,7 +28,7 @@ plugins {
 	id 'biz.aQute.bnd.builder' version '7.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.11.5' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
-	id 'net.ltgt.errorprone' version '5.1.1' apply false
+	id 'io.spring.nullability' version '0.0.18' apply false
 	id 'me.champeau.mrjar' version '0.1.1' apply false
 }
 
@@ -134,8 +134,6 @@ ext {
 	mockitoVersion = '4.11.0'
 	blockHoundVersion = '1.0.19.BUILD-SNAPSHOT'
 	reflectionsVersion = '0.10.2'
-	errorproneCoreVersion = '2.10.0'
-	errorproneGuavaVersion = '30.0-jre'
 	bouncycastleVersion = '1.86'
 
 	// Antora
@@ -207,11 +205,12 @@ subprojects {
 		}
 	}
 
-	// JDK 8 javac does not produce reproducible output, compile the main sources with JDK 17 for Java 8
+	// JDK 8 javac does not produce reproducible output and Error Prone requires JDK 21,
+	// compile the main sources with JDK 25 for Java 8
 	tasks.named('compileJava') {
 		if (java.toolchain.languageVersion.get() == JavaLanguageVersion.of(8)) {
 			javaCompiler = javaToolchains.compilerFor {
-				languageVersion = JavaLanguageVersion.of(17)
+				languageVersion = JavaLanguageVersion.of(25)
 			}
 			options.release = 8
 		}
@@ -229,7 +228,17 @@ subprojects {
 
 	apply from: "${rootDir}/gradle/setup.gradle"
 	apply from: "${rootDir}/gradle/javadoc.gradle"
-	apply from: "${rootDir}/gradle/errorprone.gradle"
+	if (name != "docs" && name != "reactor-netty-graalvm-smoke-tests") {
+		apply plugin: 'io.spring.nullability'
+
+		// The nullability plugin disables all other Error Prone checks, re-enable them
+		tasks.withType(JavaCompile).configureEach {
+			options.errorprone {
+				disableAllChecks = false
+				option("NullAway:AssertsEnabled", "true")
+			}
+		}
+	}
 	apply from: "${rootDir}/gradle/japicmp.gradle"
 
 	jacoco {

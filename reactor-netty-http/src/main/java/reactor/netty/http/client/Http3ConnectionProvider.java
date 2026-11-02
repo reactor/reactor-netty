@@ -367,7 +367,6 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 		}
 
 		@Override
-		@SuppressWarnings("NullAway")
 		public void onNext(PooledRef<Connection> pooledRef) {
 			this.pooledRef = pooledRef;
 			Channel channel = pooledRef.poolable().channel();

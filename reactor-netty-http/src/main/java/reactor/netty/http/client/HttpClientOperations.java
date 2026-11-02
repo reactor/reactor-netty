@@ -281,7 +281,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	public HttpClientOperations addHandler(String name, ChannelHandler handler) {
 		// Returned value is deliberately ignored
 		super.addHandler(name, handler);
@@ -807,6 +806,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	@SuppressWarnings("ReferenceEquality")
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse) {
 			HttpResponse response = (HttpResponse) msg;
@@ -1152,7 +1152,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 		}
 
-		@SuppressWarnings("FutureReturnValueIgnored")
 		void _subscribe(CoreSubscriber<? super Void> s) {
 			HttpClientFormEncoder encoder = null;
 

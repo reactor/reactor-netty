@@ -430,10 +430,8 @@ public final class ProxyProvider {
 
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 
-		@SuppressWarnings("UnnecessaryLambda")
 		static final Supplier<? extends @Nullable HttpHeaders> NO_HTTP_HEADERS = () -> null;
 
-		@SuppressWarnings("UnnecessaryLambda")
 		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
 
 		@Nullable String username;

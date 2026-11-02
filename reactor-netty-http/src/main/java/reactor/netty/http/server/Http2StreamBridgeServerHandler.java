@@ -190,7 +190,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		Class<?> msgClass = msg.getClass();
 		if (msgClass == DefaultHttpResponse.class) {

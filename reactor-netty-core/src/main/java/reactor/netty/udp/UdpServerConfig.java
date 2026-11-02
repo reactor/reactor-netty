@@ -206,6 +206,7 @@ public final class UdpServerConfig extends TransportConfig {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());

@@ -55,6 +55,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
@@ -824,7 +825,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				InetSocketAddress inetSocketAddress = (InetSocketAddress) holder;
 				if (!inetSocketAddress.isUnresolved()) {
 					// Use FQDN as a tie-breaker over IP's
-					fqdn = inetSocketAddress.getHostString().toLowerCase();
+					fqdn = inetSocketAddress.getHostString().toLowerCase(Locale.ROOT);
 				}
 			}
 			this.fqdn = fqdn;

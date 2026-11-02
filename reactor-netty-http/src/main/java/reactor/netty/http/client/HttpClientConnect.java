@@ -429,6 +429,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if ((newState == State.CONFIGURED || newState == STREAM_CONFIGURED) &&
 						HttpClientOperations.class == connection.getClass()) {
@@ -455,6 +456,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == HttpClientState.RESPONSE_RECEIVED) {
 				sink.success(connection);

@@ -103,7 +103,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 	public final void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null || msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 			return;

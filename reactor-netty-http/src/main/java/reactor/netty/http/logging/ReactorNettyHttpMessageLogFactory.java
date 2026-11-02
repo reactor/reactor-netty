@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ public class ReactorNettyHttpMessageLogFactory extends AbstractHttpMessageLogFac
 		return index == -1 ? s : s.substring(0, index + 1) + "<filtered>";
 	};
 
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	static final Function<DecoderResult, String> DEFAULT_DECODER_RESULT_FUNCTION =
 			decoderResult -> {
 				if (decoderResult.isFinished()) {

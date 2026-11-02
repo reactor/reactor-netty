@@ -203,6 +203,7 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State state) {
 			if (state == CONFIGURED && connection instanceof reactor.netty.http.server.HttpServerRequest) {
 				reactor.netty.http.server.HttpServerRequest request = (reactor.netty.http.server.HttpServerRequest) connection;

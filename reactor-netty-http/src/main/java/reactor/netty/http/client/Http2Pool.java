@@ -124,7 +124,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	volatile @Nullable ConcurrentLinkedQueue<Slot> connections;
 	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<Http2Pool, @Nullable ConcurrentLinkedQueue> CONNECTIONS =
-			AtomicReferenceFieldUpdater.<Http2Pool, @Nullable ConcurrentLinkedQueue>newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
+			AtomicReferenceFieldUpdater.newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
 
 	volatile int idleSize;
 	private static final AtomicIntegerFieldUpdater<Http2Pool> IDLE_SIZE =
@@ -223,6 +223,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	@Override
+	@SuppressWarnings("ReferenceEquality")
 	public Mono<Void> disposeLater() {
 		return Mono.defer(() -> {
 			recordInteractionTimestamp();
@@ -273,11 +274,13 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	@Override
+	@SuppressWarnings("ReferenceEquality")
 	public boolean isDisposed() {
 		return PENDING.get(this) == TERMINATED || CONNECTIONS.get(this) == null;
 	}
 
 	@Override
+	@SuppressWarnings("JavaDurationGetSecondsToToSeconds")
 	public boolean isInactiveForMoreThan(Duration duration) {
 		return pendingAcquireSize() == 0 && allocatedSize() == 0
 				&& secondsSinceLastInteraction() >= duration.getSeconds();
@@ -386,6 +389,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 	}
 
+	@SuppressWarnings("ReferenceEquality")
 	void drainLoop() {
 		recordInteractionTimestamp();
 		int maxPending = poolConfig.maxPending();
@@ -689,6 +693,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	 *
 	 * @param borrower a new {@link Borrower} to add to the queue and later either serve or consider pending
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	void pendingOffer(Borrower borrower) {
 		ConcurrentLinkedDeque<Borrower> pendingQueue = pending;
 		if (pendingQueue == TERMINATED) {
@@ -712,7 +717,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		if (WIP.getAndIncrement(this) == 0) {
 			int maxPending = poolConfig.maxPending();
 			ConcurrentLinkedQueue<Slot> ir = connections;
-			if (maxPending >= 0 && postOffer > maxPending && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
+			if (maxPending >= 0 && postOffer > maxPending && ir != null && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
 				Borrower toCull = pollPending(pendingQueue, false);
 				if (toCull != null) {
 					pendingAcquireLimitReached(toCull, maxPending);
@@ -818,7 +823,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		long pendingAcquireStart;
 
 		volatile Disposable timeoutTask;
-		@SuppressWarnings("rawtypes")
 		static final AtomicReferenceFieldUpdater<Borrower, Disposable> TIMEOUT_TASK =
 				AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Disposable.class, "timeoutTask");
 
@@ -859,7 +863,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		@Override
-		@SuppressWarnings("rawtypes")
+		@SuppressWarnings({"rawtypes", "ReferenceEquality"})
 		public @Nullable Object scanUnsafe(Attr key) {
 			if (key == Attr.CANCELLED) {
 				return get();

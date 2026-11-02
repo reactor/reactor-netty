@@ -99,7 +99,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			dataReceivedMeter = recorder.dataReceivedMeter(address, proxyAddress == null ? NA : formatSocketAddress(proxyAddress));
 		}
 		if (dataReceivedMeter != null) {
-			dataReceivedMeter.record(bytes);
+			dataReceivedMeter.record((double) bytes);
 		}
 	}
 
@@ -113,7 +113,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			dataSentMeter = recorder.dataSentMeter(address, proxyAddress == null ? NA : formatSocketAddress(proxyAddress));
 		}
 		if (dataSentMeter != null) {
-			dataSentMeter.record(bytes);
+			dataSentMeter.record((double) bytes);
 		}
 	}
 
@@ -164,7 +164,6 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@SuppressWarnings("try")
 		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
 				SocketAddress localAddress, ChannelPromise promise) {
 			// Cannot invoke the recorder anymore:
@@ -300,7 +299,6 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
 			addListener(ctx);
 			ctx.fireChannelActive();
