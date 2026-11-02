@@ -187,25 +187,6 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
-	/**
-	 * Returns TLS handshake timer.
-	 *
-	 * @param name the timer name
-	 * @param address the remote address
-	 * @param status the status of the TLS handshake operation
-	 * @return TLS handshake timer
-	 * @deprecated as of 1.1.19. Prefer the {@link #getTlsHandshakeTimer(String, String, String, String)}.
-	 * This method will be removed in version 1.3.0.
-	 */
-	@Deprecated
-	public final @Nullable Timer getTlsHandshakeTimer(String name, @Nullable String address, String status) {
-		MeterKey meterKey = new MeterKey(null, address, null, null, status);
-		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
-				key -> filter(Timer.builder(name)
-				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
-				                   .register(REGISTRY)));
-	}
-
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, SocketAddress proxyAddress, Duration time, String status) {
 		Timer timer = getTlsHandshakeTimer(name + TLS_HANDSHAKE_TIME, formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), status);
