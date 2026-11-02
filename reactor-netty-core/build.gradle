@@ -205,7 +205,8 @@ components.java.withVariantsFromConfiguration(configurations.testFixturesRuntime
 
 japicmp {
 	methodExcludes = [
-			'reactor.netty.tcp.SslProvider$SslContextSpec#sslContext(reactor.netty.tcp.SslProvider$ProtocolSslContextSpec)'
+			'reactor.netty.tcp.SslProvider$SslContextSpec#sslContext(reactor.netty.tcp.SslProvider$ProtocolSslContextSpec)',
+			'reactor.netty.channel.MicrometerChannelMetricsRecorder#getTlsHandshakeTimer(java.lang.String, java.lang.String, java.lang.String)'
 	]
 
 	classExcludes = [
