@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 				                                 .tags(REMOTE_ADDRESS.asString(), address, URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
-			dataReceived.record(bytes);
+			dataReceived.record((double) bytes);
 		}
 	}
 
@@ -86,7 +86,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 				                                 .tags(REMOTE_ADDRESS.asString(), address, URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataSent != null) {
-			dataSent.record(bytes);
+			dataSent.record((double) bytes);
 		}
 	}
 

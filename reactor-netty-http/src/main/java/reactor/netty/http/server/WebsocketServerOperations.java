@@ -74,7 +74,7 @@ import static reactor.netty.ReactorNetty.format;
 class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
-	WebSocketServerHandshaker                 handshakerHttp11;
+	@Nullable WebSocketServerHandshaker       handshakerHttp11;
 	final ChannelPromise                      handshakerResult;
 	final Sinks.One<WebSocketCloseStatus>     onCloseState;
 	final boolean                             proxyPing;
@@ -361,7 +361,7 @@ class WebsocketServerOperations extends HttpServerOperations
 
 	@Override
 	public @Nullable String selectedSubprotocol() {
-		return handshakerHttp11.selectedSubprotocol();
+		return handshakerHttp11 != null ? handshakerHttp11.selectedSubprotocol() : null;
 	}
 
 	Subscriber<Void> websocketSubscriber(ContextView contextView) {
