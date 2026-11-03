@@ -165,7 +165,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 				                                       ChannelMeters.ChannelMetersTags.URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
-			dataReceived.record(bytes);
+			dataReceived.record((double) bytes);
 		}
 	}
 
@@ -191,7 +191,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 				                                       ChannelMeters.ChannelMetersTags.URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataSent != null) {
-			dataSent.record(bytes);
+			dataSent.record((double) bytes);
 		}
 	}
 

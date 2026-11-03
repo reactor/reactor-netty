@@ -570,6 +570,7 @@ public final class NameResolverProvider {
 	 * @param defaultLoopResources the default {@link LoopResources} when {@link LoopResources} is not specified
 	 * @return a new {@link DnsAddressResolverGroup}
 	 */
+	@SuppressWarnings("JavaDurationGetSecondsToToSeconds")
 	public DnsAddressResolverGroup newNameResolverGroup(LoopResources defaultLoopResources, boolean defaultPreferNative) {
 		Objects.requireNonNull(defaultLoopResources, "defaultLoopResources");
 		LoopResources loop;

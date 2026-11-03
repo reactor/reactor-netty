@@ -35,9 +35,7 @@ final class UriEndpoint {
 	// Exactly one of remoteAddress or remoteAddressSupplier is non-null.
 	// remoteAddress is used for absolute URLs where the address is derived from the URL itself.
 	// remoteAddressSupplier is used for relative URLs where the address is provided by the user and may change between invocations.
-	@SuppressWarnings("NullAway")
 	final @Nullable SocketAddress remoteAddress;
-	@SuppressWarnings("NullAway")
 	final @Nullable Supplier<? extends SocketAddress> remoteAddressSupplier;
 	final String pathAndQuery;
 	final @Nullable String fullPath;

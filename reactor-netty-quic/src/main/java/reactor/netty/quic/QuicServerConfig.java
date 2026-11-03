@@ -297,7 +297,7 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());

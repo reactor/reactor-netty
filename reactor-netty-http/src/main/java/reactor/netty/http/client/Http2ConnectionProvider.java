@@ -679,9 +679,11 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			Http2SettingsSpec http2SettingsSpec = this.config.http2SettingsSpec();
 			if (poolFactory.evictionPredicate() == null && poolFactory.maxIdleTime() != -1 &&
 					http2SettingsSpec != null && http2SettingsSpec.pingAckTimeout() != null) {
-				Http11EvictionPredicate http11EvictionPredicate = new Http11EvictionPredicate(poolFactory.maxIdleTime());
 				Http2EvictionPredicate http2EvictionPredicate = new Http2EvictionPredicate(poolFactory.maxLifeTime());
-				this.parent = parent.mutate().evictionPredicate(http11EvictionPredicate).build();
+				Builder parentBuilder = parent.mutate();
+				// The builder is null when the parent has no pool, e.g. ConnectionProvider.newConnection()
+				this.parent = parentBuilder == null ? parent :
+						parentBuilder.evictionPredicate(new Http11EvictionPredicate(poolFactory.maxIdleTime())).build();
 				poolConfigFunction = poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy(),
 						http2EvictionPredicate, poolFactory.maxIdleTime());
 			}

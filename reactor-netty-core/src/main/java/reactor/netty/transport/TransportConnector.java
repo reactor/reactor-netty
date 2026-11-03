@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -296,7 +296,7 @@ public final class TransportConnector {
 		return monoChannelPromise;
 	}
 
-	@SuppressWarnings({"unchecked", "FutureReturnValueIgnored", "try"})
+	@SuppressWarnings({"unchecked", "FutureReturnValueIgnored"})
 	static Mono<Channel> doResolveAndConnect(Channel channel, TransportConfig config,
 			SocketAddress remoteAddress, AddressResolverGroup<?> resolverGroup, ContextView contextView) {
 		try {

@@ -246,6 +246,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 *
 	 * @return true if dispose subscription has been terminated
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final boolean isSubscriptionDisposed() {
 		return OUTBOUND_CLOSE.get(this) == Operators.cancelledSubscription();
 	}
@@ -626,6 +627,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	public String asLongText() {
 		boolean active = channel().isActive();
 		if (localActive == active && longId != null) {

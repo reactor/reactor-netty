@@ -137,7 +137,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
-	final String http2ExtendedConnectProtocol;
+	final @Nullable String http2ExtendedConnectProtocol;
 	final boolean is100ContinueExpected;
 	final boolean isHttp2;
 	final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
@@ -822,6 +822,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@SuppressWarnings("ReferenceEquality")
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		Class<?> msgClass = msg.getClass();
 		if (msgClass == DefaultHttpRequest.class) {
@@ -1416,9 +1417,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	static final DefaultHttpHeadersFactory DEFAULT_TRAILERS_NO_VALIDATION = trailersFactory().withValidation(false);
 
-	static final AttributeKey<String> EXTENDED_CONNECT_PATH =
+	static final AttributeKey<@Nullable String> EXTENDED_CONNECT_PATH =
 			AttributeKey.valueOf(HttpServerOperations.class.getName() + ".EXTENDED_CONNECT_PATH");
-	static final AttributeKey<String> EXTENDED_CONNECT_PROTOCOL =
+	static final AttributeKey<@Nullable String> EXTENDED_CONNECT_PROTOCOL =
 			AttributeKey.valueOf(HttpServerOperations.class.getName() + ".EXTENDED_CONNECT_PROTOCOL");
 
 	static final class FailedHttpServerRequest extends HttpServerOperations {

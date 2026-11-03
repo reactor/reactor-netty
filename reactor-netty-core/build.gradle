@@ -24,6 +24,17 @@ multiRelease {
 	targetVersions 8, 11, 17
 }
 
+// Error Prone requires JDK 21, compile the multi-release sources with JDK 25 for their target version
+[compileJava11Java: 11, compileJava17Java: 17].each { taskName, targetVersion ->
+	tasks.named(taskName, JavaCompile) {
+		javaCompiler = javaToolchains.compilerFor {
+			languageVersion = JavaLanguageVersion.of(25)
+		}
+		options.release = targetVersion
+		options.nullability.checking = "main"
+	}
+}
+
 ext {
 	bndOptions = [
 			"Export-Package" : "reactor.netty*;version=$osgiVersion;-noimport:=true",

@@ -852,6 +852,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @return a new {@link HttpServer}
 	 * @since 0.9.7
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final HttpServer metrics(boolean enable, Function<String, String> uriTagValue) {
 		if (enable) {
 			if (!Metrics.isMicrometerAvailable() && !Metrics.isTracingAvailable()) {
@@ -912,6 +913,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @return a new {@link HttpServer}
 	 * @since 1.0.39
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final HttpServer metrics(boolean enable, Function<String, String> uriTagValue, Function<String, String> methodTagValue) {
 		if (enable) {
 			Objects.requireNonNull(methodTagValue, "methodTagValue");

@@ -60,6 +60,7 @@ jobs:
         distribution: 'zulu'
         java-version: |
           8
+          25
           17
 
     # Initializes the CodeQL tools for scanning.

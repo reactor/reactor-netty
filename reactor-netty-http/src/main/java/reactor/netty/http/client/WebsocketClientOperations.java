@@ -68,7 +68,7 @@ import static reactor.netty.ReactorNetty.format;
 class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
-	WebSocketClientHandshaker handshakerHttp11;
+	@Nullable WebSocketClientHandshaker handshakerHttp11;
 	final Sinks.One<WebSocketCloseStatus> onCloseState;
 	final boolean proxyPing;
 
@@ -145,11 +145,11 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	public @Nullable String selectedSubprotocol() {
-		return handshakerHttp11.actualSubprotocol();
+		return handshakerHttp11 != null ? handshakerHttp11.actualSubprotocol() : null;
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			started = true;
@@ -161,6 +161,7 @@ class WebsocketClientOperations extends HttpClientOperations
 
 			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
+					assert handshakerHttp11 != null;
 					handshakerHttp11.finishHandshake(channel(), response);
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
@@ -238,7 +239,7 @@ class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	boolean isHandshakeComplete() {
-		return handshakerHttp11.isHandshakeComplete();
+		return handshakerHttp11 != null && handshakerHttp11.isHandshakeComplete();
 	}
 
 	void onHandshakeFailure(Channel channel, Throwable cause) {

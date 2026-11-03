@@ -445,6 +445,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				if (msg instanceof DefaultHttpRequest) {
@@ -500,7 +501,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
 				if (msg.getClass() == DefaultHttpResponse.class) {

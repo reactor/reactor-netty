@@ -304,6 +304,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED && channelGroup != null) {
 				channelGroup.add(connection.channel());

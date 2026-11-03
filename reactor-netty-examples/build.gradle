@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,3 +36,13 @@ dependencies {
 }
 
 description = "Examples for the Reactor Netty library"
+
+// The examples are not null-marked and are included in the documentation,
+// configure the checks here instead of suppressing them in the sources
+nullability {
+	requireExplicitNullMarking = false
+}
+
+tasks.named('compileJava', JavaCompile) {
+	options.errorprone.disable("AddressSelection", "JavaUtilDate", "JdkObsolete", "ReferenceEquality")
+}
