@@ -46,7 +46,7 @@ include::{examples-dir}/address/Application.java[tags=snippet-application]
 <1> Configures the `TCP` server host
 <2> Configures the `TCP` server port
 
-To serve on multiple addresses, after having configured the `TcpServer` you can bind it multiple times to obtain separate `DisposableServer`s.
+To serve on multiple addresses, after having configured the `TcpServer` you can bind it multiple times to obtain separate ``DisposableServer``s.
 All created servers will share resources such as `LoopResources` because they use the same configuration instance under the hood.
 
 {examples-link}/address/MultiAddressApplication.java
