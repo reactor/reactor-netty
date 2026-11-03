@@ -124,7 +124,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	volatile @Nullable ConcurrentLinkedQueue<Slot> connections;
 	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<Http2Pool, @Nullable ConcurrentLinkedQueue> CONNECTIONS =
-			AtomicReferenceFieldUpdater.<Http2Pool, @Nullable ConcurrentLinkedQueue>newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
+			AtomicReferenceFieldUpdater.newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
 
 	volatile int idleSize;
 	private static final AtomicIntegerFieldUpdater<Http2Pool> IDLE_SIZE =
@@ -712,7 +712,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		if (WIP.getAndIncrement(this) == 0) {
 			int maxPending = poolConfig.maxPending();
 			ConcurrentLinkedQueue<Slot> ir = connections;
-			if (maxPending >= 0 && postOffer > maxPending && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
+			if (maxPending >= 0 && postOffer > maxPending && ir != null && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
 				Borrower toCull = pollPending(pendingQueue, false);
 				if (toCull != null) {
 					pendingAcquireLimitReached(toCull, maxPending);

@@ -97,7 +97,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	void recordDataReceived(SocketAddress remoteAddress, String proxyAddress, long bytes) {
 		DistributionSummary ds = dataReceivedMeter(remoteAddress, proxyAddress);
 		if (ds != null) {
-			ds.record(bytes);
+			ds.record((double) bytes);
 		}
 	}
 
@@ -132,7 +132,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	void recordDataSent(SocketAddress remoteAddress, String proxyAddress, long bytes) {
 		DistributionSummary ds = dataSentMeter(remoteAddress, proxyAddress);
 		if (ds != null) {
-			ds.record(bytes);
+			ds.record((double) bytes);
 		}
 	}
 
@@ -199,10 +199,11 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	 */
 	@Deprecated
 	public final @Nullable Timer getTlsHandshakeTimer(String name, @Nullable String address, String status) {
-		MeterKey meterKey = new MeterKey(null, address, null, null, status);
+		String remoteAddress = address == null ? NA : address;
+		MeterKey meterKey = new MeterKey(null, remoteAddress, null, null, status);
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
-				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
+				                   .tags(REMOTE_ADDRESS, remoteAddress, STATUS, status)
 				                   .register(REGISTRY)));
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 	MonoSendMany(Publisher<? extends I> source,
 			Channel channel,
 			Predicate<I> predicate,
-			Function<? super I, ? extends O> transformer,
+			Function<? super I, ? extends @Nullable O> transformer,
 			Consumer<? super I> sourceCleanup,
 			ToIntFunction<O> sizeOf) {
 		super(channel, transformer, sourceCleanup, sizeOf);

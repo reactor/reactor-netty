@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.util.ReferenceCountUtil;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.netty.ReactorNetty;
 
@@ -37,12 +38,12 @@ import reactor.netty.ReactorNetty;
 abstract class MonoSend<I, O> extends Mono<Void> {
 
 	final ChannelHandlerContext            ctx;
-	final Function<? super I, ? extends O> transformer;
+	final Function<? super I, ? extends @Nullable O> transformer;
 	final Consumer<? super I>              sourceCleanup;
 	final ToIntFunction<? super O>         sizeOf; //FIXME use MessageSizeEstimator ?
 
 	MonoSend(Channel channel,
-			Function<? super I, ? extends O> transformer,
+			Function<? super I, ? extends @Nullable O> transformer,
 			Consumer<? super I> sourceCleanup,
 			ToIntFunction<? super O> sizeOf) {
 		this.transformer = Objects.requireNonNull(transformer, "source transformer cannot be null");
@@ -63,7 +64,7 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 
 	static final int                    REFILL_SIZE = MAX_SIZE / 2;
 
-	static final Function<ByteBuf, ByteBuf> TRANSFORMATION_FUNCTION_BB =
+	static final Function<ByteBuf, @Nullable ByteBuf> TRANSFORMATION_FUNCTION_BB =
 		msg -> {
 			if (ReactorNetty.PREDICATE_GROUP_FLUSH.test(msg)) {
 				return null;

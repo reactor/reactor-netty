@@ -220,14 +220,6 @@ public final class Http2SettingsSpec {
 		default Builder pingAckTimeout(Duration pingAckTimeout) {
 			return this;
 		}
-
-		/**
-		 * Sets the {@code SETTINGS_ENABLE_PUSH} value.
-		 *
-		 * @param pushEnabled the {@code SETTINGS_ENABLE_PUSH} value
-		 * @return {@code this}
-		 */
-		//Builder pushEnabled(boolean pushEnabled);
 	}
 
 	/**
@@ -442,13 +434,9 @@ public final class Http2SettingsSpec {
 		connectProtocolEnabled = build.connectProtocolEnabled;
 		headerTableSize = settings.headerTableSize();
 		initialWindowSize = settings.initialWindowSize();
-		if (settings.maxConcurrentStreams() != null) {
-			maxConcurrentStreams = build.maxStreams != null ?
-					Math.min(settings.maxConcurrentStreams(), build.maxStreams) : settings.maxConcurrentStreams();
-		}
-		else {
-			maxConcurrentStreams = build.maxStreams;
-		}
+		// We create HTTP/2 settings with Http2Settings.defaultSettings(), maxConcurrentStreams = 100 by default
+		maxConcurrentStreams = build.maxStreams != null ?
+				Math.min(settings.maxConcurrentStreams(), build.maxStreams) : settings.maxConcurrentStreams();
 		maxDecodedRstFramesPerWindow = build.maxDecodedRstFramesPerWindow;
 		maxDecodedRstFramesSecondsPerWindow = build.maxDecodedRstFramesSecondsPerWindow;
 		maxEncodedRstFramesPerWindow = build.maxEncodedRstFramesPerWindow;
