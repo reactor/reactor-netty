@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Queue;
@@ -35,6 +36,7 @@ import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -46,6 +48,7 @@ import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 import reactor.test.publisher.TestPublisher;
 import reactor.test.util.RaceTestUtils;
@@ -343,6 +346,70 @@ class MonoSendManyTest {
 		channel.flush();
 		messages.forEach(ReferenceCountUtil::release);
 		assertThat(cleared).isTrue();
+	}
+
+	@ParameterizedTest
+	@EnumSource(SourceMode.class)
+	void shouldCompleteAndReleaseWhenChannelAlreadyClosed(SourceMode mode) {
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = buffers();
+
+		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), channel, b -> false);
+		assertThat(channel.close().isSuccess()).isTrue();
+
+		StepVerifier.create(m)
+		            .consumeSubscriptionWith(s -> assertThat(((MonoSendMany.SendManyInner<?, ?>) s).sourceMode).isEqualTo(mode.fusionMode))
+		            .then(channel::runPendingTasks)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(5));
+
+		assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+	}
+
+	@ParameterizedTest
+	@EnumSource(SourceMode.class)
+	void shouldNotRetainCloseListenerWhenCancelledOnSubscribe(SourceMode mode) {
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = buffers();
+
+		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), channel, b -> false);
+
+		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
+		m.subscribe(new BaseSubscriber<Void>() {
+			@Override
+			protected void hookOnSubscribe(Subscription s) {
+				_w.add(new WeakReference<>(s));
+				s.cancel();
+			}
+		});
+		channel.runPendingTasks();
+
+		assertThat(channel.isOpen()).isTrue();
+		assertThat(channel.<ByteBuf>readOutbound()).isNull();
+		assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+
+		System.gc();
+		wait(_w.get(0));
+	}
+
+	static ByteBuf[] buffers() {
+		return new ByteBuf[]{
+				ByteBufAllocator.DEFAULT.buffer().writeInt(1),
+				ByteBufAllocator.DEFAULT.buffer().writeInt(2)};
+	}
+
+	enum SourceMode {
+		SYNC(Fuseable.SYNC, Flux::fromArray),
+		ASYNC(Fuseable.ASYNC, buffers -> Flux.fromArray(buffers).publishOn(Schedulers.immediate())),
+		NONE(Fuseable.NONE, buffers -> Flux.fromIterable(Arrays.asList(buffers)).hide());
+
+		final int fusionMode;
+		final Function<ByteBuf[], Flux<ByteBuf>> source;
+
+		SourceMode(int fusionMode, Function<ByteBuf[], Flux<ByteBuf>> source) {
+			this.fusionMode = fusionMode;
+			this.source = source;
+		}
 	}
 
 	static void wait(WeakReference<Subscription> ref) {

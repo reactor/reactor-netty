@@ -156,11 +156,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			this.eventLoop = ctx.channel().eventLoop();
 
 			this.asyncFlush = new AsyncFlush();
-
-			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
-			ctx.channel()
-			   .closeFuture()
-			   .addListener(this);
 		}
 
 		@Override
@@ -242,6 +237,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						queue = f;
 						terminalSignal = Completion.INSTANCE;
 						actual.onSubscribe(this);
+						addCloseListener();
 						trySchedule();
 						return;
 					}
@@ -249,6 +245,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						sourceMode = Fuseable.ASYNC;
 						queue = f;
 						actual.onSubscribe(this);
+						addCloseListener();
 						s.request(MAX_SIZE);
 						return;
 					}
@@ -256,10 +253,30 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 				queue = Queues.<I>get(MAX_SIZE).get();
 				actual.onSubscribe(this);
+				addCloseListener();
 				s.request(MAX_SIZE);
 			}
 			else {
 				queue = Queues.<I>empty().get();
+			}
+		}
+
+		/**
+		 * Adds the close listener only after the queue is set and {@code actual.onSubscribe} is called.
+		 * When the channel is already closed, the listener may run immediately (on the event loop) and needs both.
+		 */
+		void addCloseListener() {
+			// check if subscription was not cancelled immediately
+			if (s == Operators.cancelledSubscription()) {
+				return;
+			}
+
+			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
+			ChannelFuture closeFuture = ctx.channel().closeFuture();
+			closeFuture.addListener(this);
+			// cancel() may run concurrently and miss the listener, remove it here
+			if (s == Operators.cancelledSubscription()) {
+				closeFuture.removeListener(this);
 			}
 		}
 
