@@ -1146,10 +1146,7 @@ class HttpServerTests extends BaseHttpTest {
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
 				                 .then()
-				                 .doOnCancel(() -> {
-				                     data.release(3);
-				                     latch.countDown();
-				                 }),
+				                 .doFinally(s -> latch.countDown()),
 				(req, out) -> {
 					req.addHeader("Connection", "close");
 					return out;
