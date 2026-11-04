@@ -985,6 +985,46 @@ class ConnectionInfoTests extends BaseHttpTest {
 				});
 	}
 
+	@ParameterizedTest
+	@CsvSource(value = {
+			"for=\"192.0.2.60:_gazonk\"|192.0.2.60",
+			"for=\"[2001:db8:cafe::17]:_gazonk\"|2001:db8:cafe:0:0:0:0:17",
+			"for=\"_hidden:_gazonk\"|_hidden"
+	}, delimiter = '|')
+	void forwardedForObfuscatedPort(String forwardedHeader, String expectedHost) {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", forwardedHeader),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo(expectedHost);
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isZero();
+				});
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"for=\"192.0.2.60:_\"", "for=\":_gazonk\"", "for=\"2001::_gazonk\""})
+	void forwardedForInvalidObfuscatedPort(String forwardedHeader) {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", forwardedHeader),
+				serverRequest -> {},
+				null,
+				Function.identity(),
+				Function.identity(),
+				false,
+				true,
+				true,
+				false);
+	}
+
+	@Test
+	void forwardedByObfuscatedPort() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "by=\"203.0.113.43:_gazonk\""),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("203.0.113.43");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isZero();
+				});
+	}
+
 	@Test
 	void forwardedBy() {
 		testClientRequest(
