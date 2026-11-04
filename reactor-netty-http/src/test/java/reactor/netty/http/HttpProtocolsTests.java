@@ -106,6 +106,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -633,6 +634,33 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 		// Trailer header name [content-length] not declared with [Trailer] header, or it is not a valid trailer header name
 		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersNotSpecifiedUpfront");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersCallbackFails(HttpServer server, HttpClient client) {
+		Consumer<HttpHeaders> trailerHeaders = h -> {
+			throw new IllegalStateException("testTrailerHeadersCallbackFails");
+		};
+		disposableServer =
+				server.route(r ->
+				          r.get("/chunked", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(trailerHeaders)
+				                  .sendString(Flux.just("testTrailerHeaders", "CallbackFails")))
+				           .get("/full", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(trailerHeaders)
+				                  .sendString(Mono.just("testTrailerHeadersCallbackFails")))
+				           .get("/empty", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(trailerHeaders)
+				                  .send()))
+				      .bindNow();
+
+		HttpClient localClient = client.port(disposableServer.port());
+		doTestTrailerHeaders(localClient, "/chunked", "empty", "testTrailerHeadersCallbackFails");
+		doTestTrailerHeaders(localClient, "/full", "empty", "testTrailerHeadersCallbackFails");
+		doTestTrailerHeaders(localClient, "/empty", "empty", "empty");
 	}
 
 	@ParameterizedCompatibleCombinationsTest
