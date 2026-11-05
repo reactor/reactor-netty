@@ -970,6 +970,36 @@ class ConnectionInfoTests extends BaseHttpTest {
 				});
 	}
 
+	@ParameterizedTest
+	@CsvSource(value = {
+			"for=\"192.0.2.60:_gazonk\"|192.0.2.60",
+			"for=\"[2001:db8:cafe::17]:_gazonk\"|2001:db8:cafe:0:0:0:0:17",
+			"for=\"_hidden:_gazonk\"|_hidden"
+	}, delimiter = '|')
+	void forwardedForObfuscatedPort(String forwardedHeader, String expectedHost) {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", forwardedHeader),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo(expectedHost);
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isPositive();
+				});
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"for=\"192.0.2.60:_\"", "for=\"2001::_gazonk\""})
+	void forwardedForInvalidObfuscatedPort(String forwardedHeader) {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", forwardedHeader),
+				serverRequest -> {},
+				null,
+				Function.identity(),
+				Function.identity(),
+				false,
+				true,
+				true,
+				false);
+	}
+
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 	                               Consumer<HttpServerRequest> serverRequestConsumer,
 	                               boolean useCustomForwardedHandler) {

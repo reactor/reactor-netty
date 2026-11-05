@@ -59,6 +59,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final Pattern FORWARDED_HOST_PATTERN   = Pattern.compile("host=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([a-zA-Z][a-zA-Z0-9+.-]*)\"?");
 	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
+	static final Pattern FORWARDED_OBFUSCATED_PORT_PATTERN = Pattern.compile("_[a-zA-Z0-9._-]+");
 	static final Pattern X_FORWARDED_PROTO_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9+.-]*$");
 
 	private static final String[] EMPTY_STRING_ARRAY = {};
@@ -143,10 +144,25 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			connectionInfo = connectionInfo.withRemoteAddress(
 					// Deliberately suppress "NullAway"
 					// This implementation is invoked always with InetSocketAddress and remote address != null
-					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort(),
-							DEFAULT_FORWARDED_HEADER_VALIDATION));
+					AddressUtils.parseAddress(withoutObfuscatedPort(forMatcher.group(1).trim()),
+							connectionInfo.getRemoteAddress().getPort(), DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
 		return connectionInfo;
+	}
+
+	/**
+	 * An obfuscated port (RFC 7239, section 6.3) carries no port number, so the default port is used.
+	 */
+	private static String withoutObfuscatedPort(String node) {
+		int portSeparatorIdx = node.lastIndexOf(':');
+		int ipV6HostSeparatorIdx = node.lastIndexOf(']');
+		boolean hasPort = portSeparatorIdx > ipV6HostSeparatorIdx &&
+				(portSeparatorIdx == node.indexOf(':') || ipV6HostSeparatorIdx > -1);
+		if (hasPort &&
+				FORWARDED_OBFUSCATED_PORT_PATTERN.matcher(node).region(portSeparatorIdx + 1, node.length()).matches()) {
+			return node.substring(0, portSeparatorIdx);
+		}
+		return node;
 	}
 
 	@SuppressWarnings("NullAway")
