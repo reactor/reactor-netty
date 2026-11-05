@@ -74,27 +74,40 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 	}
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
-			Channel channel,
+			ChannelOperations<?, ?> ops,
 			Predicate<ByteBuf> predicate) {
-		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_NOCHECK_CLEANUP, SIZE_OF_BB);
+		return new MonoSendMany<>(source, ops, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_NOCHECK_CLEANUP, SIZE_OF_BB);
 	}
 
-	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel, Predicate<Object> predicate) {
-		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
+	static MonoSendMany<?, ?> objectSource(Publisher<?> source, ChannelOperations<?, ?> ops, Predicate<Object> predicate) {
+		return new MonoSendMany<>(source, ops, predicate, TRANSFORMATION_FUNCTION, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
 	}
 
 	final Publisher<? extends I> source;
 	final Predicate<I> predicate;
+	final ChannelOperations<?, ?> ops;
 
 	MonoSendMany(Publisher<? extends I> source,
-			Channel channel,
+			ChannelOperations<?, ?> ops,
 			Predicate<I> predicate,
 			Function<? super I, ? extends @Nullable O> transformer,
 			Consumer<? super I> sourceCleanup,
 			ToIntFunction<O> sizeOf) {
-		super(channel, transformer, sourceCleanup, sizeOf);
+		super(ops.channel(), transformer, sourceCleanup, sizeOf);
 		this.source = Objects.requireNonNull(source, "source publisher cannot be null");
 		this.predicate = Objects.requireNonNull(predicate, "predicate cannot be null");
+		this.ops = ops;
+	}
+
+	/**
+	 * Return true if the channel of the {@link ChannelOperations} that created this send is not active.
+	 * After the operations are terminated, their channel is a disposed channel, while the real channel
+	 * may already serve another exchange, so this send is handled as if the channel is closed.
+	 *
+	 * @return true if the channel of the {@link ChannelOperations} that created this send is not active
+	 */
+	boolean isOperationsInactive() {
+		return !ops.channel().isActive();
 	}
 
 	@Override
@@ -270,8 +283,14 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return;
 			}
 
-			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
 			ChannelFuture closeFuture = ctx.channel().closeFuture();
+			// the operations are already terminated, handle it as a closed channel
+			if (parent.isOperationsInactive()) {
+				operationComplete(closeFuture);
+				return;
+			}
+
+			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
 			closeFuture.addListener(this);
 			// cancel() may run concurrently and miss the listener, remove it here
 			if (s == Operators.cancelledSubscription()) {
@@ -315,6 +334,15 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						if (s == Operators.cancelledSubscription()) {
 							parent.sourceCleanup.accept(sourceMessage);
 							Operators.onDiscard(sourceMessage, actualContext);
+							onInterruptionCleanup();
+							return;
+						}
+
+						if (parent.isOperationsInactive()) {
+							// the operations are terminated while sending, handle it as a closed channel
+							parent.sourceCleanup.accept(sourceMessage);
+							Operators.onDiscard(sourceMessage, actualContext);
+							operationComplete(ctx.channel().closeFuture());
 							onInterruptionCleanup();
 							return;
 						}
