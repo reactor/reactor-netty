@@ -63,7 +63,6 @@ import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
-import reactor.netty.ReactorNetty;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
@@ -76,6 +75,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.function.Supplier;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http.HttpMethod.CONNECT;
@@ -216,12 +216,16 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
-	Mono<Void> sendClose(CloseWebSocketFrame frame) {
+	Mono<Void> sendClose(Supplier<CloseWebSocketFrame> frameSupplier) {
 		if (CLOSE_SENT.get(this) == 0) {
-			//commented for now as we assume the close is always scheduled (deferFuture runs)
-			//onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
+			// The frame is created on subscribe, so that there is nothing to release when the Mono is not subscribed
 			return FutureMono.deferFuture(() -> {
+				if (!channel().isActive()) {
+					// The connection is closed or terminated, there is nothing to send
+					return channel().newSucceededFuture();
+				}
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					CloseWebSocketFrame frame = frameSupplier.get();
 					discard();
 					// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
 					// Whether there are subscribers or the subscriber cancels is not of interest
@@ -233,11 +237,9 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 					return channel().writeAndFlush(EMPTY_LAST_CONTENT)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
-				frame.release();
 				return channel().newSucceededFuture();
-			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
+			});
 		}
-		frame.release();
 		return Mono.empty();
 	}
 
