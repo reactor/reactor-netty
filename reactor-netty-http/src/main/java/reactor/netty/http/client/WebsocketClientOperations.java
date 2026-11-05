@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -47,7 +48,6 @@ import reactor.core.publisher.Sinks;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
-import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -384,22 +384,24 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	public Mono<Void> sendClose() {
-		return sendClose(new CloseWebSocketFrame());
+		return sendClose(CloseWebSocketFrame::new);
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv) {
-		return sendClose(new CloseWebSocketFrame(true, rsv));
+		return sendClose(() -> new CloseWebSocketFrame(true, rsv));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+		requireValidStatusCode(statusCode);
+		return sendClose(() -> new CloseWebSocketFrame(statusCode, reasonText));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+		requireValidStatusCode(statusCode);
+		return sendClose(() -> new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
 	}
 
 	@Override
@@ -408,12 +410,16 @@ class WebsocketClientOperations extends HttpClientOperations
 		return onCloseState.asMono().or((Mono) onTerminate());
 	}
 
-	Mono<Void> sendClose(CloseWebSocketFrame frame) {
+	Mono<Void> sendClose(Supplier<CloseWebSocketFrame> frameSupplier) {
 		if (CLOSE_SENT.get(this) == 0) {
-			//commented for now as we assume the close is always scheduled (deferFuture runs)
-			//onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
+			// The frame is created on subscribe, so that there is nothing to release when the Mono is not subscribed
 			return FutureMono.deferFuture(() -> {
+				if (!channel().isActive()) {
+					// The connection is closed or terminated, there is nothing to send
+					return channel().newSucceededFuture();
+				}
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					CloseWebSocketFrame frame = frameSupplier.get();
 					discard();
 					// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
 					// Whether there are subscribers or the subscriber cancels is not of interest
@@ -423,11 +429,9 @@ class WebsocketClientOperations extends HttpClientOperations
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
-				frame.release();
 				return channel().newSucceededFuture();
-			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
+			});
 		}
-		frame.release();
 		return Mono.empty();
 	}
 
@@ -453,6 +457,16 @@ class WebsocketClientOperations extends HttpClientOperations
 		}
 		else {
 			frame.release();
+		}
+	}
+
+	/**
+	 * The close frame is created on subscribe, so the status code is checked here
+	 * in order to keep throwing {@link IllegalArgumentException} when {@code sendClose} is invoked.
+	 */
+	static void requireValidStatusCode(int statusCode) {
+		if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
+			throw new IllegalArgumentException("WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
 		}
 	}
 
