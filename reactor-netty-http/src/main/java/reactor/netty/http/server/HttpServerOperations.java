@@ -753,6 +753,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		return FutureMono.deferFuture(() -> {
 			if (!hasSentHeaders()) {
+				if (!channel().isActive()) {
+					// The connection is closed or terminated, there is nothing to send
+					return channel().newSucceededFuture();
+				}
+
 				beforeMarkSentHeaders();
 
 				HttpMessage msg = outboundHttpMessage();
