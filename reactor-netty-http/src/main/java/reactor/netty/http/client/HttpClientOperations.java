@@ -884,6 +884,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				trailerHeaders.tryEmitValue(request.trailingHeaders());
 				//force auto read to enable more accurate close selection now inbound is done
 				channel().config().setAutoRead(true);
+				if (markSentBody()) {
+					markPersistent(false);
+				}
 				terminate();
 			}
 			return;
