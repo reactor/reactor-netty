@@ -1079,9 +1079,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			try {
 				trailerHeadersConsumer.accept(trailerHeaders);
 			}
-			catch (IllegalArgumentException e) {
-				// A sender MUST NOT generate a trailer when header names are
-				// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES
+			catch (RuntimeException e) {
+				// IllegalArgumentException: a sender MUST NOT generate a trailer when header names are
+				// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES.
+				// Any other exception comes from the trailer headers consumer itself.
+				// In both cases the response must still be completed.
 				log.error(format(channel(), "Cannot apply trailer headers"), e);
 			}
 		}
