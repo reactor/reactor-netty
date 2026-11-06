@@ -326,8 +326,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
-			return then(((Mono<?>) dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
-			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
+			return then(((Mono<?>) dataStream)
+					.flatMap(m -> {
+						if (!channel().isActive()) {
+							// The connection is closed or terminated, there is nothing to send
+							ReactorNetty.safeRelease(m);
+							return Mono.empty();
+						}
+						return FutureMono.from(channel().writeAndFlush(m));
+					})
+					.doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
 		return then(MonoSendMany.objectSource(dataStream, this, predicate));
 	}
@@ -338,9 +346,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			ReactorNetty.safeRelease(message);
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
-		return then(FutureMono.deferFuture(() -> connection.channel()
-		                                                   .writeAndFlush(message)),
-				() -> ReactorNetty.safeRelease(message));
+		return then(FutureMono.deferFuture(() -> {
+			if (!channel().isActive()) {
+				// The connection is closed or terminated, there is nothing to send
+				ReactorNetty.safeRelease(message);
+				return channel().newSucceededFuture();
+			}
+			return channel().writeAndFlush(message);
+		}), () -> ReactorNetty.safeRelease(message));
 	}
 
 	@Override
