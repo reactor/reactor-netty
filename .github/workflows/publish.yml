@@ -12,7 +12,7 @@ jobs:
   reactor-netty-core:
     # Notes on reactor-netty-core: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-core
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       versionType: ${{ steps.version.outputs.versionType }}
       fullVersion: ${{ steps.version.outputs.fullVersion }}
@@ -45,7 +45,7 @@ jobs:
   reactor-netty-http:
     # Notes on reactor-netty-http: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-http
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: setup java
@@ -68,7 +68,7 @@ jobs:
   reactor-netty-http-brave:
     # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-http-brave
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: setup java
@@ -91,7 +91,7 @@ jobs:
   reactor-netty-quic:
     # Notes on reactor-netty-quic: this job has no access to secrets, only github token and Develocity access key. As a result, all non-core actions are centralized here
     name: reactor-netty-quic
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: setup java
@@ -115,7 +115,7 @@ jobs:
   #deploy the snapshot artifacts to Artifactory
   deploySnapshot:
     name: deploySnapshot
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic ]
     if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
@@ -145,7 +145,7 @@ jobs:
   #sign the milestone artifacts and deploy them to Artifactory
   deployMilestone:
     name: deployMilestone
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic ]
     if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
     environment: releases
@@ -200,7 +200,7 @@ jobs:
   #sign the release artifacts and deploy them to Artifactory
   deployRelease:
     name: deployRelease
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-quic ]
     if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
     environment: releases
@@ -255,7 +255,7 @@ jobs:
   tagMilestone:
     name: Tag milestone
     needs: [ reactor-netty-core, deployMilestone ]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -270,7 +270,7 @@ jobs:
   tagRelease:
     name: Tag release
     needs: [ reactor-netty-core, deployRelease ]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
