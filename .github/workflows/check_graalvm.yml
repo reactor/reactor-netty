@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-26-intel, windows-2022]
+        os: [ubuntu-24.04, macos-14, windows-2022]
         transport: [native, nio, io_uring]
         exclude:
           # excludes native on Windows (there's none)
@@ -18,7 +18,7 @@ jobs:
             transport: native
           - os: windows-2022
             transport: io_uring
-          - os: macos-26-intel
+          - os: macos-14
             transport: io_uring
 
     steps:
