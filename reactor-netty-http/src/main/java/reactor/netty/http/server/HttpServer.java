@@ -622,6 +622,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * which of the two alternatives it expects.
 	 * <p>Support for {@code "X-Forwarded-Prefix"} is enabled separately via
 	 * {@code useForwardedPrefix}.
+	 * <p>When the {@code "for"} or {@code "by"} address of the {@code "Forwarded"} header,
+	 * or the {@code "X-Forwarded-For"} address, does not include a port, the port of the
+	 * resulting address is {@code 0}, which indicates that it is unknown.
 	 *
 	 * @param useStandardHeader whether to use the standard {@code "Forwarded"} header
 	 * (true), or the {@code "X-Forwarded-*"} alternative headers (false)

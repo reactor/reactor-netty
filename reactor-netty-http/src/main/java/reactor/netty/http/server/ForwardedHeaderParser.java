@@ -42,7 +42,6 @@ final class ForwardedHeaderParser {
 
 	private ForwardedHeaderParser() {}
 
-	@SuppressWarnings("NullAway")
 	static ConnectionInfo parse(ConnectionInfo connectionInfo, String forwardedHeader) {
 		String forwardedBy = null;
 		String forwardedFor = null;
@@ -151,9 +150,7 @@ final class ForwardedHeaderParser {
 		InetSocketAddress hostAddress = forwardedHost != null && !forwardedHost.isEmpty() ?
 				AddressUtils.parseAddress(forwardedHost, getDefaultHostPort(connectionInfo.getScheme()), DEFAULT_FORWARDED_HEADER_VALIDATION) : null;
 		InetSocketAddress byAddress = forwardedBy != null && !forwardedBy.isEmpty() ?
-				// Deliberately suppress "NullAway"
-				// This implementation is invoked always with InetSocketAddress and host address != null
-				AddressUtils.parseAddress(forwardedBy, connectionInfo.getHostAddress().getPort(), DEFAULT_FORWARDED_HEADER_VALIDATION) : null;
+				AddressUtils.parseAddress(forwardedBy, 0, DEFAULT_FORWARDED_HEADER_VALIDATION) : null;
 
 		if (byAddress != null) {
 			connectionInfo = hostAddress != null ?
@@ -166,9 +163,7 @@ final class ForwardedHeaderParser {
 
 		if (forwardedFor != null && !forwardedFor.isEmpty()) {
 			connectionInfo = connectionInfo.withRemoteAddress(
-					// Deliberately suppress "NullAway"
-					// This implementation is invoked always with InetSocketAddress and remote address != null
-					AddressUtils.parseAddress(forwardedFor, connectionInfo.getRemoteAddress().getPort(), DEFAULT_FORWARDED_HEADER_VALIDATION));
+					AddressUtils.parseAddress(forwardedFor, 0, DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
 		return connectionInfo;
 	}

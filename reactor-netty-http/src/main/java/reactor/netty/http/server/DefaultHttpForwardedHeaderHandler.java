@@ -127,10 +127,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	private static ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
 		String ipHeader = request.headers().get(X_FORWARDED_IP_HEADER);
 		if (ipHeader != null) {
-			connectionInfo = connectionInfo.withRemoteAddress(
-					// Deliberately suppress "NullAway"
-					// This implementation is invoked always with InetSocketAddress and remote address != null
-					AddressUtils.parseAddress(ipHeader.split(",", 2)[0], connectionInfo.getRemoteAddress().getPort()));
+			connectionInfo = connectionInfo.withRemoteAddress(AddressUtils.parseAddress(ipHeader.split(",", 2)[0], 0));
 		}
 		String protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
 		if (protoHeader != null) {
