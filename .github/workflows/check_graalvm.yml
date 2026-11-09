@@ -38,6 +38,12 @@ jobs:
         with:
             distribution: 'graalvm'
             java-version: '17.0.12'
+      - name: Multicast routing diagnostics
+        if: runner.os == 'macOS'
+        run: |
+          route -n get 230.0.0.1 || true
+          netstat -rn -f inet
+          ifconfig
       - name: Build and test with Gradle
         if: ${{ ! startsWith(matrix.transport, 'io_uring') }}
         run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }}
