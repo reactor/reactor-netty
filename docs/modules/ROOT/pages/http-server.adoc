@@ -302,6 +302,10 @@ include::{examples-dir}/clientaddress/Application.java[tags=snippet-application]
 alternative `HTTP` request headers, if possible, and that `X-Forwarded-Prefix` is not used.
 <2> Returns the address of the remote (client) peer.
 
+NOTE: When the forwarded `for` or `by` address of the `Forwarded` header, or the
+`X-Forwarded-For` address, does not include a port, the port of the resulting address is `0`,
+which indicates that it is unknown.
+
 It is also possible to customize the behavior of the `Forwarded` or `X-Forwarded-*` header handler.
 The following example shows how to do so:
 

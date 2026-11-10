@@ -40,10 +40,21 @@ class ForwardedHeaderParserTests {
 		assertThat(connectionInfo.getHostName()).isEqualTo("a.example.com");
 		assertThat(connectionInfo.getHostPort()).isEqualTo(443);
 		assertThat(connectionInfo.getHostAddress().getHostString()).isEqualTo("203.0.113.43");
-		assertThat(connectionInfo.getHostAddress().getPort()).isEqualTo(HOST_ADDRESS.getPort());
+		assertThat(connectionInfo.getHostAddress().getPort()).isZero();
 		assertThat(connectionInfo.getRemoteAddress().getHostString()).isEqualTo("192.168.0.1");
-		assertThat(connectionInfo.getRemoteAddress().getPort()).isEqualTo(REMOTE_ADDRESS.getPort());
+		assertThat(connectionInfo.getRemoteAddress().getPort()).isZero();
 		assertThat(connectionInfo.getScheme()).isEqualTo("https");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
+			"by=\"[2001:db8:cafe::17]:4712\";for=\"192.0.2.60:4711\"",
+			"by=\"203.0.113.43:4712\";for=\"[2001:db8:cafe::17]:4711\""
+	})
+	void byAndForWithPort(String header) {
+		ConnectionInfo connectionInfo = parse(header);
+		assertThat(connectionInfo.getHostAddress().getPort()).isEqualTo(4712);
+		assertThat(connectionInfo.getRemoteAddress().getPort()).isEqualTo(4711);
 	}
 
 	@ParameterizedTest
