@@ -220,8 +220,12 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onUncaughtException(Connection c, Throwable error) {
-			sink.error(error);
-			obs.onUncaughtException(c, error);
+			try {
+				sink.error(error);
+			}
+			finally {
+				obs.onUncaughtException(c, error);
+			}
 		}
 	}
 }

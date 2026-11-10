@@ -44,6 +44,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -52,6 +54,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
@@ -1341,6 +1344,45 @@ class Http3Tests {
 		          .expectErrorMatches(t -> t instanceof UnsupportedOperationException &&
 		                  t.getMessage().contains("maxConnections is not supported for HTTP/3 protocol"))
 		          .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testFatalErrorPropagatedToConnectionObserver(boolean failRequest) throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(req.receive().aggregate().asString().defaultIfEmpty("test")))
+				        .bindNow();
+
+		NoSuchMethodError error = new NoSuchMethodError("testFatalErrorPropagatedToConnectionObserver");
+		CountDownLatch latch = new CountDownLatch(1);
+		createClient(disposableServer.port())
+		        .observe(new ConnectionObserver() {
+		            @Override
+		            public void onStateChange(Connection connection, State newState) {
+		            }
+
+		            @Override
+		            public void onUncaughtException(Connection connection, Throwable t) {
+		                if (t == error) {
+		                    latch.countDown();
+		                }
+		            }
+		        })
+		        .post()
+		        .uri("/")
+		        .send((req, out) -> {
+		            if (failRequest) {
+		                throw error;
+		            }
+		            return out;
+		        })
+		        .response((res, body) -> body.asString().collectList().map(list -> {
+		            throw error;
+		        }))
+		        .subscribe();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 	}
 
 	@Test
