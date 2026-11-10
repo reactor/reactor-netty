@@ -6,12 +6,12 @@ permissions: {}
 jobs:
   preliminary:
     name: preliminary sanity checks
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0 #needed by spotless
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
         with:
           distribution: 'zulu'
           java-version: |
@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, windows-2022]
+        os: [ubuntu-24.04, macos-15-intel, windows-2022]
         transport: [native, nio, io_uring]
         exclude:
           # excludes native on Windows (there's none)
@@ -53,13 +53,13 @@ jobs:
             transport: native
           - os: windows-2022
             transport: io_uring
-          - os: macos-14
+          - os: macos-15-intel
             transport: io_uring
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c
       - name: setup java
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
         with:
           distribution: 'zulu'
           java-version: |

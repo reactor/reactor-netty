@@ -725,8 +725,22 @@ public final class ReactorNetty {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
+			Throwable failure = null;
 			for (ConnectionObserver observer : observers) {
-				observer.onUncaughtException(connection, error);
+				try {
+					observer.onUncaughtException(connection, error);
+				}
+				catch (Throwable t) {
+					if (failure == null) {
+						failure = t;
+					}
+				}
+			}
+			if (failure instanceof RuntimeException) {
+				throw (RuntimeException) failure;
+			}
+			if (failure != null) {
+				throw (Error) failure;
 			}
 		}
 

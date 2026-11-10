@@ -53,6 +53,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.test.StepVerifier;
 import reactor.test.publisher.TestPublisher;
 import reactor.test.util.RaceTestUtils;
@@ -265,7 +267,7 @@ class MonoSendManyTest {
 		EmbeddedChannel channel = new EmbeddedChannel(new WriteTimeoutHandler(1), new ChannelHandlerAdapter() {});
 
 		Flux<String> flux = Flux.range(0, 257).map(count -> count + "");
-		Mono<Void> m = MonoSendMany.objectSource(flux, channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(flux, ops(channel), b -> flushOnEach);
 
 		StepVerifier.create(m)
 		            .then(() -> {
@@ -283,7 +285,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -305,7 +307,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -327,7 +329,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -349,7 +351,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -368,7 +370,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -392,7 +394,7 @@ class MonoSendManyTest {
 			TestPublisher<ByteBuf> source = TestPublisher.createNoncompliant(TestPublisher.Violation.DEFER_CANCELLATION);
 
 			IdentityHashMap<ReferenceCounted, Object> discarded = new IdentityHashMap<>();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> flushOnEach);
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, ops(channel), b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
 				.doOnDiscard(ReferenceCounted.class, v -> discarded.put(v, null))
 				.subscribeWith(new BaseSubscriber<Void>() {});
@@ -434,7 +436,7 @@ class MonoSendManyTest {
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
 			Sinks.Many<ByteBuf> source = Sinks.many().unicast().onBackpressureBuffer();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> flushOnEach);
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), ops(channel), b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
 					.doOnDiscard(ReferenceCounted.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});
@@ -533,7 +535,7 @@ class MonoSendManyTest {
 					public void onComplete() {
 						downstream.onComplete();
 					}
-				})), channel, b -> flushOnEach);
+				})), ops(channel), b -> flushOnEach);
 		m.subscribe();
 		Queue<Object> messages = channel.outboundMessages();
 
@@ -550,7 +552,7 @@ class MonoSendManyTest {
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 		ByteBuf[] buffers = buffers();
 
-		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), channel, b -> false);
+		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), ops(channel), b -> false);
 		assertThat(channel.close().isSuccess()).isTrue();
 
 		StepVerifier.create(m)
@@ -568,7 +570,7 @@ class MonoSendManyTest {
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 		ByteBuf[] buffers = buffers();
 
-		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), channel, b -> false);
+		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), ops(channel), b -> false);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		m.subscribe(new BaseSubscriber<Void>() {
@@ -586,6 +588,10 @@ class MonoSendManyTest {
 
 		System.gc();
 		wait(_w.get(0));
+	}
+
+	static ChannelOperations<?, ?> ops(EmbeddedChannel channel) {
+		return new ChannelOperations<>(Connection.from(channel), ConnectionObserver.emptyListener());
 	}
 
 	static ByteBuf[] buffers() {
