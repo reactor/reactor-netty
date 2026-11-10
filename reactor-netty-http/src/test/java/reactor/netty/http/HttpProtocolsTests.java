@@ -67,6 +67,7 @@ import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
@@ -581,6 +582,57 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 		assertThat(responses).isNotNull();
 		assertThat(responses.size()).isEqualTo(10);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testFatalErrorPropagatedToConnectionObserver_DefaultPool(HttpServer server, HttpClient client) throws Exception {
+		doTestFatalErrorPropagatedToConnectionObserver(server, client);
+	}
+
+	@ParameterizedCompatibleCombinationsNoPoolTest
+	void testFatalErrorPropagatedToConnectionObserver_NoPool(HttpServer server, HttpClient client) throws Exception {
+		doTestFatalErrorPropagatedToConnectionObserver(server, client);
+	}
+
+	private void doTestFatalErrorPropagatedToConnectionObserver(HttpServer server, HttpClient client) throws Exception {
+		disposableServer =
+				server.handle((req, res) -> res.sendString(req.receive().aggregate().asString().defaultIfEmpty("test")))
+				      .bindNow();
+
+		HttpClient localClient = client.port(disposableServer.port());
+		assertFatalErrorIsPropagatedToConnectionObserver(localClient, true);
+		assertFatalErrorIsPropagatedToConnectionObserver(localClient, false);
+	}
+
+	private static void assertFatalErrorIsPropagatedToConnectionObserver(HttpClient client, boolean failRequest) throws Exception {
+		NoSuchMethodError error = new NoSuchMethodError("testFatalErrorIsPropagatedToConnectionObserver");
+		CountDownLatch latch = new CountDownLatch(1);
+		client.observe(new ConnectionObserver() {
+		          @Override
+		          public void onStateChange(Connection connection, State newState) {
+		          }
+
+		          @Override
+		          public void onUncaughtException(Connection connection, Throwable t) {
+		              if (t == error) {
+		                  latch.countDown();
+		              }
+		          }
+		      })
+		      .post()
+		      .uri("/")
+		      .send((req, out) -> {
+		          if (failRequest) {
+		              throw error;
+		          }
+		          return out;
+		      })
+		      .response((res, body) -> body.asString().collectList().map(list -> {
+		            throw error;
+		      }))
+		      .subscribe();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 	}
 
 	@ParameterizedCompatibleCombinationsTest

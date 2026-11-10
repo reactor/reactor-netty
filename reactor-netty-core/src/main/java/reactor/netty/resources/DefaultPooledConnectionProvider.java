@@ -243,8 +243,12 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			sink.error(error);
-			obs.onUncaughtException(connection, error);
+			try {
+				sink.error(error);
+			}
+			finally {
+				obs.onUncaughtException(connection, error);
+			}
 		}
 
 		@Override
