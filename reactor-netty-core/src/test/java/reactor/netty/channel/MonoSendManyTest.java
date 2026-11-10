@@ -95,7 +95,7 @@ class MonoSendManyTest {
 				source = source.doOnRequest(requests::add);
 			}
 			Mono<Void> send = MonoSendMany.byteBufSource(source,
-					channel, b -> flushOnEach);
+					ops(channel), b -> flushOnEach);
 			try {
 				StepVerifier.create(send)
 				            .consumeSubscriptionWith(s -> assertThat(((MonoSendMany.SendManyInner<?, ?>) s).sourceMode)
@@ -167,7 +167,7 @@ class MonoSendManyTest {
 				AtomicBoolean completed = new AtomicBoolean();
 				AtomicReference<Throwable> error = new AtomicReference<>();
 				BaseSubscriber<Void> subscriber = MonoSendMany.byteBufSource(mode.source.apply(buffers),
-						channel, b -> flushOnEach).subscribeWith(new BaseSubscriber<Void>() {
+						ops(channel), b -> flushOnEach).subscribeWith(new BaseSubscriber<Void>() {
 					@Override
 					protected void hookOnComplete() {
 						completed.set(true);
@@ -235,7 +235,7 @@ class MonoSendManyTest {
 				}
 			}
 			AtomicBoolean flushMarker = new AtomicBoolean();
-			Mono<Void> send = new MonoSendMany<>(mode.source.apply(buffers), channel,
+			Mono<Void> send = new MonoSendMany<>(mode.source.apply(buffers), ops(channel),
 					b -> flushOnEach || flushMarker.get(),
 					b -> {
 						flushMarker.set(false);
