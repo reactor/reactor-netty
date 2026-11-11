@@ -150,7 +150,7 @@ final class ForwardedHeaderParser {
 		InetSocketAddress hostAddress = forwardedHost != null && !forwardedHost.isEmpty() ?
 				AddressUtils.parseAddress(forwardedHost, getDefaultHostPort(connectionInfo.getScheme()), DEFAULT_FORWARDED_HEADER_VALIDATION) : null;
 		InetSocketAddress byAddress = forwardedBy != null && !forwardedBy.isEmpty() ?
-				AddressUtils.parseAddress(forwardedBy, 0, DEFAULT_FORWARDED_HEADER_VALIDATION) : null;
+				AddressUtils.parseAddress(withoutObfuscatedPort(forwardedBy), 0, DEFAULT_FORWARDED_HEADER_VALIDATION) : null;
 
 		if (byAddress != null) {
 			connectionInfo = hostAddress != null ?
@@ -163,7 +163,7 @@ final class ForwardedHeaderParser {
 
 		if (forwardedFor != null && !forwardedFor.isEmpty()) {
 			connectionInfo = connectionInfo.withRemoteAddress(
-					AddressUtils.parseAddress(forwardedFor, 0, DEFAULT_FORWARDED_HEADER_VALIDATION));
+					AddressUtils.parseAddress(withoutObfuscatedPort(forwardedFor), 0, DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
 		return connectionInfo;
 	}
@@ -209,6 +209,30 @@ final class ForwardedHeaderParser {
 			}
 		}
 		return -1;
+	}
+
+	/**
+	 * An obfuscated port (RFC 7239, section 6.3) carries no port number, so the node is parsed as one without a port.
+	 */
+	static String withoutObfuscatedPort(String node) {
+		int portSeparatorIdx = node.lastIndexOf(':');
+		int ipV6HostSeparatorIdx = node.lastIndexOf(']');
+		boolean hasPort = portSeparatorIdx > 0 && portSeparatorIdx > ipV6HostSeparatorIdx &&
+				(portSeparatorIdx == node.indexOf(':') || ipV6HostSeparatorIdx > -1);
+		return hasPort && isObfuscatedPort(node, portSeparatorIdx + 1) ? node.substring(0, portSeparatorIdx) : node;
+	}
+
+	static boolean isObfuscatedPort(String node, int start) {
+		if (start + 1 >= node.length() || node.charAt(start) != '_') {
+			return false;
+		}
+		for (int i = start + 1; i < node.length(); i++) {
+			char c = node.charAt(i);
+			if (!isAlpha(c) && !isDigit(c) && c != '.' && c != '_' && c != '-') {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	static boolean isAlpha(char c) {

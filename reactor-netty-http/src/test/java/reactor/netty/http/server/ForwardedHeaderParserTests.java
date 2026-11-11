@@ -15,12 +15,15 @@
  */
 package reactor.netty.http.server;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetSocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class ForwardedHeaderParserTests {
 	static final InetSocketAddress HOST_ADDRESS = new InetSocketAddress("127.0.0.1", 8080);
@@ -74,6 +77,38 @@ class ForwardedHeaderParserTests {
 		assertThat(connectionInfo.getHostAddress()).isEqualTo(HOST_ADDRESS);
 		assertThat(connectionInfo.getRemoteAddress()).isEqualTo(REMOTE_ADDRESS);
 		assertThat(connectionInfo.getScheme()).isEqualTo("http");
+	}
+
+	@ParameterizedTest
+	@CsvSource(value = {
+			"for=\"192.0.2.60:_gazonk\"|192.0.2.60",
+			"for=\"192.0.2.60:_a.b-c_1\"|192.0.2.60",
+			"for=\"[2001:db8:cafe::17]:_gazonk\"|2001:db8:cafe:0:0:0:0:17",
+			"for=\"_hidden:_gazonk\"|_hidden"
+	}, delimiter = '|')
+	void forObfuscatedPort(String header, String expectedHost) {
+		ConnectionInfo connectionInfo = parse(header);
+		assertThat(connectionInfo.getRemoteAddress().getHostString()).isEqualTo(expectedHost);
+		assertThat(connectionInfo.getRemoteAddress().getPort()).isZero();
+	}
+
+	@Test
+	void byObfuscatedPort() {
+		ConnectionInfo connectionInfo = parse("by=\"203.0.113.43:_gazonk\"");
+		assertThat(connectionInfo.getHostAddress().getHostString()).isEqualTo("203.0.113.43");
+		assertThat(connectionInfo.getHostAddress().getPort()).isZero();
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
+			"for=\"192.0.2.60:_\"",
+			"for=\":_gazonk\"",
+			"for=\"2001::_gazonk\"",
+			"for=\"192.0.2.60:_gaz onk\"",
+			"host=\"example.com:_gazonk\""
+	})
+	void invalidObfuscatedPort(String header) {
+		assertThatIllegalArgumentException().isThrownBy(() -> parse(header));
 	}
 
 	static ConnectionInfo parse(String header) {
