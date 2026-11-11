@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -40,7 +41,9 @@ import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -60,6 +63,7 @@ import reactor.test.publisher.TestPublisher;
 import reactor.test.util.RaceTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * This test class verifies {@link MonoSendMany}.
@@ -69,194 +73,188 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MonoSendManyTest {
 
 	@ParameterizedTest
-	@EnumSource(SourceMode.class)
-	void shouldBoundPendingWrites(SourceMode mode) {
-		for (boolean flushOnEach : new boolean[]{true, false}) {
-			Queue<ByteBuf> messages = new ArrayDeque<>();
-			Queue<ChannelPromise> promises = new ArrayDeque<>();
-			List<Integer> written = new ArrayList<>();
-			EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
-				@Override
-				public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-					ByteBuf buffer = (ByteBuf) msg;
-					written.add(buffer.getInt(buffer.readerIndex()));
-					messages.add(buffer);
-					promises.add(promise);
-					assertThat(promises).hasSizeLessThanOrEqualTo(MonoSend.MAX_SIZE);
-				}
-			}, new ChannelHandlerAdapter() {});
-			ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 4];
-			for (int i = 0; i < buffers.length; i++) {
-				buffers[i] = ByteBufAllocator.DEFAULT.buffer(4).writeInt(i);
+	@MethodSource("sourceModesAndFlushOnEach")
+	void shouldBoundPendingWrites(SourceMode mode, boolean flushOnEach) {
+		Queue<ByteBuf> messages = new ArrayDeque<>();
+		Queue<ChannelPromise> promises = new ArrayDeque<>();
+		List<Integer> written = new ArrayList<>();
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+			@Override
+			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+				ByteBuf buffer = (ByteBuf) msg;
+				written.add(buffer.getInt(buffer.readerIndex()));
+				messages.add(buffer);
+				promises.add(promise);
+				assertThat(promises).hasSizeLessThanOrEqualTo(MonoSend.MAX_SIZE);
 			}
-			List<Long> requests = new ArrayList<>();
-			Flux<ByteBuf> source = mode.source.apply(buffers);
-			if (mode == SourceMode.NONE) {
-				source = source.doOnRequest(requests::add);
-			}
-			Mono<Void> send = MonoSendMany.byteBufSource(source,
-					ops(channel), b -> flushOnEach);
-			try {
-				StepVerifier.create(send)
-				            .consumeSubscriptionWith(s -> assertThat(((MonoSendMany.SendManyInner<?, ?>) s).sourceMode)
-							            .isEqualTo(mode.fusionMode))
-				            .then(() -> {
+		}, new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 4];
+		for (int i = 0; i < buffers.length; i++) {
+			buffers[i] = ByteBufAllocator.DEFAULT.buffer(4).writeInt(i);
+		}
+		List<Long> requests = new ArrayList<>();
+		Flux<ByteBuf> source = mode.source.apply(buffers);
+		if (mode == SourceMode.NONE) {
+			source = source.doOnRequest(requests::add);
+		}
+		Mono<Void> send = MonoSendMany.byteBufSource(source,
+				ops(channel), b -> flushOnEach);
+		try {
+			StepVerifier.create(send)
+			            .consumeSubscriptionWith(s -> assertThat(((MonoSendMany.SendManyInner<?, ?>) s).sourceMode)
+						            .isEqualTo(mode.fusionMode))
+			            .then(() -> {
+				            channel.runPendingTasks();
+				            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+				            int initialRequests = requests.size();
+				            for (int i = 0; i < 3; i++) {
 					            channel.runPendingTasks();
-					            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
-					            int initialRequests = requests.size();
-					            for (int i = 0; i < 3; i++) {
-						            channel.runPendingTasks();
-					            }
-					            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
-					            assertThat(requests).hasSize(initialRequests);
-					            if (mode == SourceMode.NONE) {
-						            assertThat(requests).containsExactly((long) MonoSend.MAX_SIZE);
-					            }
-					            for (int i = 0; i < 3; i++) {
-						            for (int j = 0; j < MonoSend.MAX_SIZE - MonoSend.REFILL_SIZE; j++) {
-							            messages.remove().release();
-							            promises.remove().setSuccess();
-						            }
-						            channel.runPendingTasks();
-						            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
-					            }
-					            while (written.size() < buffers.length || promises.size() > 1) {
+				            }
+				            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+				            assertThat(requests).hasSize(initialRequests);
+				            if (mode == SourceMode.NONE) {
+					            assertThat(requests).containsExactly((long) MonoSend.MAX_SIZE);
+				            }
+				            for (int i = 0; i < 3; i++) {
+					            for (int j = 0; j < MonoSend.MAX_SIZE - MonoSend.REFILL_SIZE; j++) {
 						            messages.remove().release();
 						            promises.remove().setSuccess();
-						            channel.runPendingTasks();
 					            }
-				            })
-				            .expectNoEvent(Duration.ofMillis(10))
-				            .then(() -> {
+					            channel.runPendingTasks();
+					            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+				            }
+				            while (written.size() < buffers.length || promises.size() > 1) {
 					            messages.remove().release();
 					            promises.remove().setSuccess();
 					            channel.runPendingTasks();
-				            })
-				            .verifyComplete();
-				assertThat(written).hasSize(buffers.length);
-				for (int i = 0; i < buffers.length; i++) {
-					assertThat(written.get(i)).isEqualTo(i);
-				}
-				assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
-			}
-			finally {
-				messages.forEach(ReferenceCountUtil::release);
-				channel.finishAndReleaseAll();
-			}
-		}
-	}
-
-	@ParameterizedTest
-	@EnumSource(SourceMode.class)
-	void shouldReleaseQueuedBuffersWhenPendingWritesInterrupted(SourceMode mode) {
-		for (boolean flushOnEach : new boolean[]{true, false}) {
-			for (int termination = 0; termination < 3; termination++) {
-				List<ByteBuf> messages = new ArrayList<>();
-				List<ChannelPromise> promises = new ArrayList<>();
-				EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
-					@Override
-					public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-						messages.add((ByteBuf) msg);
-						promises.add(promise);
-					}
-				}, new ChannelHandlerAdapter() {});
-				ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 2];
-				for (int i = 0; i < buffers.length; i++) {
-					buffers[i] = ByteBufAllocator.DEFAULT.buffer(4).writeInt(i);
-				}
-				AtomicBoolean completed = new AtomicBoolean();
-				AtomicReference<Throwable> error = new AtomicReference<>();
-				BaseSubscriber<Void> subscriber = MonoSendMany.byteBufSource(mode.source.apply(buffers),
-						ops(channel), b -> flushOnEach).subscribeWith(new BaseSubscriber<Void>() {
-					@Override
-					protected void hookOnComplete() {
-						completed.set(true);
-					}
-
-					@Override
-					protected void hookOnError(Throwable t) {
-						error.set(t);
-					}
-				});
-				try {
-					channel.runPendingTasks();
-					assertThat(promises).hasSize(MonoSend.MAX_SIZE);
-					IllegalStateException failure = new IllegalStateException("write failed");
-					if (termination == 0) {
-						subscriber.cancel();
-					}
-					else if (termination == 1) {
-						channel.close();
-					}
-					else {
-						promises.get(0).setFailure(failure);
-					}
-					channel.runPendingTasks();
-					assertThat(completed.get()).isEqualTo(termination == 1);
-					assertThat(error.get()).isSameAs(termination == 2 ? failure : null);
-					assertThat(promises).hasSize(MonoSend.MAX_SIZE);
-					for (int i = MonoSend.MAX_SIZE; i < buffers.length; i++) {
-						assertThat(buffers[i].refCnt()).isZero();
-					}
-				}
-				finally {
-					subscriber.cancel();
-					messages.forEach(ReferenceCountUtil::release);
-					channel.finishAndReleaseAll();
-				}
-				assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
-			}
-		}
-	}
-
-	@ParameterizedTest
-	@EnumSource(SourceMode.class)
-	void shouldDrainWithImmediateSuccessAndFlushMarkers(SourceMode mode) {
-		for (boolean flushOnEach : new boolean[]{true, false}) {
-			List<Integer> written = new ArrayList<>();
-			EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
-				@Override
-				public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-					ByteBuf buffer = (ByteBuf) msg;
-					written.add(buffer.readInt());
-					buffer.release();
-					promise.setSuccess();
-				}
-			}, new ChannelHandlerAdapter() {});
-			ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 3];
-			List<Integer> expected = new ArrayList<>();
+				            }
+			            })
+			            .expectNoEvent(Duration.ofMillis(10))
+			            .then(() -> {
+				            messages.remove().release();
+				            promises.remove().setSuccess();
+				            channel.runPendingTasks();
+			            })
+			            .verifyComplete();
+			assertThat(written).hasSize(buffers.length);
 			for (int i = 0; i < buffers.length; i++) {
-				buffers[i] = ByteBufAllocator.DEFAULT.buffer(4);
-				if (i % 3 != 1) {
-					buffers[i].writeInt(i);
-				}
-				if (i % 3 == 2) {
-					expected.add(i);
-				}
+				assertThat(written.get(i)).isEqualTo(i);
 			}
-			AtomicBoolean flushMarker = new AtomicBoolean();
-			Mono<Void> send = new MonoSendMany<>(mode.source.apply(buffers), ops(channel),
-					b -> flushOnEach || flushMarker.get(),
-					b -> {
-						flushMarker.set(false);
-						if (b.isReadable() && b.getInt(b.readerIndex()) % 3 == 0) {
-							flushMarker.set(true);
-							b.release();
-							return null;
-						}
-						return b;
-					}, ReferenceCountUtil::release, ByteBuf::readableBytes);
-			try {
-				StepVerifier.create(send)
-				            .then(channel::runPendingTasks)
-				            .expectComplete()
-				            .verify(Duration.ofSeconds(5));
-				assertThat(written).containsExactlyElementsOf(expected);
-				assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+			assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+		}
+		finally {
+			messages.forEach(ReferenceCountUtil::release);
+			channel.finishAndReleaseAll();
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("sourceModesFlushOnEachAndTerminations")
+	void shouldReleaseQueuedBuffersWhenPendingWritesInterrupted(SourceMode mode, boolean flushOnEach, Termination termination) {
+		List<ByteBuf> messages = new ArrayList<>();
+		List<ChannelPromise> promises = new ArrayList<>();
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+			@Override
+			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+				messages.add((ByteBuf) msg);
+				promises.add(promise);
 			}
-			finally {
-				channel.finishAndReleaseAll();
+		}, new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 2];
+		for (int i = 0; i < buffers.length; i++) {
+			buffers[i] = ByteBufAllocator.DEFAULT.buffer(4).writeInt(i);
+		}
+		AtomicBoolean completed = new AtomicBoolean();
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		BaseSubscriber<Void> subscriber = MonoSendMany.byteBufSource(mode.source.apply(buffers),
+				ops(channel), b -> flushOnEach).subscribeWith(new BaseSubscriber<Void>() {
+			@Override
+			protected void hookOnComplete() {
+				completed.set(true);
 			}
+
+			@Override
+			protected void hookOnError(Throwable t) {
+				error.set(t);
+			}
+		});
+		try {
+			channel.runPendingTasks();
+			assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+			IllegalStateException failure = new IllegalStateException("write failed");
+			switch (termination) {
+				case CANCEL:
+					subscriber.cancel();
+					break;
+				case CHANNEL_CLOSE:
+					channel.close();
+					break;
+				case WRITE_FAILURE:
+					promises.get(0).setFailure(failure);
+					break;
+			}
+			channel.runPendingTasks();
+			assertThat(completed.get()).isEqualTo(termination == Termination.CHANNEL_CLOSE);
+			assertThat(error.get()).isSameAs(termination == Termination.WRITE_FAILURE ? failure : null);
+			assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+			for (int i = MonoSend.MAX_SIZE; i < buffers.length; i++) {
+				assertThat(buffers[i].refCnt()).isZero();
+			}
+		}
+		finally {
+			subscriber.cancel();
+			messages.forEach(ReferenceCountUtil::release);
+			channel.finishAndReleaseAll();
+		}
+		assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+	}
+
+	@ParameterizedTest
+	@MethodSource("sourceModesAndFlushOnEach")
+	void shouldDrainWithImmediateSuccessAndFlushMarkers(SourceMode mode, boolean flushOnEach) {
+		List<Integer> written = new ArrayList<>();
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+			@Override
+			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+				ByteBuf buffer = (ByteBuf) msg;
+				written.add(buffer.readInt());
+				buffer.release();
+				promise.setSuccess();
+			}
+		}, new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 3];
+		List<Integer> expected = new ArrayList<>();
+		for (int i = 0; i < buffers.length; i++) {
+			buffers[i] = ByteBufAllocator.DEFAULT.buffer(4);
+			if (i % 3 != 1) {
+				buffers[i].writeInt(i);
+			}
+			if (i % 3 == 2) {
+				expected.add(i);
+			}
+		}
+		AtomicBoolean flushMarker = new AtomicBoolean();
+		Mono<Void> send = new MonoSendMany<>(mode.source.apply(buffers), ops(channel),
+				b -> flushOnEach || flushMarker.get(),
+				b -> {
+					flushMarker.set(false);
+					if (b.isReadable() && b.getInt(b.readerIndex()) % 3 == 0) {
+						flushMarker.set(true);
+						b.release();
+						return null;
+					}
+					return b;
+				}, ReferenceCountUtil::release, ByteBuf::readableBytes);
+		try {
+			StepVerifier.create(send)
+			            .then(channel::runPendingTasks)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(5));
+			assertThat(written).containsExactlyElementsOf(expected);
+			assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+		}
+		finally {
+			channel.finishAndReleaseAll();
 		}
 	}
 
@@ -612,6 +610,21 @@ class MonoSendManyTest {
 			this.fusionMode = fusionMode;
 			this.source = source;
 		}
+	}
+
+	static Stream<Arguments> sourceModesAndFlushOnEach() {
+		return Arrays.stream(SourceMode.values())
+		             .flatMap(mode -> Stream.of(arguments(mode, true), arguments(mode, false)));
+	}
+
+	static Stream<Arguments> sourceModesFlushOnEachAndTerminations() {
+		return sourceModesAndFlushOnEach()
+				.flatMap(args -> Arrays.stream(Termination.values())
+				                       .map(termination -> arguments(args.get()[0], args.get()[1], termination)));
+	}
+
+	enum Termination {
+		CANCEL, CHANNEL_CLOSE, WRITE_FAILURE
 	}
 
 	static void wait(WeakReference<Subscription> ref) {
