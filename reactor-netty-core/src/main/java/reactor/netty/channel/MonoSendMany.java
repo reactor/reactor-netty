@@ -323,9 +323,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			try {
 				int missed = 1;
 				for (;;) {
-					int r = requested;
-
-					while (Integer.MAX_VALUE == r || r-- > 0) {
+					while (pending < MAX_SIZE) {
 						I sourceMessage = queue.poll();
 
 						if (sourceMessage == null) {
