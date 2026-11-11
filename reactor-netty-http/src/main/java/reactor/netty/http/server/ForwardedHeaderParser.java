@@ -217,8 +217,9 @@ final class ForwardedHeaderParser {
 	static String withoutObfuscatedPort(String node) {
 		int portSeparatorIdx = node.lastIndexOf(':');
 		int ipV6HostSeparatorIdx = node.lastIndexOf(']');
-		boolean hasPort = portSeparatorIdx > 0 && portSeparatorIdx > ipV6HostSeparatorIdx &&
-				(portSeparatorIdx == node.indexOf(':') || ipV6HostSeparatorIdx > -1);
+		boolean hasPort = ipV6HostSeparatorIdx > -1 ?
+				portSeparatorIdx == ipV6HostSeparatorIdx + 1 :
+				portSeparatorIdx > 0 && portSeparatorIdx == node.indexOf(':');
 		return hasPort && isObfuscatedPort(node, portSeparatorIdx + 1) ? node.substring(0, portSeparatorIdx) : node;
 	}
 

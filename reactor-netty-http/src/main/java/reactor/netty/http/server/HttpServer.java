@@ -624,7 +624,10 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * {@code useForwardedPrefix}.
 	 * <p>When the {@code "for"} or {@code "by"} address of the {@code "Forwarded"} header,
 	 * or the {@code "X-Forwarded-For"} address, does not include a port, the port of the
-	 * resulting address is {@code 0}, which indicates that it is unknown.
+	 * resulting address is {@code 0}, which indicates that it is unknown. The same applies
+	 * when the {@code "for"} or {@code "by"} address of the {@code "Forwarded"} header has
+	 * an obfuscated port (for example, {@code for="192.0.2.43:_abc"}), as described in
+	 * <a href="https://datatracker.ietf.org/doc/html/rfc7239#section-6.3">RFC 7239, section 6.3</a>.
 	 *
 	 * @param useStandardHeader whether to use the standard {@code "Forwarded"} header
 	 * (true), or the {@code "X-Forwarded-*"} alternative headers (false)

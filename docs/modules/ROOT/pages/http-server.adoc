@@ -304,7 +304,9 @@ alternative `HTTP` request headers, if possible, and that `X-Forwarded-Prefix` i
 
 NOTE: When the forwarded `for` or `by` address of the `Forwarded` header, or the
 `X-Forwarded-For` address, does not include a port, the port of the resulting address is `0`,
-which indicates that it is unknown.
+which indicates that it is unknown. The same applies when the `for` or `by` address of the
+`Forwarded` header has an obfuscated port (for example, `for="192.0.2.43:_abc"`), as described in
+https://datatracker.ietf.org/doc/html/rfc7239#section-6.3[RFC 7239, section 6.3].
 
 It is also possible to customize the behavior of the `Forwarded` or `X-Forwarded-*` header handler.
 The following example shows how to do so:

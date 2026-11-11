@@ -105,6 +105,8 @@ class ForwardedHeaderParserTests {
 			"for=\":_gazonk\"",
 			"for=\"2001::_gazonk\"",
 			"for=\"192.0.2.60:_gaz onk\"",
+			"for=\"[2001:db8:cafe::17]:80:_gazonk\"",
+			"by=\"[2001:db8:cafe::17]::_gazonk\"",
 			"host=\"example.com:_gazonk\""
 	})
 	void invalidObfuscatedPort(String header) {
