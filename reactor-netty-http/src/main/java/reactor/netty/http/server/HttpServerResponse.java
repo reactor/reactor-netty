@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,6 +93,18 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse header(CharSequence name, CharSequence value);
+
+	/**
+	 * Sets the {@code Accept-Query} response header using the Structured Fields syntax
+	 * defined by RFC 10008.
+	 *
+	 * @param mediaRanges the supported QUERY media ranges, optionally with parameters
+	 * @return this {@link HttpServerResponse}
+	 * @since 1.3.7
+	 */
+	default HttpServerResponse acceptQuery(String... mediaRanges) {
+		return header("Accept-Query", AcceptQueryHeaderCodec.format(mediaRanges));
+	}
 
 	/**
 	 * Sets outbound HTTP headers, replacing any pre-existing value for these headers.
