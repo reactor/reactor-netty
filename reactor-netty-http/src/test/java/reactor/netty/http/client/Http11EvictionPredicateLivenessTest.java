@@ -35,8 +35,8 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -117,7 +117,7 @@ class Http11EvictionPredicateLivenessTest extends BaseHttpTest {
 				client = client.secure(spec -> spec.sslContext((SslProvider.GenericSslContextSpec<?>) clientCtx2));
 			}
 
-			List<Channel> pooledChannels = new CopyOnWriteArrayList<>();
+			Queue<Channel> pooledChannels = new ConcurrentLinkedQueue<>();
 			HttpClient warmUpClient = client.doOnConnected(conn -> {
 				pooledChannels.add(conn.channel());
 				twoConnected.countDown();

@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,6 +75,7 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -625,6 +627,45 @@ class HttpClientTest extends BaseHttpTest {
 		            .expectNextMatches(tuple -> expectedResponse.equals(tuple.getT1()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void gzipResponseDecompressionBufferSizeLimit() {
+		char[] chars = new char[100_000];
+		Arrays.fill(chars, 'a');
+		String content = new String(chars);
+
+		disposableServer =
+				createServer()
+				        .compress(true)
+				        .handle((req, res) -> res.sendString(Mono.just(content)))
+				        .bindNow();
+
+		createHttpClientForContextWithPort()
+		        .compress(true)
+		        .httpResponseDecoder(spec -> spec.maxDecompressionBufferSize(1024))
+		        .headers(h -> h.set(ACCEPT_ENCODING, GZIP))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectError(DecompressionException.class)
+		        .verify(Duration.ofSeconds(30));
+
+		createHttpClientForContextWithPort()
+		        .compress(true)
+		        .headers(h -> h.set(ACCEPT_ENCODING, GZIP))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext(content)
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -1827,6 +1868,41 @@ class HttpClientTest extends BaseHttpTest {
 		    .block(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void sendFormProgressCancellationDoesNotInterruptUpload(boolean cleanOnTerminate) throws Exception {
+		disposableServer =
+				createServer()
+				          .handle((req, res) -> res.sendString(req.receive()
+				                                                .aggregate()
+				                                                .asString()
+				                                                .map(body -> Integer.toString(body.length()))))
+				          .bindNow();
+
+		try {
+			String value = String.join("", Collections.nCopies(20000, "x"));
+			createHttpClientForContextWithAddress()
+			        .post()
+			        .uri("/")
+			        .sendForm((req, form) -> form.cleanOnTerminate(cleanOnTerminate)
+			                                     .multipart(false)
+			                                     .attr("key", value),
+			                  progress -> progress.take(1).subscribe())
+			        .responseSingle((res, body) -> body.asString())
+			        .as(StepVerifier::create)
+					.expectNext(Integer.toString("key=".length() + value.length()))
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
+
+			Field field = HttpClientOperations.SendForm.DEFAULT_FACTORY.getClass().getDeclaredField("requestFileDeleteMap");
+			field.setAccessible(true);
+			assertThat((Map<?, ?>) field.get(HttpClientOperations.SendForm.DEFAULT_FACTORY)).isEmpty();
+		}
+		finally {
+			HttpClientOperations.SendForm.DEFAULT_FACTORY.cleanAllHttpData();
+		}
 	}
 
 	@Test

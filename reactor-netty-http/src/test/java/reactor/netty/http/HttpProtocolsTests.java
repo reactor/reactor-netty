@@ -67,6 +67,7 @@ import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
@@ -106,6 +107,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -583,6 +585,57 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
+	void testFatalErrorPropagatedToConnectionObserver_DefaultPool(HttpServer server, HttpClient client) throws Exception {
+		doTestFatalErrorPropagatedToConnectionObserver(server, client);
+	}
+
+	@ParameterizedCompatibleCombinationsNoPoolTest
+	void testFatalErrorPropagatedToConnectionObserver_NoPool(HttpServer server, HttpClient client) throws Exception {
+		doTestFatalErrorPropagatedToConnectionObserver(server, client);
+	}
+
+	private void doTestFatalErrorPropagatedToConnectionObserver(HttpServer server, HttpClient client) throws Exception {
+		disposableServer =
+				server.handle((req, res) -> res.sendString(req.receive().aggregate().asString().defaultIfEmpty("test")))
+				      .bindNow();
+
+		HttpClient localClient = client.port(disposableServer.port());
+		assertFatalErrorIsPropagatedToConnectionObserver(localClient, true);
+		assertFatalErrorIsPropagatedToConnectionObserver(localClient, false);
+	}
+
+	private static void assertFatalErrorIsPropagatedToConnectionObserver(HttpClient client, boolean failRequest) throws Exception {
+		NoSuchMethodError error = new NoSuchMethodError("testFatalErrorIsPropagatedToConnectionObserver");
+		CountDownLatch latch = new CountDownLatch(1);
+		client.observe(new ConnectionObserver() {
+		          @Override
+		          public void onStateChange(Connection connection, State newState) {
+		          }
+
+		          @Override
+		          public void onUncaughtException(Connection connection, Throwable t) {
+		              if (t == error) {
+		                  latch.countDown();
+		              }
+		          }
+		      })
+		      .post()
+		      .uri("/")
+		      .send((req, out) -> {
+		          if (failRequest) {
+		              throw error;
+		          }
+		          return out;
+		      })
+		      .response((res, body) -> body.asString().collectList().map(list -> {
+		            throw error;
+		      }))
+		      .subscribe();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+	}
+
+	@ParameterizedCompatibleCombinationsTest
 	void testTrailerHeadersChunkedResponse(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.handle((req, res) ->
@@ -633,6 +686,33 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 		// Trailer header name [content-length] not declared with [Trailer] header, or it is not a valid trailer header name
 		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersNotSpecifiedUpfront");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersCallbackFails(HttpServer server, HttpClient client) {
+		Consumer<HttpHeaders> trailerHeaders = h -> {
+			throw new IllegalStateException("testTrailerHeadersCallbackFails");
+		};
+		disposableServer =
+				server.route(r ->
+				          r.get("/chunked", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(trailerHeaders)
+				                  .sendString(Flux.just("testTrailerHeaders", "CallbackFails")))
+				           .get("/full", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(trailerHeaders)
+				                  .sendString(Mono.just("testTrailerHeadersCallbackFails")))
+				           .get("/empty", (req, res) ->
+				               res.header(HttpHeaderNames.TRAILER, "foo")
+				                  .trailerHeaders(trailerHeaders)
+				                  .send()))
+				      .bindNow();
+
+		HttpClient localClient = client.port(disposableServer.port());
+		doTestTrailerHeaders(localClient, "/chunked", "empty", "testTrailerHeadersCallbackFails");
+		doTestTrailerHeaders(localClient, "/full", "empty", "testTrailerHeadersCallbackFails");
+		doTestTrailerHeaders(localClient, "/empty", "empty", "empty");
 	}
 
 	@ParameterizedCompatibleCombinationsTest

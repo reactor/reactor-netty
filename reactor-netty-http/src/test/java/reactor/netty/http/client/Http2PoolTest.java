@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -125,6 +126,253 @@ class Http2PoolTest {
 			acquired.get(1).invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).as("activeStreams after invalidation").isEqualTo(0);
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void goAwayReceivedUsesMemoizedConnection() throws Exception {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(2)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
+
+		try {
+			PooledRef<Connection> ref = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref).isNotNull();
+			channel.runPendingTasks();
+
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) ref).slot;
+			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
+
+			// deliver() ran computeMaxConcurrentStreams() on the event loop, memoizing the connection
+			assertThat(slot.http2Connection).as("connection memoized on deliver")
+					.isSameAs(frameCodec.connection());
+			assertThat(slot.goAwayReceived()).as("no GO_AWAY yet").isFalse();
+
+			frameCodec.connection().goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			assertThat(slot.goAwayReceived()).as("GO_AWAY read via the memoized connection").isTrue();
+
+			ref.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void goAwayReceivedClosesConnectionWhenLastStreamCompletes(boolean evictInBackground) throws Exception {
+		List<EmbeddedChannel> channels = new ArrayList<>();
+		Http2Pool http2Pool = goAwayTestPool(channels, evictInBackground);
+
+		try {
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			http2Pool.acquire().subscribe(acquired::add);
+			http2Pool.acquire().subscribe(acquired::add);
+			EmbeddedChannel channel = channels.get(0);
+			channel.runPendingTasks();
+			assertThat(acquired).hasSize(2);
+
+			channel.pipeline().get(Http2FrameCodec.class).connection()
+					.goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+			channel.runPendingTasks();
+			if (evictInBackground) {
+				http2Pool.evictInBackground();
+				channel.runPendingTasks();
+			}
+
+			assertThat(channel.isOpen()).as("open while a stream is active").isTrue();
+
+			acquired.get(1).invalidate().block(Duration.ofSeconds(1));
+			channel.runPendingTasks();
+			if (evictInBackground) {
+				assertThat(channel.isOpen()).as("open until the background eviction runs").isTrue();
+
+				http2Pool.evictInBackground();
+				channel.runPendingTasks();
+			}
+
+			assertThat(channel.isOpen()).as("closed once the last stream completes").isFalse();
+			assertThat(http2Pool.connections).as("removed from Http2Pool").isEmpty();
+			assertThat(http2Pool.allocatedSize()).as("permit returned to Http2Pool").isEqualTo(0);
+		}
+		finally {
+			disposeGoAwayTestPool(http2Pool, channels);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void goAwayReceivedClosesIdleConnectionOnAcquire(boolean evictInBackground) throws Exception {
+		List<EmbeddedChannel> channels = new ArrayList<>();
+		Http2Pool http2Pool = goAwayTestPool(channels, evictInBackground);
+
+		try {
+			PooledRef<Connection> ref1 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref1).isNotNull();
+			channels.get(0).runPendingTasks();
+			ref1.invalidate().block(Duration.ofSeconds(1));
+
+			EmbeddedChannel idleChannel = channels.get(0);
+			idleChannel.pipeline().get(Http2FrameCodec.class).connection()
+					.goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			assertThat(idleChannel.isOpen()).as("open until the next acquisition").isTrue();
+
+			PooledRef<Connection> ref2 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref2).isNotNull();
+			idleChannel.runPendingTasks();
+
+			assertThat(idleChannel.isOpen()).as("closed when found idle after GO_AWAY").isFalse();
+			assertThat(ref2.poolable().channel()).as("served by a new connection").isNotSameAs(idleChannel);
+
+			ref2.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			disposeGoAwayTestPool(http2Pool, channels);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void goAwayReceivedKeepsConnectionOpenOnAcquireWhileStreamIsActive(boolean evictInBackground) throws Exception {
+		List<EmbeddedChannel> channels = new ArrayList<>();
+		Http2Pool http2Pool = goAwayTestPool(channels, evictInBackground);
+
+		try {
+			PooledRef<Connection> ref1 = http2Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref1).isNotNull();
+			EmbeddedChannel goAwayChannel = channels.get(0);
+			goAwayChannel.runPendingTasks();
+
+			goAwayChannel.pipeline().get(Http2FrameCodec.class).connection()
+					.goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			http2Pool.acquire().subscribe(acquired::add);
+			goAwayChannel.runPendingTasks();
+
+			assertThat(goAwayChannel.isOpen()).as("open while a stream is active").isTrue();
+			assertThat(acquired).as("pending until the connection is closed").isEmpty();
+
+			ref1.invalidate().block(Duration.ofSeconds(1));
+			goAwayChannel.runPendingTasks();
+			channels.forEach(EmbeddedChannel::runPendingTasks);
+
+			assertThat(goAwayChannel.isOpen()).as("closed once the last stream completes").isFalse();
+			assertThat(acquired).as("served by a new connection").hasSize(1);
+			assertThat(acquired.get(0).poolable().channel()).isNotSameAs(goAwayChannel);
+
+			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			disposeGoAwayTestPool(http2Pool, channels);
+		}
+	}
+
+	private static Http2Pool goAwayTestPool(List<EmbeddedChannel> channels, boolean evictInBackground) {
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build(),
+				                   new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+				               channels.add(channel);
+				               return Connection.from(channel);
+				           }))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		if (evictInBackground) {
+			poolBuilder = poolBuilder.evictInBackground(Duration.ofSeconds(5));
+		}
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(2)
+				.build();
+		return poolBuilder.build(config -> new Http2Pool(config, strategy));
+	}
+
+	private static void disposeGoAwayTestPool(Http2Pool http2Pool, List<EmbeddedChannel> channels) {
+		http2Pool.dispose();
+		for (EmbeddedChannel channel : channels) {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void memoizesConnectionWhenFrameCodecIsInstalledAfterSlotCreation() throws Exception {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(), new ChannelHandlerAdapter() {});
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		try {
+			Http2Pool.Slot slot = http2Pool.createSlot(Connection.from(channel));
+			assertThat(slot.http2Connection).as("nothing to memoize pre-upgrade").isNull();
+			assertThat(slot.goAwayReceived()).as("pre-upgrade slot reports no GO_AWAY").isFalse();
+
+			// Stands in for the h2c upgrade, the one path where the codec joins the pipeline
+			// after the slot already exists.
+			Http2FrameCodec frameCodec = Http2FrameCodecBuilder.forClient().build();
+			channel.pipeline().addFirst(frameCodec);
+			channel.runPendingTasks();
+			slot.initMaxConcurrentStreams();
+
+			assertThat(slot.http2Connection).as("connection memoized by the post-upgrade re-init")
+					.isSameAs(frameCodec.connection());
+
+			frameCodec.connection().goAwayReceived(Integer.MAX_VALUE, 0L, Unpooled.EMPTY_BUFFER);
+
+			assertThat(slot.goAwayReceived()).as("GO_AWAY read via the memoized connection").isTrue();
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void h2cUpgradeNegativeLookupIsCached() {
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		try {
+			Http2Pool.Slot slot = http2Pool.createSlot(Connection.from(channel));
+			assertThat(slot.h2cUpgradeHandlerAbsent).as("not resolved yet").isFalse();
+
+			// No H2C upgrade handler in the pipeline (direct H2): the lookup misses...
+			assertThat(slot.isH2cUpgrade()).as("not an h2c upgrade").isFalse();
+
+			// ...and the negative result is cached so later calls skip the pipeline walk.
+			assertThat(slot.h2cUpgradeHandlerAbsent).as("negative lookup cached").isTrue();
 		}
 		finally {
 			channel.finishAndReleaseAll();

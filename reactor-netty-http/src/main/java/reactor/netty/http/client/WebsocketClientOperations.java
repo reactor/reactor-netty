@@ -16,7 +16,9 @@
 package reactor.netty.http.client;
 
 import java.net.URI;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -46,7 +48,6 @@ import reactor.core.publisher.Sinks;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
-import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -67,15 +68,18 @@ import static reactor.netty.ReactorNetty.format;
 class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
-	WebSocketClientHandshaker handshakerHttp11;
+	@Nullable WebSocketClientHandshaker handshakerHttp11;
 	final Sinks.One<WebSocketCloseStatus> onCloseState;
 	final boolean proxyPing;
 
 	@Nullable AbstractWebSocketClientMetricsHandler micrometerWsHandler;
 
+	boolean handshakeFailure;
+
 	volatile int closeSent;
 
 	static final String INBOUND_CANCEL_LOG = "WebSocket client inbound receiver cancelled, closing Websocket.";
+	static final String HANDSHAKE_REQUEST_NOT_SENT = "Failed to send the websocket handshake request.";
 
 	WebsocketClientOperations(URI currentURI,
 			WebsocketClientSpec websocketClientSpec,
@@ -100,12 +104,12 @@ class WebsocketClientOperations extends HttpClientOperations
 			PerMessageDeflateClientExtensionHandshaker perMessageDeflateClientExtensionHandshaker =
 					new PerMessageDeflateClientExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 							MAX_WINDOW_SIZE, websocketClientSpec.compressionAllowClientNoContext(),
-							websocketClientSpec.compressionRequestedServerNoContext(), 0);
+							websocketClientSpec.compressionRequestedServerNoContext(), websocketClientSpec.maxDecompressionBufferSize());
 			addHandlerFirst(NettyPipeline.WsCompressionHandler,
 					new WebSocketClientExtensionHandler(
 							perMessageDeflateClientExtensionHandshaker,
-							new DeflateFrameClientExtensionHandshaker(6, false, 0),
-							new DeflateFrameClientExtensionHandshaker(6, true, 0)));
+							new DeflateFrameClientExtensionHandshaker(6, false, websocketClientSpec.maxDecompressionBufferSize()),
+							new DeflateFrameClientExtensionHandshaker(6, true, websocketClientSpec.maxDecompressionBufferSize())));
 		}
 
 		String subprotocols = websocketClientSpec.protocols();
@@ -121,9 +125,11 @@ class WebsocketClientOperations extends HttpClientOperations
 		                .addListener(f -> {
 		                    markPersistent(false);
 		                    if (!f.isSuccess()) {
-		                        recordHandshakeFailure(channel);
+		                        onHandshakeFailure(channel, f.cause());
 		                    }
-		                    channel.read();
+		                    else {
+		                        channel.read();
+		                    }
 		                });
 	}
 
@@ -139,11 +145,11 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	public @Nullable String selectedSubprotocol() {
-		return handshakerHttp11.actualSubprotocol();
+		return handshakerHttp11 != null ? handshakerHttp11.actualSubprotocol() : null;
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			started = true;
@@ -155,6 +161,7 @@ class WebsocketClientOperations extends HttpClientOperations
 
 			if (notRedirected(response) && authenticationNotRequired()) {
 				try {
+					assert handshakerHttp11 != null;
 					handshakerHttp11.finishHandshake(channel(), response);
 					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					ctx.read();
@@ -221,7 +228,7 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	protected void onInboundClose() {
-		if (isHandshakeComplete()) {
+		if (isHandshakeComplete() || handshakeFailure) {
 			terminate();
 		}
 		else {
@@ -232,7 +239,31 @@ class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	boolean isHandshakeComplete() {
-		return handshakerHttp11.isHandshakeComplete();
+		return handshakerHttp11 != null && handshakerHttp11.isHandshakeComplete();
+	}
+
+	void onHandshakeFailure(Channel channel, Throwable cause) {
+		handshakeFailure = true;
+		recordHandshakeFailure(channel);
+		Throwable error = handshakeFailureCause(cause);
+		if (log.isDebugEnabled()) {
+			log.debug(format(channel(), HANDSHAKE_REQUEST_NOT_SENT), error);
+		}
+		onInboundError(error);
+	}
+
+	static Throwable handshakeFailureCause(@Nullable Throwable cause) {
+		if (cause == null) {
+			return new WebSocketClientHandshakeException(HANDSHAKE_REQUEST_NOT_SENT);
+		}
+		if (cause instanceof WebSocketClientHandshakeException ||
+				cause instanceof ClosedChannelException) {
+			return cause;
+		}
+		WebSocketClientHandshakeException  error =
+				new WebSocketClientHandshakeException(HANDSHAKE_REQUEST_NOT_SENT);
+		error.initCause(cause);
+		return error;
 	}
 
 	void swapMetricsHandler() {
@@ -353,22 +384,24 @@ class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	public Mono<Void> sendClose() {
-		return sendClose(new CloseWebSocketFrame());
+		return sendClose(CloseWebSocketFrame::new);
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv) {
-		return sendClose(new CloseWebSocketFrame(true, rsv));
+		return sendClose(() -> new CloseWebSocketFrame(true, rsv));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+		requireValidStatusCode(statusCode);
+		return sendClose(() -> new CloseWebSocketFrame(statusCode, reasonText));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+		requireValidStatusCode(statusCode);
+		return sendClose(() -> new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
 	}
 
 	@Override
@@ -377,12 +410,16 @@ class WebsocketClientOperations extends HttpClientOperations
 		return onCloseState.asMono().or((Mono) onTerminate());
 	}
 
-	Mono<Void> sendClose(CloseWebSocketFrame frame) {
+	Mono<Void> sendClose(Supplier<CloseWebSocketFrame> frameSupplier) {
 		if (CLOSE_SENT.get(this) == 0) {
-			//commented for now as we assume the close is always scheduled (deferFuture runs)
-			//onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
+			// The frame is created on subscribe, so that there is nothing to release when the Mono is not subscribed
 			return FutureMono.deferFuture(() -> {
+				if (!channel().isActive()) {
+					// The connection is closed or terminated, there is nothing to send
+					return channel().newSucceededFuture();
+				}
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					CloseWebSocketFrame frame = frameSupplier.get();
 					discard();
 					// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
 					// Whether there are subscribers or the subscriber cancels is not of interest
@@ -392,11 +429,9 @@ class WebsocketClientOperations extends HttpClientOperations
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
-				frame.release();
 				return channel().newSucceededFuture();
-			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
+			});
 		}
-		frame.release();
 		return Mono.empty();
 	}
 
@@ -422,6 +457,16 @@ class WebsocketClientOperations extends HttpClientOperations
 		}
 		else {
 			frame.release();
+		}
+	}
+
+	/**
+	 * The close frame is created on subscribe, so the status code is checked here
+	 * in order to keep throwing {@link IllegalArgumentException} when {@code sendClose} is invoked.
+	 */
+	static void requireValidStatusCode(int statusCode) {
+		if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
+			throw new IllegalArgumentException("WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
 		}
 	}
 

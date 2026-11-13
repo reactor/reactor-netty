@@ -24,6 +24,17 @@ multiRelease {
 	targetVersions 8, 11, 17
 }
 
+// Error Prone requires JDK 21, compile the multi-release sources with JDK 25 for their target version
+[compileJava11Java: 11, compileJava17Java: 17].each { taskName, targetVersion ->
+	tasks.named(taskName, JavaCompile) {
+		javaCompiler = javaToolchains.compilerFor {
+			languageVersion = JavaLanguageVersion.of(25)
+		}
+		options.release = targetVersion
+		options.nullability.checking = "main"
+	}
+}
+
 ext {
 	bndOptions = [
 			"Export-Package" : "reactor.netty*;version=$osgiVersion;-noimport:=true",
@@ -32,12 +43,12 @@ ext {
 					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.2,5)\"",
 					"io.netty.channel.uring;resolution:=optional;version=\"[4.2,5)\"",
 					"io.micrometer.*;resolution:=optional",
-					"io.netty.incubator.channel.uring;resolution:=optional",
 					"*"
 			].join(","),
 			"Bundle-Name" : "reactor-netty-core",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-core",
-			"Bundle-Version" : "$osgiVersion"
+			"Bundle-Version" : "$osgiVersion",
+			"-noextraheaders": "true"
 	]
 }
 
@@ -81,10 +92,8 @@ dependencies {
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
 	compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-	compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 	testCompileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-	testCompileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	java11TestCompileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 	if (project.hasProperty("forceTransport")) {
 		//so that the main code compiles
@@ -100,7 +109,6 @@ dependencies {
 			}
 		}
 		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-			testRuntimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
 			java11TestRuntimeOnly "io.netty:netty-transport-native-io_uring:$nettyVersion$os_suffix"
 		}
 		else if (forceTransport != "nio") {
@@ -193,10 +201,7 @@ java17Test {
 }
 java11Test {
 	exclude '**/*NativeConfigTest*.*'
-	// Filter out incubator io_uring as java11 uses the new non-incubator version
-	classpath = classpath.filter { file ->
-		!(file.name.contains('io_uring') && file.name.contains('incubator'))
-	} + sourceSets.java11Test.runtimeClasspath
+	classpath += sourceSets.java11Test.runtimeClasspath
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
@@ -204,6 +209,8 @@ components.java.withVariantsFromConfiguration(configurations.testFixturesRuntime
 
 japicmp {
 	methodExcludes = [
+			'reactor.netty.tcp.SslProvider$SslContextSpec#sslContext(reactor.netty.tcp.SslProvider$ProtocolSslContextSpec)',
+			'reactor.netty.channel.MicrometerChannelMetricsRecorder#getTlsHandshakeTimer(java.lang.String, java.lang.String, java.lang.String)'
 	]
 
 	classExcludes = [

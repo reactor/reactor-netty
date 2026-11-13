@@ -32,7 +32,7 @@ jobs:
     #   - https://gh.io/supported-runners-and-hardware-resources
     #   - https://gh.io/using-larger-runners
     # Consider using larger runners for possible analysis time improvements.
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-14') || 'ubuntu-22.04' }}
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-15-intel') || 'ubuntu-24.04' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
 
     permissions:
@@ -55,16 +55,17 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
     - name: setup java
-      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+      uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
       with:
         distribution: 'zulu'
         java-version: |
           8
+          25
           17
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4.37.5
+      uses: github/codeql-action/init@v4.39.3
       with:
         languages: ${{ matrix.language }}
         # If you wish to specify custom queries, you can do so here or in a config file.
@@ -80,6 +81,6 @@ jobs:
       run: ./gradlew --no-daemon clean testClasses -x :docs:build -x :docs:antora
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4.37.5
+      uses: github/codeql-action/analyze@v4.39.3
       with:
         category: "/language:${{matrix.language}}"

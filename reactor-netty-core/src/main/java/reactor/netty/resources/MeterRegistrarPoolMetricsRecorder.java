@@ -21,9 +21,10 @@ import reactor.pool.PoolMetricsRecorder;
 import java.net.SocketAddress;
 
 /**
- * A {@link PoolMetricsRecorder} that bridges pending acquisition latencies to a user-provided
- * {@link MeterRegistrar}. This allows custom registrars to receive the {@code pending.connections.time}
- * data that is otherwise only available to the built-in Micrometer integration.
+ * A {@link PoolMetricsRecorder} that bridges pending acquisition latencies and connection lifetime
+ * durations to a user-provided {@link MeterRegistrar}. This allows custom registrars to receive the
+ * {@code pending.connections.time} and {@code connections.lifetime} data that is otherwise only
+ * available to the built-in Micrometer integration.
  *
  * @author ejhnsn
  * @since 1.3.7
@@ -69,7 +70,7 @@ final class MeterRegistrarPoolMetricsRecorder implements PoolMetricsRecorder {
 
 	@Override
 	public void recordLifetimeDuration(long millisecondsSinceAllocation) {
-		//noop
+		registrar.recordConnectionLifetime(poolName, id, remoteAddress, millisecondsSinceAllocation);
 	}
 
 	@Override

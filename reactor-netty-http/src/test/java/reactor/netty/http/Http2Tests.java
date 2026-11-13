@@ -949,7 +949,7 @@ class Http2Tests extends BaseHttpTest {
 				            });
 			}
 
-			assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+			assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 			assertThat(connectionCount.get()).isEqualTo(2);
 			assertThat(successCount.get()).isEqualTo(2);
 			assertThat(failureCount.get()).isEqualTo(1);

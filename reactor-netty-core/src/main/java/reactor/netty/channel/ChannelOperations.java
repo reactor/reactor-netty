@@ -246,6 +246,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 *
 	 * @return true if dispose subscription has been terminated
 	 */
+	@SuppressWarnings("ReferenceEquality")
 	public final boolean isSubscriptionDisposed() {
 		return OUTBOUND_CLOSE.get(this) == Operators.cancelledSubscription();
 	}
@@ -316,7 +317,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(((Mono<?>) dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
-		return then(MonoSendMany.byteBufSource(dataStream, channel(), predicate));
+		return then(MonoSendMany.byteBufSource(dataStream, this, predicate));
 	}
 
 	@Override
@@ -326,10 +327,18 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
-			return then(((Mono<?>) dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
-			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
+			return then(((Mono<?>) dataStream)
+					.flatMap(m -> {
+						if (!channel().isActive()) {
+							// The connection is closed or terminated, there is nothing to send
+							ReactorNetty.safeRelease(m);
+							return Mono.empty();
+						}
+						return FutureMono.from(channel().writeAndFlush(m));
+					})
+					.doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
-		return then(MonoSendMany.objectSource(dataStream, channel(), predicate));
+		return then(MonoSendMany.objectSource(dataStream, this, predicate));
 	}
 
 	@Override
@@ -338,9 +347,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			ReactorNetty.safeRelease(message);
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
-		return then(FutureMono.deferFuture(() -> connection.channel()
-		                                                   .writeAndFlush(message)),
-				() -> ReactorNetty.safeRelease(message));
+		return then(FutureMono.deferFuture(() -> {
+			if (!channel().isActive()) {
+				// The connection is closed or terminated, there is nothing to send
+				ReactorNetty.safeRelease(message);
+				return channel().newSucceededFuture();
+			}
+			return channel().writeAndFlush(message);
+		}), () -> ReactorNetty.safeRelease(message));
 	}
 
 	@Override
@@ -626,6 +640,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	public String asLongText() {
 		boolean active = channel().isActive();
 		if (localActive == active && longId != null) {

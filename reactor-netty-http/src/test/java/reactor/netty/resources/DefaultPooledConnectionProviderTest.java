@@ -26,7 +26,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http2.DefaultHttp2GoAwayFrame;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.SslContext;
@@ -45,6 +47,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -78,6 +81,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -862,9 +866,10 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		return result;
 	}
 
-	@Test
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
 	@SuppressWarnings({"FutureReturnValueIgnored", "deprecation"})
-	void testHttp2PoolAndGoAway() throws Exception {
+	void testHttp2PoolAndGoAway(boolean serverClosesConnection) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
@@ -877,8 +882,16 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .secure(spec -> spec.sslContext(serverCtx))
 				        .route(r -> r.get("/1", (req, res) -> res.sendString(startSending.asMono().then(Mono.just("/1"))))
 				                     .get("/2", (req, res) -> {
-				                         //"FutureReturnValueIgnored" this is deliberate
-				                         req.withConnection(conn -> conn.channel().parent().close());
+				                         if (serverClosesConnection) {
+				                             //"FutureReturnValueIgnored" this is deliberate
+				                             req.withConnection(conn -> conn.channel().parent().close());
+				                         }
+				                         else {
+				                             // Graceful GOAWAY as sent by a draining proxy, the connection stays open
+				                             //"FutureReturnValueIgnored" this is deliberate
+				                             req.withConnection(conn -> conn.channel().parent().writeAndFlush(
+				                                     new DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR).setExtraStreamIds(Integer.MAX_VALUE)));
+				                         }
 				                         startSending.tryEmitEmpty();
 				                         return res.sendString(Mono.just("/2"));
 				                     })
@@ -1122,6 +1135,42 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		);
 	}
 
+	@Test
+	void testCustomRegistrarReceivesConnectionLifetime() throws InterruptedException {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testConnectionLifetime")))
+				        .bindNow();
+
+		MeterRegistrarImpl meterRegistrar = new MeterRegistrarImpl();
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testConnectionLifetime")
+				                  .maxConnections(1)
+				                  .maxIdleTime(Duration.ofMillis(50))
+				                  .evictInBackground(Duration.ofMillis(20))
+				                  .metrics(true, () -> meterRegistrar)
+				                  .build();
+
+		HttpClient client = createClient(provider, disposableServer.port());
+		try {
+			client.get()
+			      .uri("/")
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .block(Duration.ofSeconds(5));
+
+			assertThat(meterRegistrar.connectionLifetimeLatch.await(5, TimeUnit.SECONDS))
+					.as("connection lifetime latch")
+					.isTrue();
+			assertThat(meterRegistrar.connectionLifetimeMillis.get()).isGreaterThan(0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
 		AtomicBoolean registered = new AtomicBoolean();
 		AtomicBoolean deRegistered = new AtomicBoolean();
@@ -1130,6 +1179,8 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		final AtomicInteger pendingAcquireFailureCount = new AtomicInteger();
 		final CountDownLatch pendingAcquireSuccessLatch = new CountDownLatch(1);
 		final CountDownLatch pendingAcquireFailureLatch = new CountDownLatch(1);
+		final AtomicLong connectionLifetimeMillis = new AtomicLong(-1);
+		final CountDownLatch connectionLifetimeLatch = new CountDownLatch(1);
 
 		MeterRegistrarImpl() {
 		}
@@ -1155,6 +1206,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		public void recordPendingAcquireFailure(String poolName, String id, SocketAddress remoteAddress, long pendingAcquireTimeMillis) {
 			pendingAcquireFailureCount.incrementAndGet();
 			pendingAcquireFailureLatch.countDown();
+		}
+
+		@Override
+		public void recordConnectionLifetime(String poolName, String id, SocketAddress remoteAddress, long connectionLifetimeMillis) {
+			this.connectionLifetimeMillis.set(connectionLifetimeMillis);
+			connectionLifetimeLatch.countDown();
 		}
 	}
 }

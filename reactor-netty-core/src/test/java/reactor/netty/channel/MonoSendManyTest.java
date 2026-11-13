@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,22 +19,31 @@ import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -46,11 +55,15 @@ import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.test.StepVerifier;
 import reactor.test.publisher.TestPublisher;
 import reactor.test.util.RaceTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * This test class verifies {@link MonoSendMany}.
@@ -60,13 +73,199 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MonoSendManyTest {
 
 	@ParameterizedTest
+	@MethodSource("sourceModesAndFlushOnEach")
+	void shouldBoundPendingWrites(SourceMode mode, boolean flushOnEach) {
+		Queue<ByteBuf> messages = new ArrayDeque<>();
+		Queue<ChannelPromise> promises = new ArrayDeque<>();
+		List<Integer> written = new ArrayList<>();
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+			@Override
+			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+				ByteBuf buffer = (ByteBuf) msg;
+				written.add(buffer.getInt(buffer.readerIndex()));
+				messages.add(buffer);
+				promises.add(promise);
+				assertThat(promises).hasSizeLessThanOrEqualTo(MonoSend.MAX_SIZE);
+			}
+		}, new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 4];
+		for (int i = 0; i < buffers.length; i++) {
+			buffers[i] = ByteBufAllocator.DEFAULT.buffer(4).writeInt(i);
+		}
+		List<Long> requests = new ArrayList<>();
+		Flux<ByteBuf> source = mode.source.apply(buffers);
+		if (mode == SourceMode.NONE) {
+			source = source.doOnRequest(requests::add);
+		}
+		Mono<Void> send = MonoSendMany.byteBufSource(source,
+				ops(channel), b -> flushOnEach);
+		try {
+			StepVerifier.create(send)
+			            .consumeSubscriptionWith(s -> assertThat(((MonoSendMany.SendManyInner<?, ?>) s).sourceMode)
+						            .isEqualTo(mode.fusionMode))
+			            .then(() -> {
+				            channel.runPendingTasks();
+				            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+				            int initialRequests = requests.size();
+				            for (int i = 0; i < 3; i++) {
+					            channel.runPendingTasks();
+				            }
+				            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+				            assertThat(requests).hasSize(initialRequests);
+				            if (mode == SourceMode.NONE) {
+					            assertThat(requests).containsExactly((long) MonoSend.MAX_SIZE);
+				            }
+				            for (int i = 0; i < 3; i++) {
+					            for (int j = 0; j < MonoSend.MAX_SIZE - MonoSend.REFILL_SIZE; j++) {
+						            messages.remove().release();
+						            promises.remove().setSuccess();
+					            }
+					            channel.runPendingTasks();
+					            assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+				            }
+				            while (written.size() < buffers.length || promises.size() > 1) {
+					            messages.remove().release();
+					            promises.remove().setSuccess();
+					            channel.runPendingTasks();
+				            }
+			            })
+			            .expectNoEvent(Duration.ofMillis(10))
+			            .then(() -> {
+				            messages.remove().release();
+				            promises.remove().setSuccess();
+				            channel.runPendingTasks();
+			            })
+			            .verifyComplete();
+			assertThat(written).hasSize(buffers.length);
+			for (int i = 0; i < buffers.length; i++) {
+				assertThat(written.get(i)).isEqualTo(i);
+			}
+			assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+		}
+		finally {
+			messages.forEach(ReferenceCountUtil::release);
+			channel.finishAndReleaseAll();
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("sourceModesFlushOnEachAndTerminations")
+	void shouldReleaseQueuedBuffersWhenPendingWritesInterrupted(SourceMode mode, boolean flushOnEach, Termination termination) {
+		List<ByteBuf> messages = new ArrayList<>();
+		List<ChannelPromise> promises = new ArrayList<>();
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+			@Override
+			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+				messages.add((ByteBuf) msg);
+				promises.add(promise);
+			}
+		}, new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 2];
+		for (int i = 0; i < buffers.length; i++) {
+			buffers[i] = ByteBufAllocator.DEFAULT.buffer(4).writeInt(i);
+		}
+		AtomicBoolean completed = new AtomicBoolean();
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		BaseSubscriber<Void> subscriber = MonoSendMany.byteBufSource(mode.source.apply(buffers),
+				ops(channel), b -> flushOnEach).subscribeWith(new BaseSubscriber<Void>() {
+			@Override
+			protected void hookOnComplete() {
+				completed.set(true);
+			}
+
+			@Override
+			protected void hookOnError(Throwable t) {
+				error.set(t);
+			}
+		});
+		try {
+			channel.runPendingTasks();
+			assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+			IllegalStateException failure = new IllegalStateException("write failed");
+			switch (termination) {
+				case CANCEL:
+					subscriber.cancel();
+					break;
+				case CHANNEL_CLOSE:
+					channel.close();
+					break;
+				case WRITE_FAILURE:
+					promises.get(0).setFailure(failure);
+					break;
+			}
+			channel.runPendingTasks();
+			assertThat(completed.get()).isEqualTo(termination == Termination.CHANNEL_CLOSE);
+			assertThat(error.get()).isSameAs(termination == Termination.WRITE_FAILURE ? failure : null);
+			assertThat(promises).hasSize(MonoSend.MAX_SIZE);
+			for (int i = MonoSend.MAX_SIZE; i < buffers.length; i++) {
+				assertThat(buffers[i].refCnt()).isZero();
+			}
+		}
+		finally {
+			subscriber.cancel();
+			messages.forEach(ReferenceCountUtil::release);
+			channel.finishAndReleaseAll();
+		}
+		assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+	}
+
+	@ParameterizedTest
+	@MethodSource("sourceModesAndFlushOnEach")
+	void shouldDrainWithImmediateSuccessAndFlushMarkers(SourceMode mode, boolean flushOnEach) {
+		List<Integer> written = new ArrayList<>();
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+			@Override
+			public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+				ByteBuf buffer = (ByteBuf) msg;
+				written.add(buffer.readInt());
+				buffer.release();
+				promise.setSuccess();
+			}
+		}, new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = new ByteBuf[MonoSend.MAX_SIZE * 3];
+		List<Integer> expected = new ArrayList<>();
+		for (int i = 0; i < buffers.length; i++) {
+			buffers[i] = ByteBufAllocator.DEFAULT.buffer(4);
+			if (i % 3 != 1) {
+				buffers[i].writeInt(i);
+			}
+			if (i % 3 == 2) {
+				expected.add(i);
+			}
+		}
+		AtomicBoolean flushMarker = new AtomicBoolean();
+		Mono<Void> send = new MonoSendMany<>(mode.source.apply(buffers), ops(channel),
+				b -> flushOnEach || flushMarker.get(),
+				b -> {
+					flushMarker.set(false);
+					if (b.isReadable() && b.getInt(b.readerIndex()) % 3 == 0) {
+						flushMarker.set(true);
+						b.release();
+						return null;
+					}
+					return b;
+				}, ReferenceCountUtil::release, ByteBuf::readableBytes);
+		try {
+			StepVerifier.create(send)
+			            .then(channel::runPendingTasks)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(5));
+			assertThat(written).containsExactlyElementsOf(expected);
+			assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+		}
+		finally {
+			channel.finishAndReleaseAll();
+		}
+	}
+
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void testPromiseSendTimeout(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new WriteTimeoutHandler(1), new ChannelHandlerAdapter() {});
 
 		Flux<String> flux = Flux.range(0, 257).map(count -> count + "");
-		Mono<Void> m = MonoSendMany.objectSource(flux, channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(flux, ops(channel), b -> flushOnEach);
 
 		StepVerifier.create(m)
 		            .then(() -> {
@@ -84,7 +283,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -106,7 +305,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -128,7 +327,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -150,7 +349,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -169,7 +368,7 @@ class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), channel, b -> flushOnEach);
+		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), ops(channel), b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -193,7 +392,7 @@ class MonoSendManyTest {
 			TestPublisher<ByteBuf> source = TestPublisher.createNoncompliant(TestPublisher.Violation.DEFER_CANCELLATION);
 
 			IdentityHashMap<ReferenceCounted, Object> discarded = new IdentityHashMap<>();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> flushOnEach);
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, ops(channel), b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
 				.doOnDiscard(ReferenceCounted.class, v -> discarded.put(v, null))
 				.subscribeWith(new BaseSubscriber<Void>() {});
@@ -235,7 +434,7 @@ class MonoSendManyTest {
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
 			Sinks.Many<ByteBuf> source = Sinks.many().unicast().onBackpressureBuffer();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> flushOnEach);
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), ops(channel), b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
 					.doOnDiscard(ReferenceCounted.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});
@@ -334,7 +533,7 @@ class MonoSendManyTest {
 					public void onComplete() {
 						downstream.onComplete();
 					}
-				})), channel, b -> flushOnEach);
+				})), ops(channel), b -> flushOnEach);
 		m.subscribe();
 		Queue<Object> messages = channel.outboundMessages();
 
@@ -343,6 +542,89 @@ class MonoSendManyTest {
 		channel.flush();
 		messages.forEach(ReferenceCountUtil::release);
 		assertThat(cleared).isTrue();
+	}
+
+	@ParameterizedTest
+	@EnumSource(SourceMode.class)
+	void shouldCompleteAndReleaseWhenChannelAlreadyClosed(SourceMode mode) {
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = buffers();
+
+		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), ops(channel), b -> false);
+		assertThat(channel.close().isSuccess()).isTrue();
+
+		StepVerifier.create(m)
+		            .consumeSubscriptionWith(s -> assertThat(((MonoSendMany.SendManyInner<?, ?>) s).sourceMode).isEqualTo(mode.fusionMode))
+		            .then(channel::runPendingTasks)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(5));
+
+		assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+	}
+
+	@ParameterizedTest
+	@EnumSource(SourceMode.class)
+	void shouldNotRetainCloseListenerWhenCancelledOnSubscribe(SourceMode mode) {
+		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
+		ByteBuf[] buffers = buffers();
+
+		Mono<Void> m = MonoSendMany.byteBufSource(mode.source.apply(buffers), ops(channel), b -> false);
+
+		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
+		m.subscribe(new BaseSubscriber<Void>() {
+			@Override
+			protected void hookOnSubscribe(Subscription s) {
+				_w.add(new WeakReference<>(s));
+				s.cancel();
+			}
+		});
+		channel.runPendingTasks();
+
+		assertThat(channel.isOpen()).isTrue();
+		assertThat(channel.<ByteBuf>readOutbound()).isNull();
+		assertThat(buffers).allSatisfy(b -> assertThat(b.refCnt()).isZero());
+
+		System.gc();
+		wait(_w.get(0));
+	}
+
+	static ChannelOperations<?, ?> ops(EmbeddedChannel channel) {
+		return new ChannelOperations<>(Connection.from(channel), ConnectionObserver.emptyListener());
+	}
+
+	static ByteBuf[] buffers() {
+		return new ByteBuf[]{
+				ByteBufAllocator.DEFAULT.buffer().writeInt(1),
+				ByteBufAllocator.DEFAULT.buffer().writeInt(2)};
+	}
+
+	enum SourceMode {
+		SYNC(Fuseable.SYNC, Flux::fromArray),
+		ASYNC(Fuseable.ASYNC, buffers -> Flux.fromArray(buffers).publishOn(Schedulers.immediate())),
+		NONE(Fuseable.NONE, buffers -> Flux.fromIterable(Arrays.asList(buffers)).hide());
+
+		final int fusionMode;
+		final Function<ByteBuf[], Flux<ByteBuf>> source;
+
+		SourceMode(int fusionMode, Function<ByteBuf[], Flux<ByteBuf>> source) {
+			this.fusionMode = fusionMode;
+			this.source = source;
+		}
+	}
+
+	static Stream<Arguments> sourceModesAndFlushOnEach() {
+		return Arrays.stream(SourceMode.values())
+		             .flatMap(mode -> Stream.of(arguments(mode, true), arguments(mode, false)));
+	}
+
+	static Stream<Arguments> sourceModesFlushOnEachAndTerminations() {
+		return sourceModesAndFlushOnEach()
+				.flatMap(args -> Arrays.stream(Termination.values())
+				                       .map(termination -> arguments(args.get()[0], args.get()[1], termination)));
+	}
+
+	enum Termination {
+		CANCEL, CHANNEL_CLOSE, WRITE_FAILURE
 	}
 
 	static void wait(WeakReference<Subscription> ref) {

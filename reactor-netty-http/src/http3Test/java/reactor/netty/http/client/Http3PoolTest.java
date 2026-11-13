@@ -178,6 +178,37 @@ class Http3PoolTest {
 	}
 
 	@Test
+	void cannotOpenStreamWhenSlotIsInvalidated() {
+		TestQuicChannel channel = new TestQuicChannel(5);
+
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .idleResourceReuseLruOrder()
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http3Pool http3Pool = poolBuilder.build(config -> new Http3Pool(config, null));
+
+		try {
+			PooledRef<Connection> ref = http3Pool.acquire().block(Duration.ofSeconds(1));
+			assertThat(ref).isNotNull();
+			channel.runPendingTasks();
+
+			Http2Pool.Slot slot = ((Http2Pool.Http2PooledRef) ref).slot;
+			assertThat(slot.canOpenStream()).isTrue();
+
+			slot.invalidate();
+
+			assertThat(slot.canOpenStream()).as("no streams once removed from Http3Pool").isFalse();
+
+			ref.invalidate().block(Duration.ofSeconds(1));
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
 	void maxStreamsCausesNewAllocation() {
 		TestQuicChannel channel1 = new TestQuicChannel(2);
 		TestQuicChannel channel2 = new TestQuicChannel(2);

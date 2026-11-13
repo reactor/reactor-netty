@@ -500,7 +500,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == CONFIGURED) {
 				if (streamHandler == null) {
@@ -547,6 +547,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONFIGURED && doOnBound != null) {
 				doOnBound.accept(connection);

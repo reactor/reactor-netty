@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,8 +56,10 @@ final class HttpClientSecure {
 		return SslProvider.addHandlerConfigurator(sslProvider, HOSTNAME_VERIFICATION_CONFIGURER);
 	}
 
-	static final SslProvider HTTP2_SSL_PROVIDER;
-	static {
+	static final SslProvider HTTP2_SSL_PROVIDER = http2SslProvider();
+
+	@SuppressWarnings("NullAway")
+	private static SslProvider http2SslProvider() {
 		SslProvider sslProvider;
 		try {
 			sslProvider = SslProvider.builder()
@@ -67,11 +69,13 @@ final class HttpClientSecure {
 		catch (Exception e) {
 			sslProvider = null;
 		}
-		HTTP2_SSL_PROVIDER = sslProvider;
+		return sslProvider;
 	}
 
-	static final SslProvider DEFAULT_HTTP3_SSL_PROVIDER;
-	static {
+	static final SslProvider DEFAULT_HTTP3_SSL_PROVIDER = defaultHttp3SslProvider();
+
+	@SuppressWarnings("NullAway")
+	private static SslProvider defaultHttp3SslProvider() {
 		SslProvider sslProvider;
 		try {
 			if (!isHttp3Available()) {
@@ -86,7 +90,7 @@ final class HttpClientSecure {
 		catch (Exception e) {
 			sslProvider = null;
 		}
-		DEFAULT_HTTP3_SSL_PROVIDER = sslProvider;
+		return sslProvider;
 	}
 
 	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER =

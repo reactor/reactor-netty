@@ -529,6 +529,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.DISCONNECTING) {
 				if (connection.channel().isActive() && !connection.isPersistent()) {

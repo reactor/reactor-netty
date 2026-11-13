@@ -52,6 +52,7 @@ import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinali
 import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalityTags.PROXY_ADDRESS;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalityTags.REMOTE_ADDRESS;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalityTags.STATUS;
+import static reactor.netty.internal.util.ObservationErrors.recordObservationError;
 
 /**
  * {@link ChannelHandler} for collecting metrics on protocol level.
@@ -98,7 +99,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			dataReceivedMeter = recorder.dataReceivedMeter(address, proxyAddress == null ? NA : formatSocketAddress(proxyAddress));
 		}
 		if (dataReceivedMeter != null) {
-			dataReceivedMeter.record(bytes);
+			dataReceivedMeter.record((double) bytes);
 		}
 	}
 
@@ -112,7 +113,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			dataSentMeter = recorder.dataSentMeter(address, proxyAddress == null ? NA : formatSocketAddress(proxyAddress));
 		}
 		if (dataSentMeter != null) {
-			dataSentMeter.record(bytes);
+			dataSentMeter.record((double) bytes);
 		}
 	}
 
@@ -163,7 +164,6 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@SuppressWarnings("try")
 		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
 				SocketAddress localAddress, ChannelPromise promise) {
 			// Cannot invoke the recorder anymore:
@@ -187,12 +187,21 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			   .addListener(future -> {
 			       ctx.pipeline().remove(this);
 
-			       status = future.isSuccess() ? SUCCESS : ERROR;
+			       try {
+			           if (future.isSuccess()) {
+			               status = SUCCESS;
+			           }
+			           else {
+			               status = ERROR;
+			               recordObservationError(observation, future.cause());
+			           }
+			       }
+			       finally {
+			           observation.stop();
 
-			       observation.stop();
-
-			       ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
-			       parentContextView = null;
+			           ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
+			           parentContextView = null;
+			       }
 			   });
 		}
 
@@ -290,7 +299,6 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
 			addListener(ctx);
 			ctx.fireChannelActive();
@@ -404,11 +412,21 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 					sslHandler.handshakeFuture()
 					          .addListener(f -> {
 					               ctx.pipeline().remove(this);
-					               status = f.isSuccess() ? SUCCESS : ERROR;
-					               observation.stop();
+					               try {
+					                   if (f.isSuccess()) {
+					                       status = SUCCESS;
+					                   }
+					                   else {
+					                       status = ERROR;
+					                       recordObservationError(observation, f.cause());
+					                   }
+					               }
+					               finally {
+					                   observation.stop();
 
-					               ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
-					               parentContextView = null;
+					                   ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
+					                   parentContextView = null;
+					               }
 					          });
 				}
 			}

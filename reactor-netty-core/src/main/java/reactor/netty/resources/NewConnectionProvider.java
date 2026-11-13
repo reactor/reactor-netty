@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -201,7 +201,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void onStateChange(Connection connection, State newState) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "onStateChange({}, {})"), newState, connection);
@@ -220,8 +220,12 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onUncaughtException(Connection c, Throwable error) {
-			sink.error(error);
-			obs.onUncaughtException(c, error);
+			try {
+				sink.error(error);
+			}
+			finally {
+				obs.onUncaughtException(c, error);
+			}
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,10 @@ final class TcpClientSecure {
 
 	private static final Logger log = Loggers.getLogger(TcpClientSecure.class);
 
-	static final SslProvider DEFAULT_SSL_PROVIDER;
+	static final SslProvider DEFAULT_SSL_PROVIDER = defaultSslProvider();
 
-	static {
+	@SuppressWarnings("NullAway")
+	private static SslProvider defaultSslProvider() {
 		SslProvider sslProvider;
 		try {
 			sslProvider =
@@ -42,6 +43,6 @@ final class TcpClientSecure {
 			log.error("Failed to build default ssl provider", e);
 			sslProvider = null;
 		}
-		DEFAULT_SSL_PROVIDER = sslProvider;
+		return sslProvider;
 	}
 }

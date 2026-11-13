@@ -525,6 +525,7 @@ public final class ReactorNetty {
 		}
 	}
 
+	@SuppressWarnings("ReferenceEquality")
 	static ConnectionObserver compositeConnectionObserver(ConnectionObserver observer,
 			ConnectionObserver other) {
 
@@ -655,6 +656,7 @@ public final class ReactorNetty {
 			}
 		}
 
+		@SuppressWarnings("ReferenceEquality")
 		static ChannelPipelineConfigurer compositeChannelPipelineConfigurer(
 				ChannelPipelineConfigurer configurer, ChannelPipelineConfigurer other) {
 
@@ -725,8 +727,22 @@ public final class ReactorNetty {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
+			Throwable failure = null;
 			for (ConnectionObserver observer : observers) {
-				observer.onUncaughtException(connection, error);
+				try {
+					observer.onUncaughtException(connection, error);
+				}
+				catch (Throwable t) {
+					if (failure == null) {
+						failure = t;
+					}
+				}
+			}
+			if (failure instanceof RuntimeException) {
+				throw (RuntimeException) failure;
+			}
+			if (failure != null) {
+				throw (Error) failure;
 			}
 		}
 
@@ -757,6 +773,7 @@ public final class ReactorNetty {
 		// The implementation relies on Netty's promise that Channel#writeAndFlush will release the buffer on success/error
 		// The onCleanup callback is invoked only in case when we are sure that the processing doesn't delegate to Netty
 		// because of some failure before the exchange can be continued in the thenPublisher
+		@SuppressWarnings("ReferenceEquality")
 		OutboundThen(NettyOutbound source, Publisher<Void> thenPublisher, Runnable onCleanup) {
 			this.source = source;
 			Objects.requireNonNull(onCleanup, "onCleanup");

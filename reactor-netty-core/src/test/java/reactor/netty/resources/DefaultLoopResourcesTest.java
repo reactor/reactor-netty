@@ -35,21 +35,14 @@ import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.incubator.channel.uring.IOUring;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.incubator.channel.uring.IOUringDatagramChannel;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
-import io.netty.incubator.channel.uring.IOUringServerSocketChannel;
-import io.netty.incubator.channel.uring.IOUringSocketChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -239,14 +232,6 @@ class DefaultLoopResourcesTest {
 	}
 
 	@Test
-	@EnabledOnOs(OS.LINUX)
-	@EnabledOnJre(JRE.JAVA_8)
-	@EnabledIf("isIoUringTransport")
-	void testIoUringIncubatorIsAvailableOnJava8() {
-		assertThat(IOUring.isAvailable()).isTrue();
-	}
-
-	@Test
 	@EnabledOnOs(OS.MAC)
 	@EnabledIf("isNativeTransport")
 	void testKQueueIsAvailable() {
@@ -365,64 +350,6 @@ class DefaultLoopResourcesTest {
 		}
 	}
 
-	// ============== io_uring Transport Tests (Linux, Java 8 incubator) ==============
-
-	@Test
-	@EnabledOnOs(OS.LINUX)
-	@EnabledOnJre(JRE.JAVA_8)
-	@EnabledIf("isIoUringAvailable")
-	void testOnChannelWithIoUringIncubatorEventLoopGroup() throws Exception {
-		EventLoopGroup ioUringGroup = new IOUringEventLoopGroup(1);
-		try {
-			LoopResources loopResources = LoopResources.create("testOnChannelIoUringIncubator");
-			try {
-				// Verify onChannel returns correct io_uring incubator channel instances (Java 8)
-				SocketChannel socketChannel = loopResources.onChannel(SocketChannel.class, ioUringGroup);
-				assertThat(socketChannel).isInstanceOf(IOUringSocketChannel.class);
-
-				ServerSocketChannel serverSocketChannel = loopResources.onChannel(ServerSocketChannel.class, ioUringGroup);
-				assertThat(serverSocketChannel).isInstanceOf(IOUringServerSocketChannel.class);
-
-				DatagramChannel datagramChannel = loopResources.onChannel(DatagramChannel.class, ioUringGroup);
-				assertThat(datagramChannel).isInstanceOf(IOUringDatagramChannel.class);
-			}
-			finally {
-				loopResources.disposeLater().block(Duration.ofSeconds(5));
-			}
-		}
-		finally {
-			ioUringGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
-		}
-	}
-
-	@Test
-	@EnabledOnOs(OS.LINUX)
-	@EnabledOnJre(JRE.JAVA_8)
-	@EnabledIf("isIoUringAvailable")
-	void testOnChannelClassWithIoUringIncubatorEventLoopGroup() throws Exception {
-		EventLoopGroup ioUringGroup = new IOUringEventLoopGroup(1);
-		try {
-			LoopResources loopResources = LoopResources.create("testOnChannelClassIoUringIncubator");
-			try {
-				// Verify onChannelClass returns correct io_uring incubator channel classes (Java 8)
-				Class<? extends SocketChannel> socketChannelClass = loopResources.onChannelClass(SocketChannel.class, ioUringGroup);
-				assertThat(socketChannelClass).isEqualTo(IOUringSocketChannel.class);
-
-				Class<? extends ServerSocketChannel> serverSocketChannelClass = loopResources.onChannelClass(ServerSocketChannel.class, ioUringGroup);
-				assertThat(serverSocketChannelClass).isEqualTo(IOUringServerSocketChannel.class);
-
-				Class<? extends DatagramChannel> datagramChannelClass = loopResources.onChannelClass(DatagramChannel.class, ioUringGroup);
-				assertThat(datagramChannelClass).isEqualTo(IOUringDatagramChannel.class);
-			}
-			finally {
-				loopResources.disposeLater().block(Duration.ofSeconds(5));
-			}
-		}
-		finally {
-			ioUringGroup.shutdownGracefully().get(5, TimeUnit.SECONDS);
-		}
-	}
-
 	// ============== NIO Transport Tests (All Platforms) ==============
 
 	@ParameterizedTest
@@ -508,14 +435,6 @@ class DefaultLoopResourcesTest {
 				arguments(new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory())),
 				arguments(new KQueueEventLoopGroup(1))
 		);
-	}
-
-	static boolean isIoUringTransport() {
-		return "io_uring".equals(System.getProperty("forceTransport"));
-	}
-
-	static boolean isIoUringAvailable() {
-		return isIoUringTransport() && IOUring.isAvailable();
 	}
 
 	@SuppressWarnings("deprecation")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,25 @@
  */
 package reactor.netty.http.observability;
 
+import java.net.ConnectException;
+import java.net.ServerSocket;
+import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import javax.net.ssl.SSLHandshakeException;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -32,16 +42,19 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.tracing.Span;
+import io.micrometer.tracing.exporter.FinishedSpan;
 import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import io.micrometer.tracing.test.simple.SpansAssert;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty.handler.ssl.NotSslRecordException;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -49,12 +62,24 @@ import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.PrematureCloseException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.observability.ReactorNettyTracingObservationHandler;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static reactor.netty.Metrics.ADDRESS_RESOLVER;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.ERROR;
+import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.observationErrorMapper;
 import static reactor.netty.ReactorNetty.getChannelContext;
 
 class ObservabilitySmokeTest extends SampleTestRunner {
@@ -91,6 +116,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	@AfterEach
 	void cleanRegistry() {
 		Metrics.removeRegistry(registry);
+		observationErrorMapper(null);
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
@@ -111,6 +137,13 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	@SuppressWarnings("deprecation")
 	public SampleTestRunnerConsumer yourCode() {
 		return (bb, meterRegistry) -> {
+			Queue<String> mapperInvocations = new ConcurrentLinkedQueue<>();
+			BiFunction<Observation.Context, Throwable, Throwable> recordingMapper = (context, cause) -> {
+				mapperInvocations.add(context.getName());
+				return cause;
+			};
+			observationErrorMapper(recordingMapper);
+
 			Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 			disposableServer =
 					HttpServer.create()
@@ -179,7 +212,100 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 			                                           .hasTagWithKey("net.host.name")
 			                                           .hasTagWithKey("net.host.port")
 			                                           .hasTagWithKey("reactor.netty.type"));
+
+			assertThat(mapperInvocations).isEmpty();
+
+			assertThat(observationErrorMapper(null)).isSameAs(recordingMapper);
+			sendFailingRequests();
+			await().atMost(Duration.ofSeconds(5))
+			       .untilAsserted(() -> assertFailedSpans(bb.getFinishedSpans()));
+			assertNoErrorRecorded(bb.getFinishedSpans());
+
+			assertMapperFailure(bb, new IllegalStateException("mapper failure"));
+			assertMapperFailure(bb, new LinkageError("mapper failure"));
+
+			observationErrorMapper((context, cause) ->
+					cause instanceof NotSslRecordException ? new NotSslRecordException("not an SSL/TLS record") : cause);
+			sendFailingRequests();
+			await().atMost(Duration.ofSeconds(5))
+			       .untilAsserted(() ->
+			           SpansAssert.assertThat(bb.getFinishedSpans())
+			                      .hasASpanWithName("hostname resolution",
+			                              spanAssert -> spanAssert.thenThrowable().hasMessageContaining("idontexist"))
+			                      .hasASpanWithName("connect",
+			                              spanAssert -> spanAssert.thenThrowable().hasMessageContaining("Connection refused"))
+			                      .hasASpanWithName("tls handshake",
+			                              spanAssert -> spanAssert.hasTag("reactor.netty.type", "client")
+			                                                      .thenThrowable().isNotNull())
+			                      .hasASpanWithName("tls handshake",
+			                              spanAssert -> spanAssert.hasTag("reactor.netty.type", "server")
+			                                                      .thenThrowable().hasMessage("not an SSL/TLS record")));
 		};
+	}
+
+	static void assertMapperFailure(BuildingBlocks bb, Throwable mapperFailure) throws Exception {
+		Queue<String> mapperInvocations = new ConcurrentLinkedQueue<>();
+		observationErrorMapper((context, cause) -> {
+			mapperInvocations.add(context.getName());
+			throw Exceptions.propagate(mapperFailure);
+		});
+		int finishedSpans = bb.getFinishedSpans().size();
+		sendFailingRequests();
+		await().atMost(Duration.ofSeconds(5))
+		       .untilAsserted(() -> {
+		           assertThat(mapperInvocations).contains(
+		                   HTTP_CLIENT_PREFIX + ADDRESS_RESOLVER,
+		                   HTTP_CLIENT_PREFIX + CONNECT_TIME,
+		                   HTTP_CLIENT_PREFIX + TLS_HANDSHAKE_TIME,
+		                   HTTP_SERVER_PREFIX + TLS_HANDSHAKE_TIME);
+		           List<FinishedSpan> spans = new ArrayList<>(bb.getFinishedSpans());
+		           assertFailedSpans(spans.subList(finishedSpans, spans.size()));
+		       });
+		assertNoErrorRecorded(bb.getFinishedSpans());
+	}
+
+	static void assertFailedSpans(List<FinishedSpan> spans) {
+		SpansAssert.assertThat(spans)
+		           .hasASpanWithName("hostname resolution", spanAssert -> spanAssert.hasTag("reactor.netty.status", ERROR))
+		           .hasASpanWithName("connect", spanAssert -> spanAssert.hasTag("reactor.netty.status", ERROR))
+		           .hasASpanWithName("tls handshake",
+		                   spanAssert -> spanAssert.hasTag("reactor.netty.type", "client")
+		                                           .hasTag("reactor.netty.status", ERROR))
+		           .hasASpanWithName("tls handshake",
+		                   spanAssert -> spanAssert.hasTag("reactor.netty.type", "server")
+		                                           .hasTag("reactor.netty.status", ERROR));
+	}
+
+	static void assertNoErrorRecorded(List<FinishedSpan> spans) {
+		SpansAssert.assertThat(spans)
+		           .forAllSpansWithNameEqualTo("hostname resolution", spanAssert -> spanAssert.thenThrowable().isNull())
+		           .forAllSpansWithNameEqualTo("connect", spanAssert -> spanAssert.thenThrowable().isNull())
+		           .forAllSpansWithNameEqualTo("tls handshake", spanAssert -> spanAssert.thenThrowable().isNull());
+	}
+
+	static void sendFailingRequests() throws Exception {
+		int closedPort;
+		try (ServerSocket socket = new ServerSocket(0)) {
+			closedPort = socket.getLocalPort();
+		}
+
+		HttpClient client = HttpClient.create().host("localhost").metrics(true, Function.identity());
+		Flux.<Tuple2<HttpClient, Class<? extends Throwable>>>just(
+		        Tuples.of(client.host("idontexist"), UnknownHostException.class),
+		        Tuples.of(client.host("127.0.0.1").port(closedPort), ConnectException.class),
+		        Tuples.of(client.secure().port(disposableServer.port()), SSLHandshakeException.class),
+		        Tuples.of(client.port(disposableServer.port()), PrematureCloseException.class))
+		    .concatMap(tuple -> tuple.getT1()
+		                             .get()
+		                             .uri("/")
+		                             .responseContent()
+		                             .then(Mono.<Throwable>empty())
+		                             .onErrorResume(Mono::just)
+		                             .doOnNext(error -> assertThat(error).isInstanceOf(tuple.getT2())))
+		    .as(StepVerifier::create)
+		    .expectNextCount(4)
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(20));
 	}
 
 	@SuppressWarnings("deprecation")

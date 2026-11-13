@@ -15,7 +15,9 @@
  */
 package reactor.netty.http.server;
 
+import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -24,6 +26,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -35,6 +38,7 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler;
@@ -49,7 +53,6 @@ import reactor.core.publisher.Sinks;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
-import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
@@ -66,14 +69,17 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Stephane Maldini
  * @author Simon Baslé
+ * @author LivingLikeKrillin
  */
 class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
-	WebSocketServerHandshaker                 handshakerHttp11;
-	ChannelPromise                            handshakerResult;
+	@Nullable WebSocketServerHandshaker       handshakerHttp11;
+	final ChannelPromise                      handshakerResult;
 	final Sinks.One<WebSocketCloseStatus>     onCloseState;
 	final boolean                             proxyPing;
+
+	@Nullable AbstractWebSocketServerMetricsHandler micrometerWsHandler;
 
 	volatile int closeSent;
 
@@ -84,10 +90,36 @@ class WebsocketServerOperations extends HttpServerOperations
 		this.proxyPing = websocketServerSpec.handlePing();
 
 		onCloseState = Sinks.unsafe().one();
-		initHandshaker(wsUrl, websocketServerSpec, replaced);
+		Channel channel = replaced.channel();
+		handshakerResult = channel.newPromise();
+		EventLoop eventLoop = channel.eventLoop();
+		if (eventLoop.inEventLoop()) {
+			try {
+				initHandshaker(wsUrl, websocketServerSpec, replaced);
+			}
+			catch (Exception e) {
+				recordHandshakeFailure(channel);
+				handshakerResult.tryFailure(e);
+			}
+		}
+		else {
+			try {
+				eventLoop.execute(() -> {
+					try {
+						initHandshaker(wsUrl, websocketServerSpec, replaced);
+					}
+					catch (Exception e) {
+						recordHandshakeFailure(channel);
+						handshakerResult.tryFailure(e);
+					}
+				});
+			}
+			catch (RuntimeException e) {
+				handshakerResult.setFailure(e);
+			}
+		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void initHandshaker(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
 		Channel channel = replaced.channel();
 
@@ -96,9 +128,11 @@ class WebsocketServerOperations extends HttpServerOperations
 				new WebSocketServerHandshakerFactory(wsUrl, websocketServerSpec.protocols(), true, websocketServerSpec.maxFramePayloadLength());
 		handshakerHttp11 = wsFactory.newHandshaker(replaced.nettyRequest);
 		if (handshakerHttp11 == null) {
-			//"FutureReturnValueIgnored" this is deliberate
-			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel);
-			handshakerResult = null;
+			Throwable throwable = new WebSocketServerHandshakeException("Websocket version [" +
+					replaced.requestHeaders().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION) +
+					"] is not supported");
+			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel)
+					.addListener(f -> handshakerResult.setFailure(throwable));
 		}
 		else {
 			removeHandler(NettyPipeline.HttpTrafficHandler);
@@ -107,9 +141,9 @@ class WebsocketServerOperations extends HttpServerOperations
 			if (handler != null) {
 				replaceHandler(NettyPipeline.HttpMetricsHandler,
 						new WebsocketHttpServerMetricsHandler((AbstractHttpServerMetricsHandler) handler));
+				swapMetricsHandler((AbstractHttpServerMetricsHandler) handler, replaced);
 			}
 
-			handshakerResult = channel.newPromise();
 			HttpRequest request = new DefaultFullHttpRequest(replaced.version(),
 					replaced.method(),
 					replaced.uri());
@@ -123,11 +157,11 @@ class WebsocketServerOperations extends HttpServerOperations
 				PerMessageDeflateServerExtensionHandshaker perMessageDeflateServerExtensionHandshaker =
 						new PerMessageDeflateServerExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 								MAX_WINDOW_SIZE, websocketServerSpec.compressionAllowServerNoContext(),
-								websocketServerSpec.compressionPreferredClientNoContext(), 0);
+								websocketServerSpec.compressionPreferredClientNoContext(), websocketServerSpec.maxDecompressionBufferSize());
 				WebSocketServerExtensionHandler wsServerExtensionHandler =
 						new WebSocketServerExtensionHandler(
 								perMessageDeflateServerExtensionHandshaker,
-								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, 0));
+								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, websocketServerSpec.maxDecompressionBufferSize()));
 				try {
 					ChannelPipeline pipeline = channel.pipeline();
 					wsServerExtensionHandler.channelRead(pipeline.context(NettyPipeline.ReactiveBridge), request);
@@ -150,19 +184,33 @@ class WebsocketServerOperations extends HttpServerOperations
 				}
 			}
 
+			recordHandshakeStart(channel);
 			handshakerHttp11.handshake(channel,
 			                     request,
 			                     replaced.responseHeaders
 			                             .remove(HttpHeaderNames.TRANSFER_ENCODING),
-			                     handshakerResult)
+			                     channel.newPromise())
 			          .addListener(f -> {
-			              if (replaced.rebind(this)) {
-			                  markPersistent(false);
-			                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-			                  channel.read();
+			              try {
+			                  if (replaced.rebind(this)) {
+			                      markPersistent(false);
+			                      // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+			                      channel.read();
+			                  }
+			                  else if (log.isDebugEnabled()) {
+			                      log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
+			                  }
 			              }
-			              else if (log.isDebugEnabled()) {
-			                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
+			              finally {
+			                  // Notify subscribers only after the websocket operations have been bound
+			                  if (f.isSuccess()) {
+			                      recordHandshakeComplete(channel, "101");
+			                      handshakerResult.trySuccess();
+			                  }
+			                  else {
+			                      recordHandshakeFailure(channel);
+			                      handshakerResult.tryFailure(f.cause());
+			                  }
 			              }
 			          });
 		}
@@ -179,7 +227,7 @@ class WebsocketServerOperations extends HttpServerOperations
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame && ((CloseWebSocketFrame) frame).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
@@ -218,6 +266,8 @@ class WebsocketServerOperations extends HttpServerOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
+			// Outbound errors do not reach exceptionCaught
+			recordOutboundError(channel());
 			sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.PROTOCOL_ERROR),
 					f -> terminate());
 		}
@@ -233,22 +283,24 @@ class WebsocketServerOperations extends HttpServerOperations
 
 	@Override
 	public Mono<Void> sendClose() {
-		return sendClose(new CloseWebSocketFrame());
+		return sendClose(CloseWebSocketFrame::new);
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv) {
-		return sendClose(new CloseWebSocketFrame(true, rsv));
+		return sendClose(() -> new CloseWebSocketFrame(true, rsv));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+		requireValidStatusCode(statusCode);
+		return sendClose(() -> new CloseWebSocketFrame(statusCode, reasonText));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+		requireValidStatusCode(statusCode);
+		return sendClose(() -> new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
 	}
 
 	@Override
@@ -257,12 +309,16 @@ class WebsocketServerOperations extends HttpServerOperations
 		return onCloseState.asMono().or((Mono) onTerminate());
 	}
 
-	Mono<Void> sendClose(CloseWebSocketFrame frame) {
+	Mono<Void> sendClose(Supplier<CloseWebSocketFrame> frameSupplier) {
 		if (CLOSE_SENT.get(this) == 0) {
-			//commented for now as we assume the close is always scheduled (deferFuture runs)
-			//onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
+			// The frame is created on subscribe, so that there is nothing to release when the Mono is not subscribed
 			return FutureMono.deferFuture(() -> {
+				if (!channel().isActive()) {
+					// The connection is closed or terminated, there is nothing to send
+					return channel().newSucceededFuture();
+				}
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					CloseWebSocketFrame frame = frameSupplier.get();
 					discard();
 					// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
 					// Whether there are subscribers or the subscriber cancels is not of interest
@@ -272,11 +328,9 @@ class WebsocketServerOperations extends HttpServerOperations
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
-				frame.release();
 				return channel().newSucceededFuture();
-			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
+			});
 		}
-		frame.release();
 		return Mono.empty();
 	}
 	void sendCloseNow(CloseWebSocketFrame frame, ChannelFutureListener listener) {
@@ -311,11 +365,147 @@ class WebsocketServerOperations extends HttpServerOperations
 
 	@Override
 	public @Nullable String selectedSubprotocol() {
-		return handshakerHttp11.selectedSubprotocol();
+		return handshakerHttp11 != null ? handshakerHttp11.selectedSubprotocol() : null;
 	}
 
 	Subscriber<Void> websocketSubscriber(ContextView contextView) {
 		return new WebsocketSubscriber(this, Context.of(contextView));
+	}
+
+	void swapMetricsHandler(AbstractHttpServerMetricsHandler handler, HttpServerOperations replaced) {
+		Channel channel = channel();
+
+		String rawPath = resolvePath(this);
+		String resolvedPath = handler.uriTagValue != null ? handler.uriTagValue.apply(rawPath) : rawPath;
+		ContextView ctxView = currentContext();
+		// Use remoteSocketAddress() in order to obtain UDS info
+		SocketAddress remoteAddress = replaced.remoteSocketAddress();
+		String httpMethod = handler.methodTagValue.apply(replaced.method().name());
+
+		AbstractWebSocketServerMetricsHandler wsHandler;
+		if (handler instanceof MicrometerHttpServerMetricsHandler) {
+			wsHandler = new MicrometerWebSocketServerMetricsHandler(
+					MicrometerWebSocketServerMetricsRecorder.INSTANCE, remoteAddress, resolvedPath, ctxView, httpMethod);
+		}
+		else if (handler instanceof ContextAwareHttpServerMetricsHandler) {
+			ContextAwareHttpServerMetricsHandler ctxHandler = (ContextAwareHttpServerMetricsHandler) handler;
+			ContextAwareWebSocketServerMetricsRecorder wsRecorder;
+			if (ctxHandler.recorder instanceof ContextAwareWebSocketServerMetricsRecorder) {
+				wsRecorder = (ContextAwareWebSocketServerMetricsRecorder) ctxHandler.recorder;
+			}
+			else {
+				wsRecorder = new DefaultContextAwareWebSocketServerMetricsRecorder(ctxHandler.recorder);
+			}
+			wsHandler = new ContextAwareWebSocketServerMetricsHandler(
+					wsRecorder, remoteAddress, resolvedPath, ctxView, httpMethod);
+		}
+		else if (handler instanceof HttpServerMetricsHandler) {
+			HttpServerMetricsHandler plainHandler = (HttpServerMetricsHandler) handler;
+			WebSocketServerMetricsRecorder wsRecorder;
+			if (plainHandler.recorder instanceof WebSocketServerMetricsRecorder) {
+				wsRecorder = (WebSocketServerMetricsRecorder) plainHandler.recorder;
+			}
+			else {
+				wsRecorder = new DefaultWebSocketServerMetricsRecorder(plainHandler.recorder);
+			}
+			wsHandler = new WebSocketServerMetricsHandler(
+					wsRecorder, remoteAddress, resolvedPath, ctxView, httpMethod);
+		}
+		else {
+			return;
+		}
+		this.micrometerWsHandler = wsHandler;
+		channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.WsMetricsHandler, wsHandler);
+	}
+
+	void updateMetricsContext(ContextView contextView) {
+		Channel channel = channel();
+		try {
+			if (micrometerWsHandler instanceof ContextAwareWebSocketServerMetricsHandler) {
+				((ContextAwareWebSocketServerMetricsHandler) micrometerWsHandler).contextView(contextView);
+			}
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	void recordHandshakeStart(Channel channel) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.startHandshake(channel);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	void recordHandshakeComplete(Channel channel, String status) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordHandshakeComplete(channel, status);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	void recordHandshakeFailure(Channel channel) {
+		// Nothing to record when the failure happens before the handshake is started
+		if (micrometerWsHandler == null || micrometerWsHandler.handshakeStartTime == 0) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordHandshakeFailure(channel);
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	void recordOutboundError(Channel channel) {
+		if (micrometerWsHandler == null) {
+			return;
+		}
+		try {
+			micrometerWsHandler.recordException();
+		}
+		catch (RuntimeException e) {
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "Exception caught while recording metrics."), e);
+			}
+		}
+	}
+
+	static String resolvePath(HttpServerOperations ops) {
+		try {
+			return ops.fullPath();
+		}
+		catch (Exception e) {
+			return "/bad-request";
+		}
+	}
+
+	/**
+	 * The close frame is created on subscribe, so the status code is checked here
+	 * in order to keep throwing {@link IllegalArgumentException} when {@code sendClose} is invoked.
+	 */
+	static void requireValidStatusCode(int statusCode) {
+		if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
+			throw new IllegalArgumentException("WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
+		}
 	}
 
 	static final AtomicIntegerFieldUpdater<WebsocketServerOperations> CLOSE_SENT =

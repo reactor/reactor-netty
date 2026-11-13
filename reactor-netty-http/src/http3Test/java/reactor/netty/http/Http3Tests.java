@@ -44,6 +44,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -52,6 +54,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
@@ -66,6 +69,7 @@ import reactor.netty.http.server.ConnectionInformation;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
+import reactor.netty.http.server.ProxyProtocolSupportType;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.resources.ConnectionProvider;
@@ -1339,6 +1343,67 @@ class Http3Tests {
 		          .as(StepVerifier::create)
 		          .expectErrorMatches(t -> t instanceof UnsupportedOperationException &&
 		                  t.getMessage().contains("maxConnections is not supported for HTTP/3 protocol"))
+		          .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testFatalErrorPropagatedToConnectionObserver(boolean failRequest) throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(req.receive().aggregate().asString().defaultIfEmpty("test")))
+				        .bindNow();
+
+		NoSuchMethodError error = new NoSuchMethodError("testFatalErrorPropagatedToConnectionObserver");
+		CountDownLatch latch = new CountDownLatch(1);
+		createClient(disposableServer.port())
+		        .observe(new ConnectionObserver() {
+		            @Override
+		            public void onStateChange(Connection connection, State newState) {
+		            }
+
+		            @Override
+		            public void onUncaughtException(Connection connection, Throwable t) {
+		                if (t == error) {
+		                    latch.countDown();
+		                }
+		            }
+		        })
+		        .post()
+		        .uri("/")
+		        .send((req, out) -> {
+		            if (failRequest) {
+		                throw error;
+		            }
+		            return out;
+		        })
+		        .response((res, body) -> body.asString().collectList().map(list -> {
+		            throw error;
+		        }))
+		        .subscribe();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+	}
+
+	@Test
+	void testProxyProtocolNotSupportedForHttp3() throws Exception {
+		doTestProxyProtocolNotSupportedForHttp3(ProxyProtocolSupportType.ON);
+		doTestProxyProtocolNotSupportedForHttp3(ProxyProtocolSupportType.AUTO);
+	}
+
+	private void doTestProxyProtocolNotSupportedForHttp3(ProxyProtocolSupportType type) throws Exception {
+		Http3SslContextSpec serverCtx = Http3SslContextSpec.forServer(ssc.toTempPrivateKeyPem(), null, ssc.toTempCertChainPem());
+
+		HttpServer.create()
+		          .port(0)
+		          .protocol(HttpProtocol.HTTP3)
+		          .secure(spec -> spec.sslContext(serverCtx))
+		          .proxyProtocol(type)
+		          .handle((req, res) -> res.sendString(Mono.just("OK")))
+		          .bind()
+		          .as(StepVerifier::create)
+		          .expectErrorMatches(t -> t instanceof UnsupportedOperationException &&
+		                  t.getMessage().contains("proxyProtocol is not supported for HTTP/3 protocol"))
 		          .verify(Duration.ofSeconds(5));
 	}
 

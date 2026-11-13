@@ -30,7 +30,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -43,6 +45,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -89,6 +92,8 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -107,6 +112,7 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
@@ -133,7 +139,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
-	final String http2ExtendedConnectProtocol;
+	final @Nullable String http2ExtendedConnectProtocol;
 	final boolean is100ContinueExpected;
 	final boolean isHttp2;
 	final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
@@ -574,17 +580,27 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return new PostHeadersNettyOutbound(((Mono<ByteBuf>) source)
 					.flatMap(b -> {
 						if (!hasSentHeaders()) {
+							FullHttpResponse response = null;
 							try {
-								fullHttpResponse = prepareFullHttpResponse(b);
+								response = prepareFullHttpResponse(b);
+								fullHttpResponse = response;
 
 								afterMarkSentHeaders();
 							}
 							catch (RuntimeException e) {
-								b.release();
+								// Release the response if prepared, it holds the ByteBuf or an empty buffer when the content is dropped
+								fullHttpResponse = null;
+								if (response != null) {
+									response.release();
+								}
+								else {
+									b.release();
+								}
 								return Mono.error(e);
 							}
 
 							onComplete();
+							releaseFullHttpResponseIfNotSent();
 							return Mono.<Void>empty();
 						}
 
@@ -607,21 +623,36 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		if (message instanceof ByteBuf) {
 			ByteBuf b = (ByteBuf) message;
-			return new PostHeadersNettyOutbound(Mono.create(sink -> {
+			// The ByteBuf is owned either by the send below or by the cancel cleanup, whichever claims it first
+			AtomicBoolean claimed = new AtomicBoolean();
+			return new PostHeadersNettyOutbound(Mono.<Void>create(sink -> {
+				if (!claimed.compareAndSet(false, true)) {
+					// Cancelled before the send started, the ByteBuf is already released
+					return;
+				}
 				if (!hasSentHeaders()) {
+					FullHttpResponse response = null;
 					try {
-						fullHttpResponse = prepareFullHttpResponse(b);
+						response = prepareFullHttpResponse(b);
+						fullHttpResponse = response;
 
 						afterMarkSentHeaders();
 					}
 					catch (RuntimeException e) {
-						// If afterMarkSentHeaders throws an exception there is no need to release the ByteBuf here.
-						// It will be released by PostHeadersNettyOutbound as there are on error/cancel hooks
+						// Release the response if prepared, it holds the ByteBuf or an empty buffer when the content is dropped
+						fullHttpResponse = null;
+						if (response != null) {
+							response.release();
+						}
+						else {
+							b.release();
+						}
 						sink.error(e);
 						return;
 					}
 
 					onComplete();
+					releaseFullHttpResponseIfNotSent();
 					sink.success();
 				}
 				else {
@@ -631,7 +662,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					b.release();
 					sink.success();
 				}
-			}), this, b);
+			}).doFinally(signalType -> {
+				if (signalType == SignalType.CANCEL && claimed.compareAndSet(false, true)) {
+					b.release();
+				}
+			}), this, null);
 		}
 		return super.sendObject(message);
 	}
@@ -718,6 +753,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		return FutureMono.deferFuture(() -> {
 			if (!hasSentHeaders()) {
+				if (!channel().isActive()) {
+					// The connection is closed or terminated, there is nothing to send
+					return channel().newSucceededFuture();
+				}
+
 				beforeMarkSentHeaders();
 
 				HttpMessage msg = outboundHttpMessage();
@@ -818,6 +858,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@SuppressWarnings("ReferenceEquality")
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		Class<?> msgClass = msg.getClass();
 		if (msgClass == DefaultHttpRequest.class) {
@@ -1044,9 +1085,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			try {
 				trailerHeadersConsumer.accept(trailerHeaders);
 			}
-			catch (IllegalArgumentException e) {
-				// A sender MUST NOT generate a trailer when header names are
-				// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES
+			catch (RuntimeException e) {
+				// IllegalArgumentException: a sender MUST NOT generate a trailer when header names are
+				// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES.
+				// Any other exception comes from the trailer headers consumer itself.
+				// In both cases the response must still be completed.
 				log.error(format(channel(), "Cannot apply trailer headers"), e);
 			}
 		}
@@ -1075,6 +1118,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		terminate();
 	}
 
+	/**
+	 * When the connection is already disposed, {@link #onComplete()} does nothing,
+	 * so the response is not handed to Netty, release it here.
+	 */
+	final void releaseFullHttpResponseIfNotSent() {
+		if (!hasSentBody()) {
+			FullHttpResponse response = fullHttpResponse;
+			fullHttpResponse = null;
+			if (response != null) {
+				response.release();
+			}
+		}
+	}
+
 	final FullHttpResponse prepareFullHttpResponse(ByteBuf buffer) {
 		int contentLength = HttpUtil.getContentLength(outboundHttpMessage(), -1);
 		if (contentLength == 0 || isContentAlwaysEmpty()) {
@@ -1082,8 +1139,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				log.debug(format(channel(), "Dropped HTTP content, since response has " +
 						"1. [Content-Length: 0] or 2. there must be no content: {}"), buffer);
 			}
+			FullHttpResponse response = newFullHttpResponse(Unpooled.EMPTY_BUFFER, contentLength);
 			buffer.release();
-			return newFullHttpResponse(Unpooled.EMPTY_BUFFER, contentLength);
+			return response;
 		}
 		else {
 			return newFullHttpResponse(buffer, contentLength);
@@ -1300,6 +1358,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
 			isWebsocket = true;
+			EventLoop eventLoop = channel().eventLoop();
 			WebsocketServerOperations ops;
 			// ReferenceEquality is deliberate
 			if (version() == H2) {
@@ -1309,18 +1368,48 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ops = new WebsocketServerOperations(url, websocketServerSpec, this);
 			}
 
-			return FutureMono.from(ops.handshakerResult)
-			                 .doOnEach(signal -> {
-			                     if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
-			                         websocketHandler.apply(ops, ops)
-			                                         .subscribe(ops.websocketSubscriber(signal.getContextView()));
-			                     }
-			                 });
+			return Mono.deferContextual(contextView -> {
+				// A failed handshake can terminate the HTTP operations before subscription. There is no handler
+				// to start, so propagate the failure without scheduling a subscription that the termination could cancel.
+				if (ops.handshakerResult.isDone() && !ops.handshakerResult.isSuccess()) {
+					if (ops.micrometerWsHandler != null) {
+						updateMetricsContextOnEventLoop(ops, contextView, eventLoop);
+					}
+					return FutureMono.from(ops.handshakerResult);
+				}
+				Mono<Void> handshake = Mono.defer(() -> {
+					ops.updateMetricsContext(contextView);
+					return FutureMono.from(ops.handshakerResult);
+				}).doOnEach(signal -> {
+					if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+						websocketHandler.apply(ops, ops)
+						                .subscribe(ops.websocketSubscriber(signal.getContextView()));
+					}
+				});
+				// Update the context before observing even an already completed handshake.
+				return eventLoop.inEventLoop() ? handshake :
+						handshake.subscribeOn(Schedulers.fromExecutor(eventLoop));
+			});
 		}
 		else {
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
+	}
+
+	static void updateMetricsContextOnEventLoop(WebsocketServerOperations ops, ContextView contextView, EventLoop eventLoop) {
+		if (eventLoop.inEventLoop()) {
+			ops.updateMetricsContext(contextView);
+			return;
+		}
+		try {
+			eventLoop.execute(() -> ops.updateMetricsContext(contextView));
+		}
+		catch (RejectedExecutionException e) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(ops.channel(), "Cannot update the WebSocket metrics context."), e);
+			}
+		}
 	}
 
 	static final class WebsocketSubscriber implements CoreSubscriber<Void>, ChannelFutureListener {
@@ -1381,9 +1470,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	static final DefaultHttpHeadersFactory DEFAULT_TRAILERS_NO_VALIDATION = trailersFactory().withValidation(false);
 
-	static final AttributeKey<String> EXTENDED_CONNECT_PATH =
+	static final AttributeKey<@Nullable String> EXTENDED_CONNECT_PATH =
 			AttributeKey.valueOf(HttpServerOperations.class.getName() + ".EXTENDED_CONNECT_PATH");
-	static final AttributeKey<String> EXTENDED_CONNECT_PROTOCOL =
+	static final AttributeKey<@Nullable String> EXTENDED_CONNECT_PROTOCOL =
 			AttributeKey.valueOf(HttpServerOperations.class.getName() + ".EXTENDED_CONNECT_PROTOCOL");
 
 	static final class FailedHttpServerRequest extends HttpServerOperations {

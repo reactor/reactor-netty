@@ -228,6 +228,18 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
+	@Test
+	void xForwardedForWithoutPort() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isZero();
+				},
+				false,
+				false);
+	}
+
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHost(boolean useCustomForwardedHandler) {
@@ -947,7 +959,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "for=\"_gazonk\""),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("_gazonk");
-					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isPositive();
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isZero();
 				});
 	}
 
@@ -958,7 +970,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 						"for=192.0.2.60;proto=http;by=203.0.113.43"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.0.2.60");
-					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isPositive();
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isZero();
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -970,6 +982,76 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("2001:db8:cafe:0:0:0:0:17");
 					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isEqualTo(4711);
+				});
+	}
+
+	@ParameterizedTest
+	@CsvSource(value = {
+			"for=\"192.0.2.60:_gazonk\"|192.0.2.60",
+			"for=\"[2001:db8:cafe::17]:_gazonk\"|2001:db8:cafe:0:0:0:0:17",
+			"for=\"_hidden:_gazonk\"|_hidden"
+	}, delimiter = '|')
+	void forwardedForObfuscatedPort(String forwardedHeader, String expectedHost) {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", forwardedHeader),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo(expectedHost);
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isZero();
+				});
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"for=\"192.0.2.60:_\"", "for=\":_gazonk\"", "for=\"2001::_gazonk\""})
+	void forwardedForInvalidObfuscatedPort(String forwardedHeader) {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", forwardedHeader),
+				serverRequest -> {},
+				null,
+				Function.identity(),
+				Function.identity(),
+				false,
+				true,
+				true,
+				false);
+	}
+
+	@Test
+	void forwardedByObfuscatedPort() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "by=\"203.0.113.43:_gazonk\""),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("203.0.113.43");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isZero();
+				});
+	}
+
+	@Test
+	void forwardedBy() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
+						"by=203.0.113.43;host=a.example.com:8080;for=192.168.0.1"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("203.0.113.43");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isZero();
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isZero();
+					Assertions.assertThat(((InetSocketAddress) serverRequest.connectionHostAddress()).getHostString())
+							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+				});
+	}
+
+	@Test
+	void forwardedByWithoutHost() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
+						"by=\"203.0.113.43:8080\""),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("203.0.113.43");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).containsPattern("^\\[::1\\]|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(disposableServer.port());
 				});
 	}
 

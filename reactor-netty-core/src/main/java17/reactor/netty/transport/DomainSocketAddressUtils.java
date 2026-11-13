@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,11 +45,11 @@ public final class DomainSocketAddressUtils {
 	 * @return the path to the domain socket
 	 */
 	public static String path(SocketAddress socketAddress) {
-		if (socketAddress instanceof DomainSocketAddress) {
-			return ((DomainSocketAddress) socketAddress).path();
+		if (socketAddress instanceof DomainSocketAddress domainSocketAddress) {
+			return domainSocketAddress.path();
 		}
-		else if (socketAddress instanceof UnixDomainSocketAddress) {
-			return ((UnixDomainSocketAddress) socketAddress).getPath().toString();
+		else if (socketAddress instanceof UnixDomainSocketAddress unixDomainSocketAddress) {
+			return unixDomainSocketAddress.getPath().toString();
 		}
 		throw new IllegalArgumentException(socketAddress + " not supported");
 	}

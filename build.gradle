@@ -17,18 +17,18 @@ import java.text.SimpleDateFormat
 import org.gradle.api.attributes.java.TargetJvmVersion
 
 plugins {
-	id "com.diffplug.spotless" version "8.9.0"
+	id "com.diffplug.spotless" version "8.11.0"
 	id 'com.google.osdetector' version '1.7.3'
-	id 'org.gradle.test-retry' version '1.6.5'
+	id 'org.gradle.test-retry' version '1.6.6'
 	id 'io.spring.nohttp' version '0.0.11'
 	id 'com.gradleup.shadow' version '9.6.1' apply false
 	id 'com.jfrog.artifactory' version '6.0.4' apply false
 	id 'me.champeau.gradle.japicmp' version '0.4.6' apply false
 	id 'de.undercouch.download' version '5.7.0' apply false
-	id 'biz.aQute.bnd.builder' version '7.3.0' apply false
+	id 'biz.aQute.bnd.builder' version '7.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.11.5' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
-	id 'net.ltgt.errorprone' version '5.1.0' apply false
+	id 'io.spring.nullability' version '0.0.18' apply false
 	id 'me.champeau.mrjar' version '0.1.1' apply false
 }
 
@@ -86,8 +86,8 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.17.0' //optional baseline
-	micrometerTracingVersion = '1.7.0' //optional baseline
+	micrometerVersion = '1.18.0-RC1' //optional baseline
+	micrometerTracingVersion = '1.8.0-RC1' //optional baseline
 	micrometerDocsVersion = '1.0.4' //optional baseline
 
 	contextPropagationDefaultVersion = '1.2.0' //optional baseline
@@ -109,7 +109,7 @@ ext {
 	logbackVersion = '1.2.13'
 
 	// Netty
-	nettyDefaultVersion = '4.2.17.Final'
+	nettyDefaultVersion = '4.2.20.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -117,26 +117,23 @@ ext {
 		nettyVersion = forceNettyVersion
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
-	nettyIoUringVersion = '0.0.26.Final'
 
 	// Testing
-	brotli4jVersion = '1.23.0'
-	zstdJniVersion = '1.5.7-12'
-	jacksonDatabindVersion = '2.22.1'
+	brotli4jVersion = '1.24.0'
+	zstdJniVersion = '1.5.7-26'
+	jacksonDatabindVersion = '2.23.0'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.27.7'
 	awaitilityVersion = '4.3.0'
 	hoverflyJavaVersion = '0.19.1'
-	tomcatVersion = '9.0.120'
-	boringSslVersion = '2.0.81.Final'
+	tomcatVersion = '9.0.123'
+	boringSslVersion = '2.0.85.Final'
 	junitVersion = '5.14.4'
 	junitPlatformLauncherVersion = '1.14.4'
 	mockitoVersion = '4.11.0'
-	blockHoundVersion = '1.0.17.RELEASE'
+	blockHoundVersion = '1.0.19.BUILD-SNAPSHOT'
 	reflectionsVersion = '0.10.2'
-	errorproneCoreVersion = '2.10.0'
-	errorproneGuavaVersion = '30.0-jre'
-	bouncycastleVersion = '1.85'
+	bouncycastleVersion = '1.86'
 
 	// Antora
 	antoraPluginVersion = '1.0.0'
@@ -207,6 +204,17 @@ subprojects {
 		}
 	}
 
+	// JDK 8 javac does not produce reproducible output and Error Prone requires JDK 21,
+	// compile the main sources with JDK 25 for Java 8
+	tasks.named('compileJava') {
+		if (java.toolchain.languageVersion.get() == JavaLanguageVersion.of(8)) {
+			javaCompiler = javaToolchains.compilerFor {
+				languageVersion = JavaLanguageVersion.of(25)
+			}
+			options.release = 8
+		}
+	}
+
 	// Force TargetJvmVersion=8 on consumable configurations because the Artifactory
 	// plugin resets it to the toolchain JDK when it adds maven-publish to subprojects.
 	plugins.withType(JavaPlugin) {
@@ -219,7 +227,17 @@ subprojects {
 
 	apply from: "${rootDir}/gradle/setup.gradle"
 	apply from: "${rootDir}/gradle/javadoc.gradle"
-	apply from: "${rootDir}/gradle/errorprone.gradle"
+	if (name != "docs" && name != "reactor-netty-graalvm-smoke-tests") {
+		apply plugin: 'io.spring.nullability'
+
+		// The nullability plugin disables all other Error Prone checks, re-enable them
+		tasks.withType(JavaCompile).configureEach {
+			options.errorprone {
+				disableAllChecks = false
+				option("NullAway:AssertsEnabled", "true")
+			}
+		}
+	}
 	apply from: "${rootDir}/gradle/japicmp.gradle"
 
 	jacoco {
@@ -340,9 +358,14 @@ subprojects {
 		enabled = false
 	}
 
+	tasks.withType(AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+
 	jar {
 		manifest {
-			attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
+			attributes("Build-Jdk-Spec": "${System.getProperty("java.specification.version")}",
 					"Implementation-Title": project.name,
 					"Implementation-Version": project.version)
 		}

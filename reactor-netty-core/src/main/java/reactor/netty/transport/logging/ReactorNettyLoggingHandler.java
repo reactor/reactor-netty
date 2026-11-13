@@ -130,6 +130,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	}
 
 	@Override
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	protected String format(ChannelHandlerContext ctx, String eventName) {
 		String chStr = channelString(ctx.channel());
 		return new StringBuilder(chStr.length() + 1 + eventName.length())
@@ -153,6 +154,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	}
 
 	@Override
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	protected String format(ChannelHandlerContext ctx, String eventName, Object firstArg, Object secondArg) {
 		if (secondArg == null) {
 			return formatSimple(ctx, eventName, firstArg);
@@ -207,6 +209,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		return result.toString();
 	}
 
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	private String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
 		String chStr = channelString(ctx.channel());
 		int length = msg.readableBytes();
@@ -249,6 +252,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		}
 	}
 
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	private String formatByteBufHolder(ChannelHandlerContext ctx, String eventName, ByteBufHolder msg) {
 		String chStr = channelString(ctx.channel());
 		String msgStr = msg.toString();
@@ -304,6 +308,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		}
 	}
 
+	@SuppressWarnings("UnnecessaryStringBuilder")
 	private static String formatSimple(ChannelHandlerContext ctx, String eventName, Object msg) {
 		String chStr = channelString(ctx.channel());
 		String msgStr = String.valueOf(msg);

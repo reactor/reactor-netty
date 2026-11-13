@@ -47,6 +47,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final ConnectionObserver obs;
 	final ChannelOperations.OnSetup opsFactory;
 	final boolean acceptGzip;
+	final int maxDecompressionBufferSize;
 	final @Nullable LoggingHandler loggingHandler;
 	final @Nullable ChannelMetricsRecorder metricsRecorder;
 	final SocketAddress remoteAddress;
@@ -57,6 +58,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			ConnectionObserver obs,
 			ChannelOperations.OnSetup opsFactory,
 			boolean acceptGzip,
+			int maxDecompressionBufferSize,
 			@Nullable LoggingHandler loggingHandler,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			SocketAddress remoteAddress,
@@ -65,6 +67,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.obs = obs;
 		this.opsFactory = opsFactory;
 		this.acceptGzip = acceptGzip;
+		this.maxDecompressionBufferSize = maxDecompressionBufferSize;
 		this.loggingHandler = loggingHandler;
 		this.metricsRecorder = metricsRecorder;
 		this.remoteAddress = remoteAddress;
@@ -93,7 +96,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		        .addLast(NettyPipeline.HttpTrafficHandler, HTTP_3_STREAM_BRIDGE_CLIENT_HANDLER);
 
 		if (acceptGzip) {
-			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, 0));
+			pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor(false, maxDecompressionBufferSize));
 		}
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, obs);

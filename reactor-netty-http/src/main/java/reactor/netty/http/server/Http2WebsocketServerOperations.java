@@ -63,7 +63,6 @@ import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
-import reactor.netty.ReactorNetty;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
@@ -76,6 +75,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.function.Supplier;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http.HttpMethod.CONNECT;
@@ -111,8 +111,6 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 
 	@Override
 	void initHandshaker(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
-		handshakerResult = channel().newPromise();
-
 		if (isValid()) {
 			Channel channel = channel();
 
@@ -122,6 +120,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 			if (handler != null) {
 				replaceHandler(NettyPipeline.HttpMetricsHandler,
 						new WebsocketHttpServerMetricsHandler((AbstractHttpServerMetricsHandler) handler));
+				swapMetricsHandler((AbstractHttpServerMetricsHandler) handler, replaced);
 			}
 
 			HttpRequest request = new DefaultHttpRequest(replaced.version(), replaced.method(), replaced.uri());
@@ -133,11 +132,11 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 				PerMessageDeflateServerExtensionHandshaker perMessageDeflateServerExtensionHandshaker =
 						new PerMessageDeflateServerExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
 								MAX_WINDOW_SIZE, websocketServerSpec.compressionAllowServerNoContext(),
-								websocketServerSpec.compressionPreferredClientNoContext(), 0);
+								websocketServerSpec.compressionPreferredClientNoContext(), websocketServerSpec.maxDecompressionBufferSize());
 				WebsocketServerExtensionHandler wsServerExtensionHandler =
 						new WebsocketServerExtensionHandler(Arrays.asList(
 								perMessageDeflateServerExtensionHandshaker,
-								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, 0)));
+								new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, websocketServerSpec.maxDecompressionBufferSize())));
 				try {
 					ChannelPipeline pipeline = channel.pipeline();
 					wsServerExtensionHandler.channelRead(pipeline.context(NettyPipeline.ReactiveBridge), request);
@@ -152,15 +151,29 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 			}
 
 			handshakerHttp2 = new WebsocketServerHandshaker(wsUrl, websocketServerSpec);
-			handshakerHttp2.handshake(channel, request, responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING), handshakerResult)
+			recordHandshakeStart(channel);
+			handshakerHttp2.handshake(channel, request, responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING), channel.newPromise())
 			               .addListener(f -> {
-			                   if (replaced.rebind(this)) {
-			                       markPersistent(false);
-			                       // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-			                       channel.read();
+			                   try {
+			                       if (replaced.rebind(this)) {
+			                           markPersistent(false);
+			                           // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+			                           channel.read();
+			                       }
+			                       else if (log.isDebugEnabled()) {
+			                           log.debug(format(channel, "Cannot bind Http2WebsocketServerOperations after the handshake."));
+			                       }
 			                   }
-			                   else if (log.isDebugEnabled()) {
-			                       log.debug(format(channel, "Cannot bind Http2WebsocketServerOperations after the handshake."));
+			                   finally {
+			                       // Notify subscribers only after the websocket operations have been bound
+			                       if (f.isSuccess()) {
+			                           recordHandshakeComplete(channel, "200");
+			                           handshakerResult.trySuccess();
+			                       }
+			                       else {
+			                           recordHandshakeFailure(channel);
+			                           handshakerResult.tryFailure(f.cause());
+			                       }
 			                   }
 			               });
 		}
@@ -169,6 +182,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 	@SuppressWarnings("UndefinedEquals")
 	boolean isValid() {
 		String msg = null;
+		HttpResponseStatus status = HttpResponseStatus.BAD_REQUEST;
 		if (this.nettyRequest instanceof FullHttpRequest) {
 			msg = "Failed to upgrade to websocket. End of stream is received.";
 		}
@@ -181,12 +195,13 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 		else {
 			CharSequence version = requestHeaders().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
 			if (version == null || !version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
-				msg = "Websocket version [" + version + "] is not supported.";
+				msg = "Websocket version [" + version + "] is not supported";
+				status = HttpResponseStatus.UPGRADE_REQUIRED;
 			}
 		}
 
 		if (msg != null) {
-			HttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, EMPTY_BUFFER);
+			HttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, EMPTY_BUFFER);
 			res.headers().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 			Throwable handshakeException = new WebSocketServerHandshakeException(msg, nettyRequest);
 			channel().writeAndFlush(res)
@@ -201,12 +216,16 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
-	Mono<Void> sendClose(CloseWebSocketFrame frame) {
+	Mono<Void> sendClose(Supplier<CloseWebSocketFrame> frameSupplier) {
 		if (CLOSE_SENT.get(this) == 0) {
-			//commented for now as we assume the close is always scheduled (deferFuture runs)
-			//onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
+			// The frame is created on subscribe, so that there is nothing to release when the Mono is not subscribed
 			return FutureMono.deferFuture(() -> {
+				if (!channel().isActive()) {
+					// The connection is closed or terminated, there is nothing to send
+					return channel().newSucceededFuture();
+				}
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					CloseWebSocketFrame frame = frameSupplier.get();
 					discard();
 					// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
 					// Whether there are subscribers or the subscriber cancels is not of interest
@@ -218,11 +237,9 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 					return channel().writeAndFlush(EMPTY_LAST_CONTENT)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
-				frame.release();
 				return channel().newSucceededFuture();
-			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
+			});
 		}
-		frame.release();
 		return Mono.empty();
 	}
 
@@ -430,6 +447,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				if (msg instanceof DefaultHttpRequest) {
@@ -485,7 +503,7 @@ final class Http2WebsocketServerOperations extends WebsocketServerOperations {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
 				if (msg.getClass() == DefaultHttpResponse.class) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,6 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	static <F extends Future<Void>> void doSubscribe(CoreSubscriber<? super Void> s, F future) {
 		if (future.isDone()) {
 			if (future.isSuccess()) {
@@ -176,7 +175,6 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void cancel() {
 			// cancel is not thread safe since we assume that removeListener is thread-safe. That said if we have
 			// concurrent addListener and removeListener and if addListener is after removeListener, the other Thread

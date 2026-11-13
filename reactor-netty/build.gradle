@@ -22,7 +22,6 @@ dependencies {
 	compileOnly "io.micrometer:context-propagation:$contextPropagationVersion"
 	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-	compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	compileOnly "io.netty:netty-transport-native-io_uring:$nettyVersion"
 	compileOnly "io.projectreactor.addons:reactor-pool:$reactorPoolVersion"
 }
@@ -48,6 +47,15 @@ task docsZip(type: Zip) {
 
 	from ('../docs/build/site') {
 		into 'docs'
+		// Antora's site-mapper and atlas-extension stamp the current time into these
+		// files on every build (sitemap.xml's <lastmod>, site-manifest.json's "generated"),
+		// which breaks reproducible builds. Normalize them to a fixed value.
+		filesMatching('sitemap.xml') {
+			filter { line -> line.replaceAll(/<lastmod>[^<]*<\/lastmod>/, '<lastmod>1980-02-01T00:00:00.000Z</lastmod>') }
+		}
+		filesMatching('site-manifest.json') {
+			filter { line -> line.replaceAll(/"generated": "[^"]*"/, '"generated": "1980-02-01T00:00:00.000Z"') }
+		}
 	}
 
 	from("${rootDir}/docs/src/docs/dist") {

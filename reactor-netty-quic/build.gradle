@@ -23,7 +23,8 @@ ext {
 			"Import-Package" : "!javax.annotation,*",
 			"Bundle-Name" : "reactor-netty-quic",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-quic",
-			"Bundle-Version" : "$osgiVersion"
+			"Bundle-Version" : "$osgiVersion",
+			"-noextraheaders": "true"
 	]
 }
 
@@ -33,6 +34,9 @@ dependencies {
 	api "org.jspecify:jspecify:$jspecifyVersion"
 
 	api "io.netty:netty-codec-native-quic:$nettyVersion$os_suffix"
+
+	// Needed by javac to read the type annotations in reactor-netty-core class files
+	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 
 	testImplementation(testFixtures(project(':reactor-netty-core'))) {
 		exclude module: "reactor-netty-core"

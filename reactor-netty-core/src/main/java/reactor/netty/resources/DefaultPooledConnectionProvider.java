@@ -218,6 +218,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONFIGURED) {
 				// First send a notification that the connection is ready and then change the state
@@ -243,11 +244,16 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			sink.error(error);
-			obs.onUncaughtException(connection, error);
+			try {
+				sink.error(error);
+			}
+			finally {
+				obs.onUncaughtException(connection, error);
+			}
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public void run() {
 			PooledConnection pooledConnection = pooledRef.poolable();
 			Channel c = pooledConnection.channel;
@@ -426,7 +432,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void onStateChange(Connection connection, State newState) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "onStateChange({}, {})"), connection, newState);

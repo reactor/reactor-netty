@@ -27,9 +27,16 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpData;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -39,14 +46,17 @@ import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FACTORY;
@@ -82,6 +93,11 @@ class HttpClientWithTomcatTest {
 		if (tomcat != null) {
 			tomcat.stop();
 		}
+	}
+
+	@AfterEach
+	void cleanDefaultFactory() {
+		DEFAULT_FACTORY.cleanAllHttpData();
 	}
 
 	@Test
@@ -124,12 +140,115 @@ class HttpClientWithTomcatTest {
 
 	@Test
 	void postUploadNoMultipartWithCustomFactory() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 		doTestPostUpload((req, form) -> {
-			DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 			form.factory(customFactory)
 			    .multipart(false)
 			    .attr("attr1", "attr2");
 		}, "attr1=attr2");
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
+	}
+
+	@Test
+	void postUploadWithCustomFactoryLimitAndMultipartConfiguredAfterParts() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		customFactory.setMaxLimit(4);
+		doTestPostUpload((req, form) -> form.factory(customFactory).attr("attr1", "é").multipart(true), "attr1 ");
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
+	}
+
+	@Test
+	void customFactoryIsCleanedWhenFormCallbackFails() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		HttpClient client = HttpClient.create()
+		                              .host("localhost")
+		                              .port(getPort());
+
+		StepVerifier.create(
+				client.post()
+			      .uri("/multipart")
+			      .sendForm((req, form) -> {
+			          form.factory(customFactory)
+			              .multipart(false)
+			              .attr("attr1", "attr2");
+			          throw new IllegalStateException("test");
+			      })
+			      .response())
+		            .expectErrorMessage("test")
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(getRequestFileDeleteMap(DEFAULT_FACTORY)).isEmpty();
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
+	}
+
+	@Test
+	void postUploadNoMultipartWithCustomCharset() throws Exception {
+		doTestPostUpload((req, form) -> form.charset(StandardCharsets.ISO_8859_1)
+		                                      .multipart(false)
+		                                      .attr("attr1", "é"),
+				"attr1=%E9");
+	}
+
+	@Test
+	void postUploadNoMultipartWithRfc3986Encoding() throws Exception {
+		doTestPostUpload((req, form) -> form.encoding(HttpPostRequestEncoder.EncoderMode.RFC3986)
+		                                      .multipart(false)
+		                                      .attr("attr1", "*"),
+				"attr1=%2A");
+	}
+
+	@Test
+	void postUploadStreamNoMultipartWithCustomFactory() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		doTestPostUpload((req, form) -> form.factory(customFactory).multipart(false)
+		                                    .file("attr1", "attr2", new ByteArrayInputStream(new byte[] {1, 2}), "text/plain"),
+				"attr1=attr2");
+		assertThat(getRequestFileDeleteMap(customFactory)).isEmpty();
+	}
+
+	@Test
+	void postUploadWithCustomFactoryKeepsDataWhenCleanOnTerminateIsFalse() throws Exception {
+		DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+		try {
+			doTestPostUpload((req, form) -> form.cleanOnTerminate(false).factory(customFactory)
+			                                    .multipart(true).attr("attr1", "attr2"),
+					"attr1 ");
+			assertThat(getRequestFileDeleteMap(customFactory)).isNotEmpty();
+		}
+		finally {
+			new ArrayList<>(getRequestFileDeleteMap(customFactory).keySet()).forEach(customFactory::cleanRequestHttpData);
+		}
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void postUploadFailureWithCustomFactoryCleansDefaultFactory() throws Exception {
+		HttpClient.create()
+		          .host("localhost")
+		          .port(getPort())
+		          .wiretap(true)
+		          .post()
+		          .uri("/multipart")
+		          .sendForm((req, form) -> form.factory(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE))
+		                                       .attr("attr1", "attr2"),
+		                    progress -> {
+		                        throw new IllegalStateException("test");
+		                    })
+		          .response()
+		          .as(StepVerifier::create)
+		          .expectErrorMessage("test")
+		          .verify(Duration.ofSeconds(5));
+
+		Field field = DEFAULT_FACTORY.getClass().getDeclaredField("requestFileDeleteMap");
+		field.setAccessible(true);
+		assertThat((Map<HttpRequest, List<HttpData>>) field.get(DEFAULT_FACTORY)).isEmpty();
+	}
+
+	@ParameterizedTest
+	@MethodSource("formsNotCleanedByTheEncoder")
+	void postUploadAlwaysCleansDefaultFactory(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
+			String expectedResponse) throws Exception {
+		doTestPostUpload(formCallback, expectedResponse);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -152,9 +271,30 @@ class HttpClientWithTomcatTest {
 		assertThat(res.getT1()).as("status code").isEqualTo(200);
 		assertThat(res.getT2()).as("response body reflecting request").contains(expectedResponse);
 
-		Field field = DEFAULT_FACTORY.getClass().getDeclaredField("requestFileDeleteMap");
+		assertThat(getRequestFileDeleteMap(DEFAULT_FACTORY)).isEmpty();
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<HttpRequest, List<HttpData>> getRequestFileDeleteMap(HttpDataFactory factory)
+			throws Exception {
+		Field field = DefaultHttpDataFactory.class.getDeclaredField("requestFileDeleteMap");
 		field.setAccessible(true);
-		assertThat((Map<HttpRequest, List<HttpData>>) field.get(DEFAULT_FACTORY)).isEmpty();
+		return (Map<HttpRequest, List<HttpData>>) field.get(factory);
+	}
+
+	static Stream<Arguments> formsNotCleanedByTheEncoder() {
+		return Stream.of(
+				Arguments.of(Named.<BiConsumer<? super HttpClientRequest, HttpClientForm>>of("cleanOnTerminate(false)",
+						(req, form) -> form.cleanOnTerminate(false)
+						                   .multipart(false)
+						                   .attr("attr1", "attr2")), "attr1=attr2"),
+				Arguments.of(Named.<BiConsumer<? super HttpClientRequest, HttpClientForm>>of("custom factory",
+						(req, form) -> form.factory(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE))
+						                   .attr("attr1", "attr2")), "attr1=attr2"),
+				Arguments.of(Named.<BiConsumer<? super HttpClientRequest, HttpClientForm>>of("custom factory, multipart",
+						(req, form) -> form.factory(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE))
+						                   .multipart(true)
+						                   .attr("attr1", "attr2")), "attr1 "));
 	}
 
 	@Test

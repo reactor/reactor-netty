@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,9 +56,10 @@ import reactor.util.context.Context;
 
 final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
-	static final Object KEY_ON_DISCARD;
+	static final Object KEY_ON_DISCARD = keyOnDiscard();
 
-	static {
+	@SuppressWarnings("NullAway")
+	private static Object keyOnDiscard() {
 		Context context = Operators.enableOnDiscard(null, o -> { });
 
 		Map.Entry<Object, Object> entry = context.stream()
@@ -66,35 +67,48 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		                                         .orElse(null);
 
 		if (entry != null) {
-			KEY_ON_DISCARD = entry.getKey();
+			return entry.getKey();
 		}
 		else {
-			KEY_ON_DISCARD = null;
+			return null;
 		}
 	}
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
-			Channel channel,
+			ChannelOperations<?, ?> ops,
 			Predicate<ByteBuf> predicate) {
-		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_NOCHECK_CLEANUP, SIZE_OF_BB);
+		return new MonoSendMany<>(source, ops, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_NOCHECK_CLEANUP, SIZE_OF_BB);
 	}
 
-	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel, Predicate<Object> predicate) {
-		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
+	static MonoSendMany<?, ?> objectSource(Publisher<?> source, ChannelOperations<?, ?> ops, Predicate<Object> predicate) {
+		return new MonoSendMany<>(source, ops, predicate, TRANSFORMATION_FUNCTION, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
 	}
 
 	final Publisher<? extends I> source;
 	final Predicate<I> predicate;
+	final ChannelOperations<?, ?> ops;
 
 	MonoSendMany(Publisher<? extends I> source,
-			Channel channel,
+			ChannelOperations<?, ?> ops,
 			Predicate<I> predicate,
-			Function<? super I, ? extends O> transformer,
+			Function<? super I, ? extends @Nullable O> transformer,
 			Consumer<? super I> sourceCleanup,
 			ToIntFunction<O> sizeOf) {
-		super(channel, transformer, sourceCleanup, sizeOf);
+		super(ops.channel(), transformer, sourceCleanup, sizeOf);
 		this.source = Objects.requireNonNull(source, "source publisher cannot be null");
 		this.predicate = Objects.requireNonNull(predicate, "predicate cannot be null");
+		this.ops = ops;
+	}
+
+	/**
+	 * Return true if the channel of the {@link ChannelOperations} that created this send is not active.
+	 * After the operations are terminated, their channel is a disposed channel, while the real channel
+	 * may already serve another exchange, so this send is handled as if the channel is closed.
+	 *
+	 * @return true if the channel of the {@link ChannelOperations} that created this send is not active
+	 */
+	boolean isOperationsInactive() {
+		return !ops.channel().isActive();
 	}
 
 	@Override
@@ -103,7 +117,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 	}
 
 	@Override
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({"rawtypes", "ReferenceEquality"})
 	public @Nullable Object scanUnsafe(Attr key) {
 		if (key == Attr.PREFETCH) {
 			return MAX_SIZE;
@@ -126,7 +140,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		final Runnable                     asyncFlush;
 
 
-		@SuppressWarnings({"unused", "NullAway"})
+		@SuppressWarnings("NullAway")
 		// Deliberately suppress "NullAway"
 		// This is a lazy initialization
 		volatile Subscription s;
@@ -155,11 +169,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			this.eventLoop = ctx.channel().eventLoop();
 
 			this.asyncFlush = new AsyncFlush();
-
-			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
-			ctx.channel()
-			   .closeFuture()
-			   .addListener(this);
 		}
 
 		@Override
@@ -241,6 +250,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						queue = f;
 						terminalSignal = Completion.INSTANCE;
 						actual.onSubscribe(this);
+						addCloseListener();
 						trySchedule();
 						return;
 					}
@@ -248,6 +258,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						sourceMode = Fuseable.ASYNC;
 						queue = f;
 						actual.onSubscribe(this);
+						addCloseListener();
 						s.request(MAX_SIZE);
 						return;
 					}
@@ -255,10 +266,37 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 				queue = Queues.<I>get(MAX_SIZE).get();
 				actual.onSubscribe(this);
+				addCloseListener();
 				s.request(MAX_SIZE);
 			}
 			else {
 				queue = Queues.<I>empty().get();
+			}
+		}
+
+		/**
+		 * Adds the close listener only after the queue is set and {@code actual.onSubscribe} is called.
+		 * When the channel is already closed, the listener may run immediately (on the event loop) and needs both.
+		 */
+		@SuppressWarnings("ReferenceEquality")
+		void addCloseListener() {
+			// check if subscription was not cancelled immediately
+			if (s == Operators.cancelledSubscription()) {
+				return;
+			}
+
+			ChannelFuture closeFuture = ctx.channel().closeFuture();
+			// the operations are already terminated, handle it as a closed channel
+			if (parent.isOperationsInactive()) {
+				operationComplete(closeFuture);
+				return;
+			}
+
+			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
+			closeFuture.addListener(this);
+			// cancel() may run concurrently and miss the listener, remove it here
+			if (s == Operators.cancelledSubscription()) {
+				closeFuture.removeListener(this);
 			}
 		}
 
@@ -280,15 +318,13 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "ReferenceEquality"})
 		public void run() {
 			Queue<I> queue = this.queue;
 			try {
 				int missed = 1;
 				for (;;) {
-					int r = requested;
-
-					while (Integer.MAX_VALUE == r || r-- > 0) {
+					while (pending < MAX_SIZE) {
 						I sourceMessage = queue.poll();
 
 						if (sourceMessage == null) {
@@ -298,6 +334,15 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						if (s == Operators.cancelledSubscription()) {
 							parent.sourceCleanup.accept(sourceMessage);
 							Operators.onDiscard(sourceMessage, actualContext);
+							onInterruptionCleanup();
+							return;
+						}
+
+						if (parent.isOperationsInactive()) {
+							// the operations are terminated while sending, handle it as a closed channel
+							parent.sourceCleanup.accept(sourceMessage);
+							Operators.onDiscard(sourceMessage, actualContext);
+							operationComplete(ctx.channel().closeFuture());
 							onInterruptionCleanup();
 							return;
 						}
@@ -392,7 +437,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 		}
 
-		@SuppressWarnings("FutureReturnValueIgnored")
 		void onInterruptionCleanup() {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.channel()
@@ -449,7 +493,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
-		@SuppressWarnings("rawtypes")
+		@SuppressWarnings({"rawtypes", "ReferenceEquality"})
 		public @Nullable Object scanUnsafe(Attr key) {
 			if (key == Attr.PARENT) {
 				return s;
@@ -711,7 +755,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		// Context interface impl
 		@Override
-		@SuppressWarnings({"unchecked", "rawtypes", "TypeParameterUnusedInFormals"})
+		@SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals", "ReferenceEquality"})
 		public <T> T get(Object key) {
 			if (KEY_ON_DISCARD == key) {
 				return (T) this;
@@ -721,6 +765,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public boolean hasKey(Object key) {
 			if (KEY_ON_DISCARD == key) {
 				return true;
@@ -730,6 +775,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public Context put(Object key, Object value) {
 			Context context = actualContext;
 
@@ -746,6 +792,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
+		@SuppressWarnings("ReferenceEquality")
 		public Context delete(Object key) {
 			Context context = actualContext;
 
@@ -811,6 +858,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 	}
 
+	@SuppressWarnings("StaticAssignmentOfThrowable")
 	static final class Completion extends Exception {
 
 		static final Completion INSTANCE = new Completion();
