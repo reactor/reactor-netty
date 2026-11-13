@@ -278,6 +278,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		 * Adds the close listener only after the queue is set and {@code actual.onSubscribe} is called.
 		 * When the channel is already closed, the listener may run immediately (on the event loop) and needs both.
 		 */
+		@SuppressWarnings("ReferenceEquality")
 		void addCloseListener() {
 			// check if subscription was not cancelled immediately
 			if (s == Operators.cancelledSubscription()) {
