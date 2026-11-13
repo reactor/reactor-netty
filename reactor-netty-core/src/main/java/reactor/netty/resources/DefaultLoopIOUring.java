@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,6 @@ package reactor.netty.resources;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.incubator.channel.uring.IOUring;
-import io.netty.incubator.channel.uring.IOUringDatagramChannel;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
-import io.netty.incubator.channel.uring.IOUringServerSocketChannel;
-import io.netty.incubator.channel.uring.IOUringSocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -32,39 +24,21 @@ import java.util.concurrent.ThreadFactory;
 
 /**
  * {@link DefaultLoop} that uses {@code io_uring} transport.
+ * <p>The {@code io_uring} transport requires Java 11 or later, the actual implementation
+ * is provided in {@code META-INF/versions/11}. On Java 8, {@code io_uring} is never available.
  *
  * @author Violeta Georgieva
  */
 final class DefaultLoopIOUring implements DefaultLoop {
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass) {
-		if (channelClass.equals(SocketChannel.class)) {
-			return (CHANNEL) new IOUringSocketChannel();
-		}
-		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (CHANNEL) new IOUringServerSocketChannel();
-		}
-		if (channelClass.equals(DatagramChannel.class)) {
-			return (CHANNEL) new IOUringDatagramChannel();
-		}
-		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
+		throw new UnsupportedOperationException("io_uring transport requires Java 11 or later");
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public <CHANNEL extends Channel> Class<? extends CHANNEL> getChannelClass(Class<CHANNEL> channelClass) {
-		if (channelClass.equals(SocketChannel.class)) {
-			return (Class<? extends CHANNEL>) IOUringSocketChannel.class;
-		}
-		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (Class<? extends CHANNEL>) IOUringServerSocketChannel.class;
-		}
-		if (channelClass.equals(DatagramChannel.class)) {
-			return (Class<? extends CHANNEL>) IOUringDatagramChannel.class;
-		}
-		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
+		throw new UnsupportedOperationException("io_uring transport requires Java 11 or later");
 	}
 
 	@Override
@@ -74,15 +48,12 @@ final class DefaultLoopIOUring implements DefaultLoop {
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new IOUringEventLoopGroup(threads, factory);
+		throw new UnsupportedOperationException("io_uring transport requires Java 11 or later");
 	}
 
 	@Override
 	public boolean supportGroup(EventLoopGroup group) {
-		if (group instanceof ColocatedEventLoopGroup) {
-			group = ((ColocatedEventLoopGroup) group).get();
-		}
-		return group instanceof IOUringEventLoopGroup;
+		return false;
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopIOUring.class);
@@ -90,17 +61,11 @@ final class DefaultLoopIOUring implements DefaultLoop {
 	static final boolean isIoUringAvailable;
 
 	static {
-		boolean ioUringCheck = false;
-		try {
-			Class.forName("io.netty.incubator.channel.uring.IOUring");
-			ioUringCheck = IOUring.isAvailable();
-		}
-		catch (ClassNotFoundException cnfe) {
-			// noop
-		}
-		isIoUringAvailable = ioUringCheck;
+		// Must not be a compile-time constant, otherwise it is inlined in the callers
+		// and the Java 11+ implementation will never be used
+		isIoUringAvailable = false;
 		if (log.isDebugEnabled()) {
-			log.debug("Default io_uring support : " + isIoUringAvailable);
+			log.debug("Default io_uring support : " + isIoUringAvailable + " (requires Java 11 or later)");
 		}
 	}
 }
