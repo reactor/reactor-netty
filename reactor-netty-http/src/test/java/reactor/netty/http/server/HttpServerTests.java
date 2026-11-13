@@ -66,7 +66,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -2597,14 +2596,9 @@ class HttpServerTests extends BaseHttpTest {
 		Http11SslContextSpec defaultSslContextBuilder =
 				Http11SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
 
-		Http11SslContextSpec clientSslContextBuilder =
-				Http11SslContextSpec.forClient()
-				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-
 		Sinks.One<Throwable> error = Sinks.one();
 		disposableServer =
 				createServer()
-				        .childOption(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(64))
 				        .secure(spec -> spec.sslContext(defaultSslContextBuilder)
 				                            .handshakeTimeout(Duration.ofMillis(1))
 				                            .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(defaultSslContextBuilder)))
@@ -2623,16 +2617,15 @@ class HttpServerTests extends BaseHttpTest {
 				        .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
 				        .bindNow();
 
-		createClient(disposableServer::address)
-		        .secure(spec -> spec.sslContext(clientSslContextBuilder)
-		                            .serverNames(new SNIHostName("test.com")))
-		        .get()
-		        .uri("/")
-		        .responseContent()
-		        .aggregate()
-		        .as(StepVerifier::create)
-		        .expectError()
-		        .verify(Duration.ofSeconds(10));
+		// The client never sends a ClientHello, so the connection is closed when the handshake timeout expires
+		Connection connection =
+				TcpClient.create()
+				         .remoteAddress(disposableServer::address)
+				         .connectNow();
+
+		StepVerifier.create(connection.inbound().receive())
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(10));
 
 		StepVerifier.create(error.asMono())
 		            .expectNextMatches(t -> t instanceof SslHandshakeTimeoutException)
