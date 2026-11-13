@@ -477,9 +477,12 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 			      .expectComplete()
 			      .verify(Duration.ofSeconds(5));
 
-			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
-			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
-			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+			// The response may complete before the connection is returned to the pool
+			await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+			});
 
 			assertThat(channel.get()).hasSize(1);
 			//"FutureReturnValueIgnored" this is deliberate
@@ -505,9 +508,12 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 			assertThat(channel.get().get(0)).isNotSameAs(channel.get().get(1));
 			assertThat(connectionClosed2.await(5, TimeUnit.SECONDS)).isTrue();
 
-			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
-			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
-			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+			// The connection is removed from the pool after the close listeners are notified
+			await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+			});
 		}
 		finally {
 			provider.disposeLater()
