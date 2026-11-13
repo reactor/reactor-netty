@@ -25,6 +25,7 @@ import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import reactor.core.Exceptions;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
@@ -136,7 +137,11 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 		}
 		catch (Throwable err) {
-			safeRelease(msg);
+			// A fatal error is rethrown after the message was handed to the receiver, which may have released it.
+			// Releasing it again may release a buffer that is already used by another channel.
+			if (!Exceptions.isJvmFatal(err)) {
+				safeRelease(msg);
+			}
 			log.error(format(ctx.channel(), "Error was received while reading the incoming data." +
 					" The connection will be closed."), err);
 			//"FutureReturnValueIgnored" this is deliberate
