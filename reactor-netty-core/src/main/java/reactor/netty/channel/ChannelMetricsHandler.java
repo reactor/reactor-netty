@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandler;
 import org.jspecify.annotations.Nullable;
+import reactor.netty.NettyPipeline;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -151,7 +152,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 		private void addListener(ChannelHandlerContext ctx) {
 			if (!listenerAdded) {
-				SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+				SslHandler sslHandler = (SslHandler) ctx.pipeline().get(NettyPipeline.SslHandler);
 				if (sslHandler != null) {
 					listenerAdded = true;
 					long tlsHandshakeTimeStart = System.nanoTime();
