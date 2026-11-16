@@ -133,7 +133,7 @@ ext {
 	mockitoVersion = '4.11.0'
 	blockHoundVersion = '1.0.19.BUILD-SNAPSHOT'
 	reflectionsVersion = '0.10.2'
-	bouncycastleVersion = '1.86'
+	bouncycastleVersion = '1.87'
 
 	// Antora
 	antoraPluginVersion = '1.0.0'
