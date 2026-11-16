@@ -382,8 +382,8 @@ public class Metrics {
 				|| DEFAULT_OBSERVATION_REGISTRY.customized();
   }
 
-  /**
-   * Set the function that decides which error, if any, is recorded with {@link Observation#error(Throwable)}
+	/**
+	 * Set the function that decides which error, if any, is recorded with {@link Observation#error(Throwable)}
 	 * when these fail:
 	 * <ul>
 	 * <li>the connection establishment</li>
