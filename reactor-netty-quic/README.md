@@ -12,7 +12,7 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
     }
 
     dependencies {
-      //compile "io.projectreactor.netty:reactor-netty-quic:1.3.9-SNAPSHOT"
+      //compile "io.projectreactor.netty:reactor-netty-quic:1.3.10-SNAPSHOT"
       compile "io.projectreactor.netty:reactor-netty-quic:1.3.8"
     }
 ```
