@@ -22,7 +22,7 @@ plugins {
 	id 'org.gradle.test-retry' version '1.6.6'
 	id 'io.spring.nohttp' version '0.0.11'
 	id 'com.gradleup.shadow' version '9.6.1' apply false
-	id 'com.jfrog.artifactory' version '6.0.4' apply false
+	id 'com.jfrog.artifactory' version '6.0.5' apply false
 	id 'me.champeau.gradle.japicmp' version '0.4.6' apply false
 	id 'de.undercouch.download' version '5.7.0' apply false
 	id 'biz.aQute.bnd.builder' version '7.4.0' apply false
