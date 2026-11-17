@@ -109,6 +109,15 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder implements Chun
 		return super.finalizeRequest();
 	}
 
+	/**
+	 * {@link HttpPostRequestEncoder#length()} subtracts the trailing {@code '&'} of a url-encoded form,
+	 * and returns {@code -1} when the form has no attributes.
+	 */
+	@Override
+	public long length() {
+		return Math.max(0, super.length());
+	}
+
 	@Override
 	public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
 		HttpContent c = super.readChunk(allocator);

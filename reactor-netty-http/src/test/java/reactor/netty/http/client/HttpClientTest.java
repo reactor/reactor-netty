@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -1929,6 +1930,35 @@ class HttpClientTest extends BaseHttpTest {
 				    .expectNext("OK")
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void sendEmptyUrlEncodedForm() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				                res.sendString(req.receive()
+				                                  .aggregate()
+				                                  .asString()
+				                                  .defaultIfEmpty("")
+				                                  .map(body -> req.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH) +
+				                                          " " + body.length())))
+				        .bindNow();
+
+		ConcurrentLinkedQueue<Long> progress = new ConcurrentLinkedQueue<>();
+		createHttpClientForContextWithAddress()
+		        .post()
+		        .uri("/")
+		        .sendForm((req, form) -> form.multipart(false), p -> p.subscribe(progress::add))
+		        .responseSingle((res, body) -> body.asString()
+		                                           .defaultIfEmpty("")
+		                                           .map(s -> res.status().code() + " " + s))
+		        .as(StepVerifier::create)
+		        .expectNext("200 0 0")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+
+		assertThat(progress).containsExactly(0L);
 	}
 
 	@Test
