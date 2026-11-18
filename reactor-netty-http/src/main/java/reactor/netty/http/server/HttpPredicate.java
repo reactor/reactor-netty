@@ -194,6 +194,24 @@ final class HttpPredicate
 		return http(uri, null, HttpMethod.PUT);
 	}
 
+	/**
+	 * An alias for {@link HttpPredicate#http}.
+	 * <p>
+	 * Creates a {@link Predicate} based on a URI template filtering.
+	 * <p>
+	 * This will listen for QUERY Method.
+	 *
+	 * @param uri The string to compile into a URI template and use for matching
+	 *
+	 * @return The new {@link Predicate}.
+	 *
+	 * @since 1.3.7
+	 * @see Predicate
+	 */
+	public static Predicate<HttpServerRequest> query(String uri) {
+		return http(uri, null, HttpMethod.QUERY);
+	}
+
 	final @Nullable HttpVersion protocol;
 	final HttpMethod            method;
 	final String                uri;
