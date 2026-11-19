@@ -62,8 +62,12 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	private final ConcurrentMap<MeterKey, Counter> errorsCache = new ConcurrentHashMap<>();
 
+	// Constant per recorder; precomputed to avoid rebuilding the response-time meter name every request.
+	final String responseTimeName;
+
 	private MicrometerHttpClientMetricsRecorder() {
 		super(HTTP_CLIENT_PREFIX, "http", false);
+		this.responseTimeName = name() + RESPONSE_TIME;
 	}
 
 	@Override
@@ -121,7 +125,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, formatSocketAddress(remoteAddress), NA, uri, method, status);
+		Timer responseTime = getResponseTimeTimer(responseTimeName, formatSocketAddress(remoteAddress), NA, uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
@@ -129,7 +133,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, String status, Duration time) {
-		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, status);
+		Timer responseTime = getResponseTimeTimer(responseTimeName, formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
