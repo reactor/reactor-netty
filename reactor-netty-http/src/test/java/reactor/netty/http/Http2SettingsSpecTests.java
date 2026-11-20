@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -135,6 +136,47 @@ class Http2SettingsSpecTests {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxConcurrentStreams(-1))
 				.withMessageContaining("Setting MAX_CONCURRENT_STREAMS is invalid: -1");
+	}
+
+	@Test
+	void maxConcurrentStreamsSupplier() {
+		AtomicLong maxConcurrentStreams = new AtomicLong(10);
+		builder.maxConcurrentStreamsSupplier(maxConcurrentStreams::get);
+		Http2SettingsSpec spec = builder.build();
+
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(10);
+
+		maxConcurrentStreams.set(20);
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(20);
+	}
+
+	@Test
+	void maxConcurrentStreamsSupplierWithMaxStreams() {
+		AtomicLong maxConcurrentStreams = new AtomicLong(20);
+		builder.maxConcurrentStreamsSupplier(maxConcurrentStreams::get).maxStreams(10);
+		Http2SettingsSpec spec = builder.build();
+
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(10);
+
+		maxConcurrentStreams.set(5);
+		assertThat(spec.maxConcurrentStreams()).isEqualTo(5);
+	}
+
+	@Test
+	void maxConcurrentStreamsSupplierCanBeReplaced() {
+		AtomicLong maxConcurrentStreams = new AtomicLong(10);
+		builder.maxConcurrentStreamsSupplier(maxConcurrentStreams::get).maxConcurrentStreams(20);
+		assertThat(builder.build().maxConcurrentStreams()).isEqualTo(20);
+
+		builder.maxConcurrentStreams(30).maxConcurrentStreamsSupplier(() -> 40);
+		assertThat(builder.build().maxConcurrentStreams()).isEqualTo(40);
+	}
+
+	@Test
+	void maxConcurrentStreamsSupplierMustNotBeNull() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.maxConcurrentStreamsSupplier(null))
+				.withMessage("maxConcurrentStreamsSupplier");
 	}
 
 	@Test

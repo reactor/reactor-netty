@@ -63,6 +63,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -1076,6 +1077,51 @@ class Http2Tests extends BaseHttpTest {
 		doTestMaxConcurrentStreamsDynamicUpdate(
 				server -> server.protocol(serverProtocols),
 				client -> client.protocol(clientProtocols));
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void testMaxConcurrentStreamsSupplierH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.toTempCertChainPem(), ssc.toTempPrivateKeyPem());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestMaxConcurrentStreamsSupplier(
+				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	@Test
+	void testMaxConcurrentStreamsSupplierH2C() {
+		doTestMaxConcurrentStreamsSupplier(
+				server -> server.protocol(HttpProtocol.H2C),
+				client -> client.protocol(HttpProtocol.H2C));
+	}
+
+	private void doTestMaxConcurrentStreamsSupplier(
+			Function<HttpServer, HttpServer> serverCustomizer,
+			Function<HttpClient, HttpClient> clientCustomizer) {
+		AtomicLong maxConcurrentStreams = new AtomicLong();
+		disposableServer =
+				serverCustomizer.apply(
+				        createServer()
+				                .http2Settings(settings -> settings.maxConcurrentStreamsSupplier(maxConcurrentStreams::incrementAndGet))
+				                .handle((req, res) -> res.sendString(Mono.just("testMaxConcurrentStreamsSupplier"))))
+				        .bindNow();
+
+		for (long expected = 1; expected <= 2; expected++) {
+			HttpClient client = clientCustomizer.apply(createClientNewConnection(disposableServer.port()));
+			client.get()
+			      .uri("/")
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .as(StepVerifier::create)
+			      .expectNext("testMaxConcurrentStreamsSupplier")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(30));
+			assertThat(maxConcurrentStreams).hasValue(expected);
+		}
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")

@@ -21,6 +21,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.function.LongSupplier;
 
 /**
  * A configuration builder to fine tune the {@link Http2Settings}.
@@ -72,6 +73,23 @@ public final class Http2SettingsSpec {
 		 * @return {@code this}
 		 */
 		Builder maxConcurrentStreams(long maxConcurrentStreams);
+
+		/**
+		 * Sets a supplier for the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value. When used with a server, the
+		 * supplier is evaluated as the server configures the HTTP/2 pipeline for a newly accepted connection.
+		 * This allows the setting to change for new connections without rebinding the server. Existing connections
+		 * are not updated.
+		 *
+		 * <p>The supplier must return a valid {@code SETTINGS_MAX_CONCURRENT_STREAMS} value and should return
+		 * promptly because it can be called while an HTTP/2 connection is being initialized.
+		 *
+		 * @param maxConcurrentStreamsSupplier the supplier for the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value
+		 * @return {@code this}
+		 * @since 1.4.1
+		 */
+		default Builder maxConcurrentStreamsSupplier(LongSupplier maxConcurrentStreamsSupplier) {
+			throw new UnsupportedOperationException("maxConcurrentStreamsSupplier is not supported by this builder");
+		}
 
 		/**
 		 * Sets the maximum number RST frames that are allowed per window before the connection is closed.
@@ -267,7 +285,8 @@ public final class Http2SettingsSpec {
 	 * the default {@link Http2CodecUtil#SMALLEST_MAX_CONCURRENT_STREAMS}
 	 */
 	public Long maxConcurrentStreams() {
-		return maxConcurrentStreams;
+		long value = maxConcurrentStreamsSupplier != null ? maxConcurrentStreamsSupplier.getAsLong() : maxConcurrentStreams;
+		return maxStreams != null ? Math.min(value, maxStreams) : value;
 	}
 
 	/**
@@ -382,6 +401,7 @@ public final class Http2SettingsSpec {
 				Objects.equals(headerTableSize, that.headerTableSize) &&
 				Objects.equals(initialWindowSize, that.initialWindowSize) &&
 				maxConcurrentStreams.equals(that.maxConcurrentStreams) &&
+				Objects.equals(maxConcurrentStreamsSupplier, that.maxConcurrentStreamsSupplier) &&
 				Objects.equals(maxDecodedRstFramesPerWindow, that.maxDecodedRstFramesPerWindow) &&
 				Objects.equals(maxDecodedRstFramesSecondsPerWindow, that.maxDecodedRstFramesSecondsPerWindow) &&
 				Objects.equals(maxEncodedRstFramesPerWindow, that.maxEncodedRstFramesPerWindow) &&
@@ -401,6 +421,7 @@ public final class Http2SettingsSpec {
 		result = 31 * result + (headerTableSize == null ? 0 : Long.hashCode(headerTableSize));
 		result = 31 * result + (initialWindowSize == null ? 0 : initialWindowSize);
 		result = 31 * result + Long.hashCode(maxConcurrentStreams);
+		result = 31 * result + Objects.hashCode(maxConcurrentStreamsSupplier);
 		result = 31 * result + (maxDecodedRstFramesPerWindow == null ? 0 : maxDecodedRstFramesPerWindow);
 		result = 31 * result + (maxDecodedRstFramesSecondsPerWindow == null ? 0 : maxDecodedRstFramesSecondsPerWindow);
 		result = 31 * result + (maxEncodedRstFramesPerWindow == null ? 0 : maxEncodedRstFramesPerWindow);
@@ -418,6 +439,7 @@ public final class Http2SettingsSpec {
 	final @Nullable Long headerTableSize;
 	final @Nullable Integer initialWindowSize;
 	final Long maxConcurrentStreams;
+	final @Nullable LongSupplier maxConcurrentStreamsSupplier;
 	final @Nullable Integer maxDecodedRstFramesPerWindow;
 	final @Nullable Integer maxDecodedRstFramesSecondsPerWindow;
 	final @Nullable Integer maxEncodedRstFramesPerWindow;
@@ -437,6 +459,7 @@ public final class Http2SettingsSpec {
 		// We create HTTP/2 settings with Http2Settings.defaultSettings(), maxConcurrentStreams = 100 by default
 		maxConcurrentStreams = build.maxStreams != null ?
 				Math.min(settings.maxConcurrentStreams(), build.maxStreams) : settings.maxConcurrentStreams();
+		maxConcurrentStreamsSupplier = build.maxConcurrentStreamsSupplier;
 		maxDecodedRstFramesPerWindow = build.maxDecodedRstFramesPerWindow;
 		maxDecodedRstFramesSecondsPerWindow = build.maxDecodedRstFramesSecondsPerWindow;
 		maxEncodedRstFramesPerWindow = build.maxEncodedRstFramesPerWindow;
@@ -458,6 +481,7 @@ public final class Http2SettingsSpec {
 		@Nullable Integer maxEncodedRstFramesPerWindow;
 		@Nullable Integer maxEncodedRstFramesSecondsPerWindow;
 		@Nullable Long maxStreams;
+		@Nullable LongSupplier maxConcurrentStreamsSupplier;
 		Integer pingAckDropThreshold = Integer.valueOf(DEFAULT_PING_ACK_DROP_THRESHOLD);
 		@Nullable Duration pingAckTimeout;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
@@ -488,6 +512,13 @@ public final class Http2SettingsSpec {
 		@Override
 		public Builder maxConcurrentStreams(long maxConcurrentStreams) {
 			http2Settings.maxConcurrentStreams(maxConcurrentStreams);
+			maxConcurrentStreamsSupplier = null;
+			return this;
+		}
+
+		@Override
+		public Builder maxConcurrentStreamsSupplier(LongSupplier maxConcurrentStreamsSupplier) {
+			this.maxConcurrentStreamsSupplier = Objects.requireNonNull(maxConcurrentStreamsSupplier, "maxConcurrentStreamsSupplier");
 			return this;
 		}
 
