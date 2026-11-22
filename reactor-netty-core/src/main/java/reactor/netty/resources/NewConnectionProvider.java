@@ -44,6 +44,7 @@ import reactor.util.Loggers;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.wrapException;
 import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
 
 /**
@@ -221,7 +222,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 		@Override
 		public void onUncaughtException(Connection c, Throwable error) {
 			try {
-				sink.error(error);
+				sink.error(error instanceof OutOfMemoryError ? wrapException(error) : error);
 			}
 			finally {
 				obs.onUncaughtException(c, error);
