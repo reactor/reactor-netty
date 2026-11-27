@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -39,7 +40,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		implements AccessLogArgProvider, Supplier<SELF> {
 
 	static final DateTimeFormatter DATE_TIME_FORMATTER =
-			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
+			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 	static final String MISSING = "-";
 
 	final @Nullable SocketAddress remoteAddress;
