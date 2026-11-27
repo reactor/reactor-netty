@@ -26,6 +26,7 @@ import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -39,7 +40,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		implements AccessLogArgProvider, Supplier<SELF> {
 
 	static final DateTimeFormatter DATE_TIME_FORMATTER =
-			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
+			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 	static final String MISSING = "-";
 
 	final @Nullable SocketAddress remoteAddress;

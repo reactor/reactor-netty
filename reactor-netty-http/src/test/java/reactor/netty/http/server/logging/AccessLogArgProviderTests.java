@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2026 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,10 @@ import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Collections;
+import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.server.logging.LoggingTests.URI;
@@ -80,6 +83,14 @@ class AccessLogArgProviderTests {
 		assertThat(accessLogArgProvider.accessDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.startTime).isNotNull();
+	}
+
+	@Test
+	void dateTimeFormatterUsesEnglishMonthNames() {
+		assertThat(AbstractAccessLogArgProvider.DATE_TIME_FORMATTER.getLocale()).isEqualTo(Locale.US);
+		ZonedDateTime september = ZonedDateTime.of(2026, 9, 5, 10, 15, 30, 0, ZoneOffset.UTC);
+		assertThat(september.format(AbstractAccessLogArgProvider.DATE_TIME_FORMATTER))
+				.isEqualTo("05/Sep/2026:10:15:30 +0000");
 	}
 
 	@Test
